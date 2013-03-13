@@ -1,0 +1,14 @@
+2011-08-29	Kevin Allen	<allen@uni-heidelberg>
+
+	* main.c: Official start of development ;)
+	* all: Copy the code from kacq and ajust it to positrack
+	* all: compile with autotools, comedi part was remove so it compiles on my desktop
+2011-08-30	Kevin Allen	<allen@uni-heidelberg>
+	* camera_interface.c: Can get an image from the camera.
+2011-09-15	Kevin Allen	<allen@uni-heidelberg>
+	* callback.c: Started the loop that gets the frame from camera.
+	* camera_interface.c: Added a function to convert the frame to rgb8.
+2011-09-17	Kevin Allen	<allen@uni-heidelberg>
+	* callback.c: Now get frame at 30 Hz, convert to rgb (3 ms) and get luminance (3 ms).
+2011-10-14	Kevin Allen	<allen@uni-heidelberg>
+	* callback.c: Add SDL library support to display video in a window. Will have to experiment with that.

@@ -1,0 +1,48 @@
+Initial notes when started the positrack project
+
+Features:
+
+1) runs on linux
+2) use IEEE 1394 interface because it is fast and used by many high-end camera. Webcam might have been simpler and cheaper but I think IEEE 1394 cam might be better for accurate measurments. But we will provide support for both.
+3) linux has built in drivers for IEEE 1394.
+3) libdc1394 is the library that provides a complete high level application programming interface (API) for developers (me) who wish to control IEEE 1394 based cameras
+    it seems to be the most popular,  has lesser GNU licence.
+4) use gtk as visual interface (can steel some code from kacq), same licence, will be programmed with glade and based on previous tracking program running on windows
+5) will use autotools to configure and install, based on kacq
+6) Code will be split into 4: camera (IEEE 1394) code, display, tracking, comedi.
+7) The tracking software will be able to interact with other computer via a AD card driven by comedi driver (this will allow laser stimulation based on position).
+8) All video processing code will come from our old windows tracking program.
+10) infra-red could be done with a monochrome firewire camera from imagesource. 
+11) example of capture code in c: http://tldp.org/HOWTO/html_single/libdc1394-HOWTO/#example
+12) Use gstreamer for video processing.
+
+Despite trouble with firewire source, I still think gstreamer is the right choice because
+of its flexibility. We can choose from many pluggins. This should prevent facing the same
+problem as now with the old Windows Tracking System. I suspect it will be around for at
+least 10 years.
+
+I should not block the development of positrack because I can't figure out how to get the
+video input from 1394 camera using gstreamer. I will use a webcam as a sourse for now so
+that I can move forward with the rest of the application. In the end, I will only have to
+change the source of the video feed. I might even be able to use a webcam to do the
+tracking. Who knows.
+
+
+1-. Get the webcam gstreamer pipeline to display the video feed from a c program (done 12 March 2013) 
+2-. Put the video stream in the GUI window (done 13 March 2013)
+3-. Build a very basic GUI. Like the old one but with two windows (video and tracking) (done 13 March 2013).
+4-. Play and stop video streaming from menu (done 13 March 2013).
+5. Design of the tracking loop. What makes more sense? Timer?
+6. Get the image buffer from the pipeline, in the right format.
+7. Write up the part of the code to do the tracking and develop the GUI further.
+8. Add comedi support for synchronization.
+9. Implement the firewire source
+11. Testing with flashing led to know if there is some jitter. Check if all aligns in dat files.
+
+
+Problems encountered
+1. Can't manage to stream from the 1394 camera
+   Using webcam for now.
+   Try with another computer when possible
+2. Can't compile with the gstreamer-interfaces library 
+   remove/reinstall gstreamer-plugins-base-devel and it worked
