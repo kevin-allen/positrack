@@ -1,5 +1,5 @@
 bin_PROGRAMS = positrack
-positrack_SOURCES = callback.c comedi_code.c firewire_camera_interface.c tracking_interface.c main.h main.c ../config.h
+positrack_SOURCES = callback.c comedi_code.c firewire_camera_interface.c main.h main.c ../config.h
 positrack_CPPFLAGS = @GTK_CFLAGS@ @GSTREAMER_CFLAGS@ @GSTREAMER_BASE_CFLAGS@  @GSTREAMER_INTERFACES_CFLAGS@ -DDATADIR='"$(datadir)"'
 positrack_LDADD = @GTK_LIBS@ @GSTREAMER_LIBS@ @GSTREAMER_BASE_LIBS@ @GSTREAMER_INTERFACES_LIBS@ -lcomedi
 positrack_LDFLAGS= -export-dynamic -Wall

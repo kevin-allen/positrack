@@ -226,7 +226,6 @@ int build_gstreamer_pipeline()
     return -1;
   }
 
-
   // set the filter to get right resolution and sampling rate
   filtercaps = gst_caps_new_simple ("video/x-raw-yuv", "width", G_TYPE_INT, 640, "height", G_TYPE_INT, 480, "framerate", GST_TYPE_FRACTION, 30, 1, NULL);
   g_object_set (G_OBJECT (filter), "caps", filtercaps, NULL);

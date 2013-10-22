@@ -44,12 +44,6 @@ File with declarations of the main structures and functions used in positrack
 #define NSEC_PER_SEC (1000000000) // The number of nsecs per sec
 
 #define COMEDI_INTERFACE_MAX_DEVICES 2
-#define MAX_BUFFER_LENGTH 100000 // buffer length for each comedi_dev
-#define DEFAULT_SAMPLING_RATE 20000 
-#define MAX_SAMPLING_RATE 48000
-#define COMEDI_DEVICE_MAX_CHANNELS 32
-#define COMEDI_INTERFACE_TO_DEVICE_BUFFER_SIZE_RATIO 4 // size of comedi interface buffer, set according to device buffer size
-#define COMEDI_INTERFACE_ACQUISITION_SLEEP_TIME_MS 1 // if too high could lead to buffer overflow
 #define TIMEOUT_FOR_CAPTURE_MS 20 // time before the timeout try to get a new frame
 #define FIREWIRE_CAMERA_INTERFACE_NUMBER_OF_FRAMES_IN_RING_BUFFER 10
 
@@ -181,19 +175,19 @@ int microsecond_from_timespec(struct timespec* duration);
 defined in camera_interface.c
 to get the data from firewire camera
 ****************************************/
-int firewire_camera_interface_init(struct firewire_camera_interface* cam);
-int firewire_camera_interface_free(struct firewire_camera_interface* cam);
-int firewire_camera_interface_print_info(struct firewire_camera_interface* cam);
-int firewire_camera_interface_save_buffer_to_file(struct firewire_camera_interface* cam, char* file_name);
-int firewire_camera_interface_save_rgb8_buffer_to_file(struct firewire_camera_interface* cam, char* file_name);
-int firewire_camera_interface_dequeue(struct firewire_camera_interface* cam);
-int firewire_camera_interface_enqueue(struct firewire_camera_interface* cam);
-int firewire_camera_interface_start_transmission(struct firewire_camera_interface* cam);
-int firewire_camera_interface_stop_transmission(struct firewire_camera_interface* cam);
-int firewire_camera_interface_convert_to_RGB8(struct firewire_camera_interface* cam);
-int firewire_camera_interface_get_lum(struct firewire_camera_interface* cam);
-void firewire_camera_interface_print_format( uint32_t format );
-void firewire_camera_interface_print_frame_rate( uint32_t format );
+/* int firewire_camera_interface_init(struct firewire_camera_interface* cam); */
+/* int firewire_camera_interface_free(struct firewire_camera_interface* cam); */
+/* int firewire_camera_interface_print_info(struct firewire_camera_interface* cam); */
+/* int firewire_camera_interface_save_buffer_to_file(struct firewire_camera_interface* cam, char* file_name); */
+/* int firewire_camera_interface_save_rgb8_buffer_to_file(struct firewire_camera_interface* cam, char* file_name); */
+/* int firewire_camera_interface_dequeue(struct firewire_camera_interface* cam); */
+/* int firewire_camera_interface_enqueue(struct firewire_camera_interface* cam); */
+/* int firewire_camera_interface_start_transmission(struct firewire_camera_interface* cam); */
+/* int firewire_camera_interface_stop_transmission(struct firewire_camera_interface* cam); */
+/* int firewire_camera_interface_convert_to_RGB8(struct firewire_camera_interface* cam); */
+/* int firewire_camera_interface_get_lum(struct firewire_camera_interface* cam); */
+/* void firewire_camera_interface_print_format( uint32_t format ); */
+/* void firewire_camera_interface_print_frame_rate( uint32_t format ); */
 
 /********************************
 defined in tracking_interface.c
