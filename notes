@@ -17,7 +17,6 @@ Features:
 12) Use gstreamer for video processing.
 
 
-
 Example of capture code in c: http://tldp.org/HOWTO/html_single/libdc1394-HOWTO/#example
 
 
