@@ -215,6 +215,18 @@ int build_gstreamer_pipeline()
     g_printerr("sink could not be created\n");
     return -1;
   }
+  videotee=gst_element_factory_make ("tee", "videotee");
+  if(!videotee){
+    g_printerr("videotee could not be created\n");
+    return -1;
+  }
+  appsink=gst_element_factory_make("appsink","appsink");
+  if(!appsink){
+    g_printerr("appsink could not be created\n");
+    return -1;
+  }
+
+
   // set the filter to get right resolution and sampling rate
   filtercaps = gst_caps_new_simple ("video/x-raw-yuv", "width", G_TYPE_INT, 640, "height", G_TYPE_INT, 480, "framerate", GST_TYPE_FRACTION, 30, 1, NULL);
   g_object_set (G_OBJECT (filter), "caps", filtercaps, NULL);

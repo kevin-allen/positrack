@@ -143,7 +143,7 @@ struct firewire_camera_interface fw_camera_inter;
 
 // to get the video data via gstreamer
 GstBus *bus;
-GstElement *pipeline, *source, *filter, *sink;
+GstElement *pipeline, *source, *filter, *sink, *videotee, *appsink;
 GstCaps *filtercaps; 
 GMainLoop *loop; // for gstreamer
 GtkBuilder *builder; // to build the interface from glade
