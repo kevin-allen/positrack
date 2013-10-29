@@ -435,7 +435,7 @@ You should have received a copy of the GNU General Public License along with gac
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
                             <property name="invisible_char">●</property>
-                            <property name="text" translatable="yes">ka999-130313_</property>
+                            <property name="text" translatable="yes">ka99-130313_</property>
                             <property name="primary_icon_activatable">False</property>
                             <property name="secondary_icon_activatable">False</property>
                             <property name="primary_icon_sensitive">True</property>

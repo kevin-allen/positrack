@@ -40,7 +40,6 @@ int main (int argc, char *argv[])
   // flag for each option
   int with_h_opt=0; // help
   int with_v_opt=0; // version
-  int with_c_opt=0; // comedi
   int with_t_opt=0; // terminal
   int with_C_opt=0; // camera
 
@@ -56,13 +55,12 @@ int main (int argc, char *argv[])
 	{
 	  {"help", no_argument,0,'h'},
 	  {"version", no_argument,0,'v'},
-	  {"comedi", no_argument,0,'c'},
 	  {"terminal", required_argument,0,'t'},
 	  {"camera", no_argument,0,'C'},
 	  {0, 0, 0, 0}
 	};
       int option_index = 0;
-      opt = getopt_long (argc, argv, "hvct:C",
+      opt = getopt_long (argc, argv, "hvt:C",
 			 long_options, &option_index);
       /* Detect the end of the options. */
       if (opt == -1)
@@ -89,12 +87,6 @@ int main (int argc, char *argv[])
 	    with_v_opt=1;
 	    break;
 	  }
-	case 'c':
-	  {
-	    with_c_opt=1;
-	    break;
-	  }
-
 	case  't':
 	  {
 	    with_t_opt=1;
