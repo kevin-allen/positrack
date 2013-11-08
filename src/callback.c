@@ -194,6 +194,9 @@ static gboolean bus_call (GstBus *bus, GstMessage *msg, gpointer data)
      
 int build_gstreamer_pipeline()
 {
+  
+  /*videotee will branch in two threads: the usual sink thread,  and the additional appsink thread */
+
   /* Create gstreamer elements */
   pipeline = gst_pipeline_new ("video-player");
   if(!pipeline){
@@ -230,21 +233,69 @@ int build_gstreamer_pipeline()
   filtercaps = gst_caps_new_simple ("video/x-raw-yuv", "width", G_TYPE_INT, 640, "height", G_TYPE_INT, 480, "framerate", GST_TYPE_FRACTION, 30, 1, NULL);
   g_object_set (G_OBJECT (filter), "caps", filtercaps, NULL);
   gst_caps_unref (filtercaps);
+
   // set the sink of the video in the proper drawing area of the application
   GdkWindow *window = gtk_widget_get_window (widgets.videodrawingarea);
   guintptr window_handle = GDK_WINDOW_XID (window);
   gst_x_overlay_set_window_handle(GST_X_OVERLAY (sink), window_handle);
+
   // add the elements to the pipeline
-  gst_bin_add_many (GST_BIN (pipeline), source,filter, sink, NULL);
+  gst_bin_add_many (GST_BIN (pipeline), source, filter, sink, videotee, appsink, NULL);
+
   // link all elements
-  gst_element_link_many (source, filter,sink, NULL);
-  // get a bus from the pipeline to lessen to its messages
+  gst_element_link_many (source, filter, sink, videotee, appsink, NULL);
+
+  /* Manually link the Tee, which has "Request" pads */
+
+  //load the src pad template for the Request pads in videotee_src_pad_template
+  videotee_src_pad_template = gst_element_class_get_pad_template (GST_ELEMENT_GET_CLASS (videotee), "src%d");
+
+  /*having gotten the template, request the creation of the Reuqest pads from the videotee */
+
+  //create src pad for sink (usual) branch of the videotee
+  
+videotee_sink_pad=gst_element_request_pad (videotee, videotee_src_pad_template, NULL, NULL);
+ g_print ("Obtained request pad %s for sink (usual) branch.\n", gst_pad_get_name (videotee_sink_pad)); 
+
+//create src pad for appsink branch of the videotee
+
+  videotee_appsink_pad=gst_element_request_pad (videotee, videotee_src_pad_template, NULL, NULL);
+  g_print ("Obtained request pad %s for appsink branch.\n", gst_pad_get_name (videotee_appsink_pad));
+
+  //obtain the pads from the downstream elements to which the request tabs need to be linked
+  sink_sink_pad=gst_element_static_pad(sink, "sink");
+  appsink_sink_pad=gst_element_static_pad(appsink, "sink");
+
+  //connect tee to the two branches and emit feedback
+  if (gst_pad_link (videotee_sink_pad, sink_sink_pad) != GST_PAD_LINK_OK ||
+    gst_pad_link (videotee_appsink_pad, appsink_sink_pad) != GST_PAD_LINK_OK) {
+  g_printerr ("Tee could not be linked.\n");
+  gst_object_unref (pipeline);
+  return -1;
+
+  //release the sink pads we have obtained
+  gst_object_unref (sink_sink_pad);
+  gst_object_unref (appsink_sink_pad);
+
+}
+
+
+  // get a bus from the pipeline to listen to its messages
   bus = gst_pipeline_get_bus (GST_PIPELINE (pipeline));
   gst_bus_add_watch (bus,bus_call, loop);
   gst_object_unref (bus);
   widgets.video_running=0;
   return 0;
 }
+
+int release_request_pads ()
+{
+  gst_element_release_request_pad (videotee, videotee_sink_pad);
+  gst_element_release_request_pad (videotee, videotee_appsink_pad);
+  gst_object_unref (videotee_sink_pad);
+  gst_object_unref (videotee_appsink_pad);
+}
+
 
 int delete_gstreamer_pipeline()
 {

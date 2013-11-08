@@ -74,7 +74,7 @@ struct all_widget
   int tracking_running;
   int timeout_id;
 };
-struct all_widget widgets;
+struct all_widget widgets; //defines a structure named widgets of the all_widget type
 
 struct tracking_interface
 {
@@ -140,6 +140,13 @@ GstBus *bus;
 GstElement *pipeline, *source, *filter, *sink, *videotee, *appsink;
 GstCaps *filtercaps; 
 GMainLoop *loop; // for gstreamer
+
+//added 
+GstPadTemplate *videotee_src_pad_template; //object stores the template of the Request pads which act as source pads in Tee
+  GstPad *videotee_sink_pad, *videotee_appsink_pad; //declaration of request Pads themselves 
+  GstPad *sink_sink_pad, *appsink_sink_pad; //declaration of alwazs pads with which the request pads need to be linked
+
+
 GtkBuilder *builder; // to build the interface from glade
 
 gchar* trk_file_name; // directory + file name from gui

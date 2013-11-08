@@ -134,7 +134,7 @@ int main (int argc, char *argv[])
 	  fprintf(stderr,"%s\n", argv[i]);
 	}
       return (1);
-    }  
+    }
 
   // build the gui
   if(init_window()!=0)
@@ -160,8 +160,8 @@ int main (int argc, char *argv[])
 
 
   // if -c option given, just print the comedi_interface info
-  if (with_c_opt==1)
-    {
+  //  if (with_c_opt==1)
+  // {
       /*
       // initialize the comedi_interface
       if (comedi_interface_init(&comedi_inter)==-1)
@@ -180,8 +180,8 @@ int main (int argc, char *argv[])
       // free the memory used
       comedi_interface_free(&comedi_inter);
       */
-      return 0;
-    }
+  // return 0;
+      //}
   if(with_C_opt==1)  
     {
       /*  // initialize the comedi_interface */
