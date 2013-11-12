@@ -228,6 +228,20 @@ int build_gstreamer_pipeline()
     g_printerr("appsink could not be created\n");
     return -1;
   }
+  sink_queue=gst_element_factory_make("queue", "video_queue_1");
+  if(!sink_queue){
+    g_printerr("sink_queue could not be created\n");
+    return -1;
+  }
+  else g_printerr("sink_queue successfully created\n");
+
+  appsink_queue=gst_element_factory_make("queue", "video_queue_2");
+  if(!appsink_queue){
+    g_printerr("appsink_queue could not be created\n");
+    return -1;
+  }
+  else g_printerr("appsink_queue successfully created\n");
+
 
   // set the filter to get right resolution and sampling rate
   filtercaps = gst_caps_new_simple ("video/x-raw-yuv", "width", G_TYPE_INT, 640, "height", G_TYPE_INT, 480, "framerate", GST_TYPE_FRACTION, 30, 1, NULL);
@@ -240,68 +254,86 @@ int build_gstreamer_pipeline()
   gst_x_overlay_set_window_handle(GST_X_OVERLAY (sink), window_handle);
 
   // add the elements to the pipeline
-  gst_bin_add_many (GST_BIN (pipeline), source, filter, sink, videotee, appsink, NULL);
+  gst_bin_add_many (GST_BIN (pipeline), source, filter, sink, videotee, appsink, sink_queue, appsink_queue, NULL); 
 
-  // link all elements
-  gst_element_link_many (source, filter, sink, videotee, appsink, NULL);
+  // Link all elements that can be automatically linked because they have "Always" pads 
 
-  /* Manually link the Tee, which has "Request" pads */
+  if(gst_element_link_many(source, filter, videotee, NULL) != TRUE)
+  {g_printerr("Could not link Thread 1\n");
+gst_object_unref (pipeline);
+    return -1;
+  }
+  else g_printerr("Thread 1 linked\n");
 
-  //load the src pad template for the Request pads in videotee_src_pad_template
+if(gst_element_link_many (sink_queue, sink, NULL) != TRUE)
+{g_printerr("Could not link Thread 2\n");
+gst_object_unref (pipeline);
+    return -1;
+  }
+  else g_printerr("Thread 2 linked\n");
+
+ if (gst_element_link_many (appsink_queue, appsink, NULL) != TRUE) 
+{g_printerr("Could not link Thread 3\n");
+gst_object_unref (pipeline);
+    return -1;
+  } else g_printerr("Thread 3 linked\n");
+
+
+  // Manually link the Tee, which has "Request" pads 
   videotee_src_pad_template = gst_element_class_get_pad_template (GST_ELEMENT_GET_CLASS (videotee), "src%d");
-
-  /*having gotten the template, request the creation of the Reuqest pads from the videotee */
-
   //create src pad for sink (usual) branch of the videotee
-  
-videotee_sink_pad=gst_element_request_pad (videotee, videotee_src_pad_template, NULL, NULL);
- g_print ("Obtained request pad %s for sink (usual) branch.\n", gst_pad_get_name (videotee_sink_pad)); 
+  videotee_sink_pad=gst_element_request_pad (videotee, videotee_src_pad_template, NULL, NULL);
+  g_print ("Obtained request pad %s for sink (usual) branch.\n", gst_pad_get_name (videotee_sink_pad)); 
+  queue_sink_pad=gst_element_get_static_pad (sink_queue,"sink");
 
-//create src pad for appsink branch of the videotee
-
+  //create src pad for appsink branch of the videotee
   videotee_appsink_pad=gst_element_request_pad (videotee, videotee_src_pad_template, NULL, NULL);
   g_print ("Obtained request pad %s for appsink branch.\n", gst_pad_get_name (videotee_appsink_pad));
-
-  //obtain the pads from the downstream elements to which the request tabs need to be linked
-  sink_sink_pad=gst_element_static_pad(sink, "sink");
-  appsink_sink_pad=gst_element_static_pad(appsink, "sink");
+  queue_appsink_pad=gst_element_get_static_pad (appsink_queue,"sink");
 
   //connect tee to the two branches and emit feedback
-  if (gst_pad_link (videotee_sink_pad, sink_sink_pad) != GST_PAD_LINK_OK ||
-    gst_pad_link (videotee_appsink_pad, appsink_sink_pad) != GST_PAD_LINK_OK) {
+  if (gst_pad_link (videotee_sink_pad, queue_sink_pad) != GST_PAD_LINK_OK ||
+    gst_pad_link (videotee_appsink_pad, queue_appsink_pad) != GST_PAD_LINK_OK) {
   g_printerr ("Tee could not be linked.\n");
   gst_object_unref (pipeline);
-  return -1;
-
-  //release the sink pads we have obtained
-  gst_object_unref (sink_sink_pad);
-  gst_object_unref (appsink_sink_pad);
-
-}
-
+  return -1; }
 
   // get a bus from the pipeline to listen to its messages
   bus = gst_pipeline_get_bus (GST_PIPELINE (pipeline));
-  gst_bus_add_watch (bus,bus_call, loop);
+  gst_bus_add_watch (bus,bus_call,loop);
+
+  /*Kevin suggested adding the sink pad release lines to delete pipeline function */
+ //release the sink pads we have obtained
+  gst_object_unref (queue_sink_pad);
+  g_printerr("queue_sink_pad unreferenced successfully\n");
+  gst_object_unref (queue_appsink_pad);
+  g_printerr("queue_appsink_pad unreferenced successfully\n");
+
+
   gst_object_unref (bus);
   widgets.video_running=0;
   return 0;
-}
-
-int release_request_pads ()
-{
-  gst_element_release_request_pad (videotee, videotee_sink_pad);
-  gst_element_release_request_pad (videotee, videotee_appsink_pad);
-  gst_object_unref (videotee_sink_pad);
-  gst_object_unref (videotee_appsink_pad);
 }
 
 
 int delete_gstreamer_pipeline()
 {
   g_printerr("delete_gstreamer_pipeline\n");
-  gst_element_set_state (pipeline, GST_STATE_NULL); 
-  gst_object_unref(GST_OBJECT(pipeline)); 
+  gst_element_set_state (pipeline, GST_STATE_NULL); //setting the pipeline to the NULL state ensures freeing of the allocated resources
+  gst_object_unref(GST_OBJECT(pipeline)); //destroys the pipeline and its contents
+
+   
+  //release the request tabs we have obtained
+  gst_element_release_request_pad (videotee, videotee_sink_pad);
+  g_printerr("videotee_sink_pad successfully released\n"); 
+  gst_element_release_request_pad (videotee, videotee_appsink_pad);
+  g_printerr("videotee_appsink_pad successfully released\n"); 
+  gst_object_unref (videotee_sink_pad);
+  g_printerr("videotee_sink_pad successfully unreferenced\n"); 
+  gst_object_unref (videotee_appsink_pad);
+  g_printerr("videotee_appsink_pad successfully unreferenced\n"); 
+
+
   return 0;
 }
 
