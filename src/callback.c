@@ -191,6 +191,8 @@ static gboolean bus_call (GstBus *bus, GstMessage *msg, gpointer data)
      }
    return TRUE;
  }
+
+
      
 int build_gstreamer_pipeline()
 {
@@ -241,7 +243,6 @@ int build_gstreamer_pipeline()
     return -1;
   }
   else g_printerr("appsink_queue successfully created\n");
-
 
   // set the filter to get right resolution and sampling rate
   filtercaps = gst_caps_new_simple ("video/x-raw-yuv", "width", G_TYPE_INT, 640, "height", G_TYPE_INT, 480, "framerate", GST_TYPE_FRACTION, 30, 1, NULL);
@@ -337,6 +338,68 @@ int delete_gstreamer_pipeline()
   return 0;
 }
 
+//function to register the video frames from appsink
+void snapshot ()
+{
+  position=1*GST_SECOND;
+
+  /* take snapshots until error or EOS*/
+  bus=gst_element_get_bus (pipeline);
+
+  msg=gst_bus_timed_pop_filtered (bus, GST_CLOCK_TIME_NONE, GST_MESSAGE_ERROR | GST_MESSAGE_EOS);
+
+  while (!msg) //while error or EOS hasn't occured
+  {
+    /* seek to the a position in the file */
+    gst_element_seek_simple (pipeline, GST_FORMAT_TIME,
+      GST_SEEK_FLAG_KEY_UNIT | GST_SEEK_FLAG_FLUSH, position);
+
+    /* get the preroll buffer from appsink, this block untils appsink really
+     * prerolls */
+    g_signal_emit_by_name (appsink, "pull-preroll", &sample, NULL);
+
+    /* if we have a buffer now, convert it to a pixbuf. It's possible that we
+     * don't have a buffer because we went EOS right away or had an error. */
+    if (sample) {
+           GstBuffer *buffer;
+           GstCaps *caps;
+           GstStructure *s;
+    caps = gst_sample_get_caps (sample);
+    if (!caps) {
+      g_print ("could not get snapshot format\n");
+      exit (-1);
+    }
+    s = gst_caps_get_structure (caps, 0);
+    /* we need to get the final caps on the buffer to get the size */
+    res = gst_structure_get_int (s, "width", &width);
+    res |= gst_structure_get_int (s, "height", &height);
+    if (!res) {
+      g_print ("could not get snapshot dimension\n");
+      exit (-1);
+    }
+    /* create pixmap from buffer and save, gstreamer video buffers have a stride
+     * that is rounded up to the nearest multiple of 4 */
+    buffer = gst_sample_get_buffer (sample);
+    gst_buffer_map (buffer, &map, GST_MAP_READ);
+    pixbuf = gdk_pixbuf_new_from_data (map.data,
+        GDK_COLORSPACE_RGB, FALSE, 8, width, height,
+        GST_ROUND_UP_4 (width * 3), NULL, NULL);
+    /* save the pixbuf */
+    gdk_pixbuf_save (pixbuf, "snapshot%d",position,".png", "png", &error, NULL);
+    gst_buffer_unmap (buffer, &map);
+  } 
+  else {
+    g_print ("could not make snapshot\n");
+  }
+  position=position+1*GST_SECOND;  
+  gst_message_unref (msg);
+  gst_object_unref (bus);
+  
+}
+}
+
+
+
 // start the video pipeline
 void on_playvideomenuitem_activate(GtkObject *object, gpointer user_data)
 {
@@ -345,6 +408,8 @@ void on_playvideomenuitem_activate(GtkObject *object, gpointer user_data)
       widgets.video_running=1;
       loop = g_main_loop_new (NULL, FALSE);
       gst_element_set_state (pipeline, GST_STATE_PLAYING);
+      //add function to analyze video frames from appsink
+      /**************************************************/
       g_main_loop_run (loop); // flow will stay here until the loop is quit
     }
 }
@@ -417,6 +482,16 @@ void on_directorytoolbutton_clicked(GtkObject *object, gpointer user_data)
     }
  gtk_widget_destroy (dialog);
  return; 
+}
+
+//declare a function to analyze the video frames from appsink
+void query_sink ()
+{
+
+
+
+
+
 }
 
 

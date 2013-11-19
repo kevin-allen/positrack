@@ -39,7 +39,7 @@ File with declarations of the main structures and functions used in positrack
 #include <gdk/gdkx.h>  // for GDK_WINDOW_XID
 #include <gst/interfaces/xoverlay.h>
 #include <glib.h>
-
+#include <gst/app/gstappsink.h> //added for appsink
 #define _FILE_OFFSET_BITS 64 // to have files larger than 2GB
 #define NSEC_PER_SEC (1000000000) // The number of nsecs per sec
 
@@ -52,6 +52,8 @@ File with declarations of the main structures and functions used in positrack
 #define DEBUG_CAMERA // to turn on debugging for the camera
 #define DEBUG_TRACKING // to turn on debugging for the tracking
 #define DEBUG_IMAGE // to turn on debugging for the image processing
+
+#define CAPS "video/x-raw, format=RGB, width=160, pixel-aspect-ratio=1/1"
 
 
 /***********************************************************************************
@@ -151,12 +153,24 @@ GMainLoop *loop; // for gstreamer
 GstPadTemplate *videotee_src_pad_template; //object stores the template of the Request pads which act as source pads in Tee
   GstPad *videotee_sink_pad, *videotee_appsink_pad; //declaration of request Pads themselves 
   GstPad *sink_sink_pad, *appsink_sink_pad; //declaration of alwazs pads with which the request pads need to be linked
+gint64 position;
+GstMessage msg;
+GstSample *sample;
+GdkPixbuf *pixbuf;
+gboolean res;
+GstMapInfo map;
+GError *error=NULL;
+gint width, height;
+
 
 
 GtkBuilder *builder; // to build the interface from glade
 
 gchar* trk_file_name; // directory + file name from gui
 gchar* saving_directory_name; // 
+
+
+
 
 /***********************
  defined in callback.c
@@ -173,6 +187,10 @@ void on_aboutmenuitem_activate(GtkObject *object, gpointer user_data);
 void on_directorytoolbutton_clicked(GtkObject *object, gpointer user_data);
 int build_gstreamer_pipeline();
 int delete_gstreamer_pipeline();
+
+//declare a function to register the video frames from appsink
+void snapshot ();
+
 
 /* void on_play_toggletoolbutton_toggled(GtkObject *object, gpointer user_data); */
 /* void on_track_toggletoolbutton_toggled(GtkObject *object, gpointer user_data); */
