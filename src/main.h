@@ -139,7 +139,6 @@ struct firewire_camera_interface fw_camera_inter;
 // to get the video data via gstreamer
 GstBus *bus;
 GstElement *pipeline, *source, *filter, *sink, *videotee, *appsink;
-
 //need to add queue elements for multithreading
 GstElement *sink_queue, *appsink_queue;
 //need to add queue pads
