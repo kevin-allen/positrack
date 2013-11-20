@@ -8,8 +8,16 @@ it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
-To install, you will need 
+Requirements:
 
+gtk2-devel
 gstreamer1-devel
 gstreamer1-plugins-base-devel
 libdc1394-devel
+comedilib-devel
+
+To install:
+autoreconf
+./configure
+make
+make install (as root)
