@@ -10,6 +10,6 @@ the Free Software Foundation, either version 3 of the License, or
 
 To install, you will need 
 
-gstreamer-devel
-gstreamer-plugins-base-devel.x86_64
+gstreamer1-devel
+gstreamer1-plugins-base-devel
 libdc1394-devel

@@ -37,9 +37,8 @@ File with declarations of the main structures and functions used in positrack
 #include <dc1394/dc1394.h> // to control the camera
 #include <gst/gst.h> // to use gstreamer
 #include <gdk/gdkx.h>  // for GDK_WINDOW_XID
-#include <gst/interfaces/xoverlay.h>
+#include <gst/video/videooverlay.h>
 #include <glib.h>
-#include <gst/app/gstappsink.h> //added for appsink
 #define _FILE_OFFSET_BITS 64 // to have files larger than 2GB
 #define NSEC_PER_SEC (1000000000) // The number of nsecs per sec
 
@@ -151,15 +150,15 @@ GMainLoop *loop; // for gstreamer
 
 //added 
 GstPadTemplate *videotee_src_pad_template; //object stores the template of the Request pads which act as source pads in Tee
-  GstPad *videotee_sink_pad, *videotee_appsink_pad; //declaration of request Pads themselves 
-  GstPad *sink_sink_pad, *appsink_sink_pad; //declaration of alwazs pads with which the request pads need to be linked
+GstPad *videotee_sink_pad, *videotee_appsink_pad; //declaration of request Pads themselves 
+GstPad *sink_sink_pad, *appsink_sink_pad; //declaration of alwazs pads with which the request pads need to be linked
 gint64 position;
-GstMessage msg;
+GstMessage *msg;
 GstSample *sample;
 GdkPixbuf *pixbuf;
 gboolean res;
 GstMapInfo map;
-GError *error=NULL;
+//GError *error=NULL;
 gint width, height;
 
 

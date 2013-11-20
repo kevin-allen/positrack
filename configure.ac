@@ -11,9 +11,13 @@ AM_PROG_CC_STDC
 AC_PROG_SED
 AM_PROG_CC_C_O
 AC_PROG_INSTALL 
-PKG_CHECK_MODULES([GSTREAMER], [gstreamer-0.10], [], []) 
-PKG_CHECK_MODULES([GSTREAMER_BASE], [gstreamer-base-0.10],[],[])
-PKG_CHECK_MODULES([GSTREAMER_INTERFACES], [gstreamer-interfaces-0.10],[],[])
+
+PKG_CHECK_MODULES([GSTREAMER], [gstreamer-1.0], [], []) 
+PKG_CHECK_MODULES([GSTREAMER_BASE], [gstreamer-base-1.0],[],[])
+PKG_CHECK_MODULES([GSTREAMER_PLUGINS_BASE], [gstreamer-plugins-base-1.0],[],[]) # not sure if there is an interface anymore
+
+
+
 PKG_CHECK_MODULES([GTK], [gtk+-2.0 >= 2.4.0])
 PKG_CHECK_MODULES([cairo], [cairo])
 AC_SEARCH_LIBS([clock_gettime],[rt])

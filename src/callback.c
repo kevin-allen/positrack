@@ -252,7 +252,9 @@ int build_gstreamer_pipeline()
   // set the sink of the video in the proper drawing area of the application
   GdkWindow *window = gtk_widget_get_window (widgets.videodrawingarea);
   guintptr window_handle = GDK_WINDOW_XID (window);
-  gst_x_overlay_set_window_handle(GST_X_OVERLAY (sink), window_handle);
+  //gst_x_overlay_set_window_handle(GST_X_OVERLAY (sink), window_handle);
+  gst_video_overlay_set_window_handle(GST_VIDEO_OVERLAY(sink), window_handle);
+  //gst_x_overlay_set_xwindow_id(GST_X_OVERLAY(sink), window_handle);
 
   // add the elements to the pipeline
   gst_bin_add_many (GST_BIN (pipeline), source, filter, sink, videotee, appsink, sink_queue, appsink_queue, NULL); 
@@ -341,11 +343,17 @@ int delete_gstreamer_pipeline()
 //function to register the video frames from appsink
 void snapshot ()
 {
-  position=1*GST_SECOND;
-
+  GError *error;
+  /*get the current position*/
+  if (!gst_element_query_position (pipeline, GST_FORMAT_TIME, &position))
+    {   g_printerr("could not query pipeline for position\n"); 
+      //insert exit statement
+    }
+  else
+    g_printerr("position %d", position,"ns\n"); 
+ 
   /* take snapshots until error or EOS*/
   bus=gst_element_get_bus (pipeline);
-
   msg=gst_bus_timed_pop_filtered (bus, GST_CLOCK_TIME_NONE, GST_MESSAGE_ERROR | GST_MESSAGE_EOS);
 
   while (!msg) //while error or EOS hasn't occured
