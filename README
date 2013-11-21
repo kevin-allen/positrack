@@ -17,6 +17,7 @@ libdc1394-devel
 comedilib-devel
 
 To install:
+
 autoreconf
 ./configure
 make
