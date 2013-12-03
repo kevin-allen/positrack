@@ -38,10 +38,13 @@ File with declarations of the main structures and functions used in positrack
 #include <gst/gst.h> // to use gstreamer
 #include <gdk/gdkx.h>  // for GDK_WINDOW_XID
 #include <gst/video/videooverlay.h>
+#include <gst/app/gstappsink.h> //added 28.11
+
 #include <glib.h>
 #define _FILE_OFFSET_BITS 64 // to have files larger than 2GB
 #define NSEC_PER_SEC (1000000000) // The number of nsecs per sec
 
+#define INTERVAL_BETWEEN_TRACKING_CALLS_MS 1000 //CHANGED FROM 10 ON 03.12, works down to 25ms fine
 #define COMEDI_INTERFACE_MAX_DEVICES 2
 #define TIMEOUT_FOR_CAPTURE_MS 20 // time before the timeout try to get a new frame
 #define FIREWIRE_CAMERA_INTERFACE_NUMBER_OF_FRAMES_IN_RING_BUFFER 10
@@ -53,6 +56,7 @@ File with declarations of the main structures and functions used in positrack
 #define DEBUG_IMAGE // to turn on debugging for the image processing
 
 #define CAPS "video/x-raw, format=RGB, width=160, pixel-aspect-ratio=1/1"
+
 
 
 /***********************************************************************************
@@ -79,8 +83,11 @@ struct all_widget widgets; //defines a structure named widgets of the all_widget
 
 struct tracking_interface
 {
-  int width;
-  int height;
+  int interval_between_tracking_calls_ms;
+  //int width;
+  gint width;
+  //int height;
+  gint height;
   int number_of_pixels;
   int number_frames_tracked;
   int luminance_threshold;
@@ -151,15 +158,18 @@ GMainLoop *loop; // for gstreamer
 GstPadTemplate *videotee_src_pad_template; //object stores the template of the Request pads which act as source pads in Tee
 GstPad *videotee_sink_pad, *videotee_appsink_pad; //declaration of request Pads themselves 
 GstPad *sink_sink_pad, *appsink_sink_pad; //declaration of alwazs pads with which the request pads need to be linked
-gint64 position;
+gint64 position; //26.11
 GstMessage *msg;
-GstSample *sample;
-GdkPixbuf *pixbuf;
-gboolean res;
-GstMapInfo map;
-//GError *error=NULL;
-gint width, height;
-
+GstSample *sample; //26.11
+GdkPixbuf *pixbuf;  //26.11
+gboolean res; //26.11
+GstMapInfo map; //26.11
+//GError *error=NULL; //26.11
+//gint width, height; //26.11
+GstBuffer *buffer; //26.11
+GstCaps *caps; //26.11
+GstStructure *s; //26.11
+ 
 
 
 GtkBuilder *builder; // to build the interface from glade
@@ -187,6 +197,7 @@ int build_gstreamer_pipeline();
 int delete_gstreamer_pipeline();
 
 //declare a function to register the video frames from appsink
+gboolean tracking(); 
 void snapshot ();
 
 
@@ -198,7 +209,7 @@ void snapshot ();
 struct timespec set_timespec_from_ms(double milisec);
 struct timespec diff(struct timespec* start, struct timespec* end);
 int microsecond_from_timespec(struct timespec* duration);
-
+/*clock_gettime(CLOCK_REALTIME, &tk.time_tracking_frame_start); */
 
 /****************************************
 defined in camera_interface.c

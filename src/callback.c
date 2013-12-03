@@ -131,6 +131,7 @@ int init_window()
   
   // show the main window
   gtk_widget_show (widgets.window);      
+  tr.interval_between_tracking_calls_ms = INTERVAL_BETWEEN_TRACKING_CALLS_MS;
   return 0;
 }
 
@@ -242,6 +243,7 @@ int build_gstreamer_pipeline()
     g_printerr("appsink_queue could not be created\n");
     return -1;
   }
+
   else g_printerr("appsink_queue successfully created\n");
 
   // set the filter to get right resolution and sampling rate
@@ -257,7 +259,7 @@ int build_gstreamer_pipeline()
   //gst_x_overlay_set_xwindow_id(GST_X_OVERLAY(sink), window_handle);
 
   // add the elements to the pipeline
-  gst_bin_add_many (GST_BIN (pipeline), source, filter, sink, videotee, appsink, sink_queue, appsink_queue, NULL); 
+  gst_bin_add_many (GST_BIN (pipeline), source, filter, videotee, sink, appsink, sink_queue, appsink_queue, NULL); 
 
   // Link all elements that can be automatically linked because they have "Always" pads 
 
@@ -282,9 +284,11 @@ int build_gstreamer_pipeline()
     } else g_printerr("Thread 3 linked\n");
   
   
-  videotee=NULL;
+  //26.11 videotee=NULL;
   // Manually link the Tee, which has "Request" pads 
-  videotee_src_pad_template = gst_element_class_get_pad_template (GST_ELEMENT_GET_CLASS (videotee), "src%d");
+  videotee_src_pad_template = gst_element_class_get_pad_template (GST_ELEMENT_GET_CLASS (videotee), "src_%u"); 
+  g_print("Got video_src_pad_template\n");
+
   //create src pad for sink (usual) branch of the videotee
   videotee_sink_pad=gst_element_request_pad (videotee, videotee_src_pad_template, NULL, NULL);
   g_print ("Obtained request pad %s for sink (usual) branch.\n", gst_pad_get_name (videotee_sink_pad)); 
@@ -306,15 +310,7 @@ int build_gstreamer_pipeline()
   bus = gst_pipeline_get_bus (GST_PIPELINE (pipeline));
   gst_bus_add_watch (bus,bus_call,loop);
 
-  /*Kevin suggested adding the sink pad release lines to delete pipeline function */
- //release the sink pads we have obtained
-  gst_object_unref (queue_sink_pad);
-  g_printerr("queue_sink_pad unreferenced successfully\n");
-  gst_object_unref (queue_appsink_pad);
-  g_printerr("queue_appsink_pad unreferenced successfully\n");
-
-
-  gst_object_unref (bus);
+    gst_object_unref (bus);
   widgets.video_running=0;
   return 0;
 }
@@ -322,11 +318,6 @@ int build_gstreamer_pipeline()
 
 int delete_gstreamer_pipeline()
 {
-  g_printerr("delete_gstreamer_pipeline\n");
-  gst_element_set_state (pipeline, GST_STATE_NULL); //setting the pipeline to the NULL state ensures freeing of the allocated resources
-  gst_object_unref(GST_OBJECT(pipeline)); //destroys the pipeline and its contents
-
-   
   //release the request tabs we have obtained
   gst_element_release_request_pad (videotee, videotee_sink_pad);
   g_printerr("videotee_sink_pad successfully released\n"); 
@@ -337,34 +328,62 @@ int delete_gstreamer_pipeline()
   gst_object_unref (videotee_appsink_pad);
   g_printerr("videotee_appsink_pad successfully unreferenced\n"); 
 
+  g_printerr("delete_gstreamer_pipeline\n");
+  gst_element_set_state (pipeline, GST_STATE_NULL); //setting the pipeline to the NULL state ensures freeing of the allocated resources
+  gst_object_unref(GST_OBJECT(pipeline)); //destroys the pipeline and its contents
+//release the sink pads we have obtained
+  gst_object_unref (queue_sink_pad);
+  g_printerr("queue_sink_pad unreferenced successfully\n");
+  gst_object_unref (queue_appsink_pad);
+  g_printerr("queue_appsink_pad unreferenced successfully\n");
+   
+  
+
 
   return 0;
 }
 
 //function to register the video frames from appsink
-void snapshot ()
-{
-  /* GError *error; */
-  /* /\*get the current position*\/ */
-  /* if (!gst_element_query_position (pipeline, GST_FORMAT_TIME, &position)) */
-  /*   {   g_printerr("could not query pipeline for position\n");  */
-  /*     //insert exit statement */
-  /*   } */
-  /* else */
-  /*   g_printerr("position %d", position,"ns\n");  */
+/* void snapshot ()  */
+/* { */
+/*   while (!gst_app_sink_is_eos(appsink)) */
+/* 	{ */
+/* 	  buffer=gst_app_sink_pull_sample(appsink); */
+/* 	  g_print ("%d\n",counter); */
+/* 	  gst_buffer_unref (buffer); */
+/* 	  counter++; */
+/* 	} */
+
+/* } */
+
+
+ 
+//GError *error; 
+   /*get the current position*/
+  
+  
+  /* if (!gst_element_query_position (pipeline, GST_FORMAT_TIME, &position))
+   {   g_print("could not query pipeline for position\n");  
+     return -1;
+   } 
+   else
+     {  g_print("position %" GST_TIME_FORMAT "\n", GST_TIME_ARGS (position)); 
+       return 0;
+       } */
+
  
   /* /\* take snapshots until error or EOS*\/ */
-  /* bus=gst_element_get_bus (pipeline); */
-  /* msg=gst_bus_timed_pop_filtered (bus, GST_CLOCK_TIME_NONE, GST_MESSAGE_ERROR | GST_MESSAGE_EOS); */
+  // bus=gst_element_get_bus (pipeline); 
+  // msg=gst_bus_timed_pop_filtered (bus, GST_CLOCK_TIME_NONE, GST_MESSAGE_ERROR | GST_MESSAGE_EOS); 
 
-  /* while (!msg) //while error or EOS hasn't occured */
-  /* { */
+  // while (msg != GST_MESSAGE_ERROR && msg != GST_MESSAGE_EOS)
+  //{ g_print("still running\n"); }
   /*   /\* seek to the a position in the file *\/ */
   /*   gst_element_seek_simple (pipeline, GST_FORMAT_TIME, */
   /*     GST_SEEK_FLAG_KEY_UNIT | GST_SEEK_FLAG_FLUSH, position); */
 
-  /*   /\* get the preroll buffer from appsink, this block untils appsink really */
-  /*    * prerolls *\/ */
+  /* get the preroll buffer from appsink, this block untils appsink really */
+  // * prerolls *\/ */
   /*   g_signal_emit_by_name (appsink, "pull-preroll", &sample, NULL); */
 
   /*   /\* if we have a buffer now, convert it to a pixbuf. It's possible that we */
@@ -403,9 +422,7 @@ void snapshot ()
   /* position=position+1*GST_SECOND;   */
   /* gst_message_unref (msg); */
   /* gst_object_unref (bus); */
-  
-}
-
+ 
 
 
 // start the video pipeline
@@ -416,8 +433,6 @@ void on_playvideomenuitem_activate(GtkObject *object, gpointer user_data)
       widgets.video_running=1;
       loop = g_main_loop_new (NULL, FALSE);
       gst_element_set_state (pipeline, GST_STATE_PLAYING);
-      //add function to analyze video frames from appsink
-      /**************************************************/
       g_main_loop_run (loop); // flow will stay here until the loop is quit
     }
 }
@@ -432,6 +447,7 @@ void on_stopvideomenuitem_activate(GtkObject *object, gpointer user_data)
 } 
 void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
 {
+  g_print("widgets.tracking_running=%d\n",widgets.tracking_running);
   if(widgets.video_running==0) // need to start video first, could we emit a signal to trigger it?
     {
       g_printerr("You need to start video to do tracking, from on_playtrackingmenuitem_activate()\n");
@@ -440,9 +456,14 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
   if(widgets.tracking_running==1)
     {
       g_printerr("Tracking already underway, from on_playtrackingmenuitem_activate()\n");
+      // start the ticking of a timer 
       return;
     }
+  tr.number_frames_tracked=0;
   widgets.tracking_running=1;
+  g_timeout_add(tr.interval_between_tracking_calls_ms,tracking,user_data);
+  
+
   g_printerr("leaving playtrackingmenuitem_activate, tracking_running: %d\n",widgets.tracking_running);
 }
 void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
@@ -450,13 +471,69 @@ void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
   int index;
   widgets.tracking_running=0;
   
+  // stop the ticking of a timer
+  
+
   // increament the file index
   index=gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widgets.trialnospinbutton));
   index++;
   gtk_spin_button_set_value(GTK_SPIN_BUTTON(widgets.trialnospinbutton),(gdouble)index);
   g_printerr("tracking_running: %d\n",widgets.tracking_running);
 }
+gboolean tracking()
+{
+  if(widgets.tracking_running==1)
+    {
+      // get a buffer
+      buffer=gst_app_sink_pull_sample(appsink); 
+                                       
+      // get information about the buffer
+      caps=gst_sample_get_caps(buffer);
+      if (!caps)
+      {
+	g_print ("could not get buffer format\n");
+	return FALSE;
+      }
+      s=gst_caps_get_structure(caps,0);
+      res = gst_structure_get_int (s, "width", &tr.width);
+      if (!res) {
+	g_print ("could not get buffer/frame width\n");
+	return FALSE;
+      }
+      else
+	g_print("Buffer/Frame width: %d\n", tr.width);
+	
 
+      res = gst_structure_get_int (s, "height", &tr.height);
+      if (!res) {
+	g_print ("could not get buffer/frame height\n");
+	return FALSE;
+      }
+      else
+	g_print("Buffer/Frame height: %d\n", tr.height);
+
+      tr.number_of_pixels=tr.height*tr.width;
+      g_print("Number of pixels per buffer/frame: %d\n", tr.number_of_pixels);
+
+      // print on the screen
+      tr.number_frames_tracked++;
+      g_print("frame number: %d\n",tr.number_frames_tracked);
+
+      //create a pixmap from each buffer
+      /* gst_buffer_map (buffer, &map, GST_MAP_READ); */
+      /* pixbuf = gdk_pixbuf_new_from_data (map.data,GDK_COLORSPACE_RGB, FALSE, 8, tr.width, tr.height,GST_ROUND_UP_4 (width * 3), NULL, NULL); */
+
+      //OPTIONAL//
+      //save the pixbuf
+
+      //unreference buffer
+      gst_buffer_unref (buffer);    
+ 
+      return TRUE;
+    }
+  else
+    return FALSE;
+}
 void on_aboutmenuitem_activate(GtkObject *object, gpointer user_data)
 {
   int response;
@@ -492,15 +569,6 @@ void on_directorytoolbutton_clicked(GtkObject *object, gpointer user_data)
  return; 
 }
 
-//declare a function to analyze the video frames from appsink
-void query_sink ()
-{
-
-
-
-
-
-}
 
 
 
@@ -677,35 +745,34 @@ void query_sink ()
 /*     return 1; */
 /* } */
 
-
-/* struct timespec set_timespec_from_ms(double milisec) */
-/* { // set the values in timespec structure */
-/*   struct timespec temp; */
-/*   time_t sec=(int)(milisec/1000); */
-/*   milisec=milisec-(sec*1000); */
-/*   temp.tv_sec=sec; */
-/*   temp.tv_nsec=milisec*1000000L; */
-/*   return temp; */
-/* } */
-/* struct timespec diff(struct timespec* start, struct timespec* end) */
-/* { */
-/*   // get the time difference between two times */
-/*   struct timespec temp; */
-/*   if ((end->tv_nsec-start->tv_nsec)<0) { */
-/*     temp.tv_sec = end->tv_sec-start->tv_sec-1; */
-/*     temp.tv_nsec = 1000000000+end->tv_nsec-start->tv_nsec; */
-/*   }  */
-/*   else { */
-/*     temp.tv_sec = end->tv_sec-start->tv_sec; */
-/*     temp.tv_nsec = end->tv_nsec-start->tv_nsec; */
-/*   } */
-/*   return temp; */
-/* } */
-/* int microsecond_from_timespec(struct timespec* duration) */
-/* { */
-/*   int ms; */
-/*   ms=duration->tv_nsec/1000; */
-/*   //  ms=ms+duration.tv_sec*1000; */
-/*   return ms; */
-/* } */
+struct timespec set_timespec_from_ms(double milisec)
+{ // set the values in timespec structure
+  struct timespec temp;
+  time_t sec=(int)(milisec/1000);
+  milisec=milisec-(sec*1000);
+  temp.tv_sec=sec;
+  temp.tv_nsec=milisec*1000000L;
+  return temp;
+}
+struct timespec diff(struct timespec* start, struct timespec* end)
+{
+  // get the time difference between two times
+  struct timespec temp;
+  if ((end->tv_nsec-start->tv_nsec)<0) {
+    temp.tv_sec = end->tv_sec-start->tv_sec-1;
+    temp.tv_nsec = 1000000000+end->tv_nsec-start->tv_nsec;
+  }
+  else {
+    temp.tv_sec = end->tv_sec-start->tv_sec;
+    temp.tv_nsec = end->tv_nsec-start->tv_nsec;
+  }
+  return temp;
+}
+int microsecond_from_timespec(struct timespec* duration)
+{
+  int ms;
+  ms=duration->tv_nsec/1000;
+  //  ms=ms+duration.tv_sec*1000;
+  return ms;
+}
 
