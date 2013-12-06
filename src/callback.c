@@ -309,8 +309,8 @@ int build_gstreamer_pipeline()
   // get a bus from the pipeline to listen to its messages
   bus = gst_pipeline_get_bus (GST_PIPELINE (pipeline));
   gst_bus_add_watch (bus,bus_call,loop);
-
-    gst_object_unref (bus);
+  
+  gst_object_unref (bus);
   widgets.video_running=0;
   return 0;
 }
@@ -331,98 +331,14 @@ int delete_gstreamer_pipeline()
   g_printerr("delete_gstreamer_pipeline\n");
   gst_element_set_state (pipeline, GST_STATE_NULL); //setting the pipeline to the NULL state ensures freeing of the allocated resources
   gst_object_unref(GST_OBJECT(pipeline)); //destroys the pipeline and its contents
-//release the sink pads we have obtained
+  //release the sink pads we have obtained
   gst_object_unref (queue_sink_pad);
   g_printerr("queue_sink_pad unreferenced successfully\n");
   gst_object_unref (queue_appsink_pad);
   g_printerr("queue_appsink_pad unreferenced successfully\n");
    
-  
-
-
   return 0;
 }
-
-//function to register the video frames from appsink
-/* void snapshot ()  */
-/* { */
-/*   while (!gst_app_sink_is_eos(appsink)) */
-/* 	{ */
-/* 	  buffer=gst_app_sink_pull_sample(appsink); */
-/* 	  g_print ("%d\n",counter); */
-/* 	  gst_buffer_unref (buffer); */
-/* 	  counter++; */
-/* 	} */
-
-/* } */
-
-
- 
-//GError *error; 
-   /*get the current position*/
-  
-  
-  /* if (!gst_element_query_position (pipeline, GST_FORMAT_TIME, &position))
-   {   g_print("could not query pipeline for position\n");  
-     return -1;
-   } 
-   else
-     {  g_print("position %" GST_TIME_FORMAT "\n", GST_TIME_ARGS (position)); 
-       return 0;
-       } */
-
- 
-  /* /\* take snapshots until error or EOS*\/ */
-  // bus=gst_element_get_bus (pipeline); 
-  // msg=gst_bus_timed_pop_filtered (bus, GST_CLOCK_TIME_NONE, GST_MESSAGE_ERROR | GST_MESSAGE_EOS); 
-
-  // while (msg != GST_MESSAGE_ERROR && msg != GST_MESSAGE_EOS)
-  //{ g_print("still running\n"); }
-  /*   /\* seek to the a position in the file *\/ */
-  /*   gst_element_seek_simple (pipeline, GST_FORMAT_TIME, */
-  /*     GST_SEEK_FLAG_KEY_UNIT | GST_SEEK_FLAG_FLUSH, position); */
-
-  /* get the preroll buffer from appsink, this block untils appsink really */
-  // * prerolls *\/ */
-  /*   g_signal_emit_by_name (appsink, "pull-preroll", &sample, NULL); */
-
-  /*   /\* if we have a buffer now, convert it to a pixbuf. It's possible that we */
-  /*    * don't have a buffer because we went EOS right away or had an error. *\/ */
-  /*   if (sample) { */
-  /*          GstBuffer *buffer; */
-  /*          GstCaps *caps; */
-  /*          GstStructure *s; */
-  /*   caps = gst_sample_get_caps (sample); */
-  /*   if (!caps) { */
-  /*     g_print ("could not get snapshot format\n"); */
-  /*     exit (-1); */
-  /*   } */
-  /*   s = gst_caps_get_structure (caps, 0); */
-  /*   /\* we need to get the final caps on the buffer to get the size *\/ */
-  /*   res = gst_structure_get_int (s, "width", &width); */
-  /*   res |= gst_structure_get_int (s, "height", &height); */
-  /*   if (!res) { */
-  /*     g_print ("could not get snapshot dimension\n"); */
-  /*     exit (-1); */
-  /*   } */
-  /*   /\* create pixmap from buffer and save, gstreamer video buffers have a stride */
-  /*    * that is rounded up to the nearest multiple of 4 *\/ */
-  /*   buffer = gst_sample_get_buffer (sample); */
-  /*   gst_buffer_map (buffer, &map, GST_MAP_READ); */
-  /*   pixbuf = gdk_pixbuf_new_from_data (map.data, */
-  /*       GDK_COLORSPACE_RGB, FALSE, 8, width, height, */
-  /*       GST_ROUND_UP_4 (width * 3), NULL, NULL); */
-  /*   /\* save the pixbuf *\/ */
-  /*   gdk_pixbuf_save (pixbuf, "snapshot%d",position,".png", "png", &error, NULL); */
-  /*   gst_buffer_unmap (buffer, &map); */
-  /* }  */
-  /* else { */
-  /*   g_print ("could not make snapshot\n"); */
-  /* } */
-  /* position=position+1*GST_SECOND;   */
-  /* gst_message_unref (msg); */
-  /* gst_object_unref (bus); */
- 
 
 
 // start the video pipeline
@@ -462,18 +378,13 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
   tr.number_frames_tracked=0;
   widgets.tracking_running=1;
   g_timeout_add(tr.interval_between_tracking_calls_ms,tracking,user_data);
-  
-
   g_printerr("leaving playtrackingmenuitem_activate, tracking_running: %d\n",widgets.tracking_running);
 }
 void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
 {
   int index;
-  widgets.tracking_running=0;
+  widgets.tracking_running=0; // this will stop timer by making tracking function to return FALSE
   
-  // stop the ticking of a timer
-  
-
   // increament the file index
   index=gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widgets.trialnospinbutton));
   index++;
@@ -488,21 +399,19 @@ gboolean tracking()
       sample=gst_app_sink_pull_sample(appsink); 
       // get a buffer from sample
       buffer=gst_sample_get_buffer(sample);
-                                             
-      // get information about the samples
-     
-      //caps
+      // get the caps of the sample
       tr.caps=gst_sample_get_caps(sample);
       if (!tr.caps)
       {
-      	g_print ("could not get buffer format\n");
+      	g_print ("could not get caps from sample\n");
       	return FALSE;
       }
       g_print("caps are %s\n" GST_PTR_FORMAT, gst_caps_to_string(tr.caps));
       
+      // get caps structure
       s=gst_caps_get_structure(tr.caps,0);
 
-      //width
+      //width from structure
       res = gst_structure_get_int (s, "width", &tr.width);
       if (!res) 
 	{
@@ -510,7 +419,7 @@ gboolean tracking()
 	  return FALSE;
 	}
 
-      //height
+      //height from structure
       res = gst_structure_get_int (s, "height", &tr.height); 
       if (!res) 
 	{
@@ -518,23 +427,16 @@ gboolean tracking()
 	  return FALSE;
 	}
 
-      g_print("Buffer/Frame height: %d\n", tr.height);
-
-      /* //pixel number */
+      //pixel number
       tr.number_of_pixels=tr.height*tr.width; 
-      g_print("Number of pixels per buffer/frame: %d\n", tr.number_of_pixels);
+      g_print("Frame height: %d, width: %d, pixels:%d\n", tr.height, tr.width,tr.number_of_pixels);
+
 
       //timestamp
       GST_TIME_TO_TIMESPEC(GST_BUFFER_TIMESTAMP(buffer), tr.timestamp_timespec);
       tr.timestamp=microsecond_from_timespec(&tr.timestamp_timespec);
-      g_print("timestamp: %d\n", tr.timestamp);
-      //g_print("timestamp: %" GST_TIME_FORMAT "\n", GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (buffer)) );
-
-      //duration
-      GST_TIME_TO_TIMESPEC(GST_BUFFER_DURATION(buffer), tr.timestamp_timespec);
-      tr.duration=microsecond_from_timespec(&tr.duration_timespec);
-      g_print("duration: %d\n", tr.duration);
-
+      g_print("timestamp: %d ms\n", tr.timestamp/1000);
+      
       //size
       tr.size=gst_buffer_get_size(buffer);
       g_print("buffer size: %d\n", tr.size);
@@ -604,181 +506,6 @@ void on_directorytoolbutton_clicked(GtkObject *object, gpointer user_data)
  return; 
 }
 
-
-
-
-/* void on_track_toggletoolbutton_toggled(GtkObject *object, gpointer user_data) */
-/* { */
-/*   fprintf(stderr,"on_track_toggletoolbutton_toggled\n"); */
-  
-/*   //callback to start the tracking process */
-/*   if(widgets.tracking_running==0) */
-/*     { */
-/*       if(widgets.video_running==0) */
-/* 	{ */
-/* 	  // start the timeout that will get the frames */
-/* 	  if((firewire_camera_interface_start_transmission(&fw_camera_inter))!=0) */
-/* 	    { */
-/* 	      fprintf(stderr,"in on_track_toggletoolbutton_toggled\n"); */
-/* 	      fprintf(stderr,"problem with firewire_camera_interface_start_transmission()\n"); */
-/* 	      return; */
-/* 	    } */
-/* 	  widgets.timeout_id=gtk_timeout_add(TIMEOUT_FOR_CAPTURE_MS,timeout_callback,NULL); */
-/* 	  widgets.tracking_running=1; */
-/* 	} */
-/*       else */
-/* 	{ */
-/* 	  // just set the flag */
-/* 	  widgets.tracking_running=1; */
-/* 	} */
-/*     } */
-/*   else */
-/*     { */
-/*       if(widgets.video_running==0) */
-/* 	{ */
-/* 	  gtk_timeout_remove(widgets.timeout_id); */
-/* 	  widgets.tracking_running=0; */
-/* 	  if((firewire_camera_interface_stop_transmission(&fw_camera_inter))!=0) */
-/* 	    { */
-/* 	      fprintf(stderr,"in on_track_toggletoolbutton_toggled\n"); */
-/* 	      fprintf(stderr,"problem with firewire_camera_interface_stop_transmission()\n"); */
-/* 	      return; */
-/* 	    } */
-/* 	  //firewire_camera_interface_save_rgb8_buffer_to_file(&fw_camera_inter, "ImageRGB.ppm"); */
-/* 	} */
-/*       else */
-/* 	{ */
-/* 	  widgets.tracking_running=0; */
-/* 	  // firewire_camera_interface_save_rgb8_buffer_to_file(&fw_camera_inter, "ImageRGB.ppm"); */
-/* 	} */
-/*     } */
-/* } */
-
-/* void on_play_toggletoolbutton_toggled(GtkObject *object, gpointer user_data) */
-/* { */
-/*   // calback to start or stop the video display */
-/*   if(widgets.video_running==0) */
-/*     { // start the timeout that will update the video */
-/*       if(widgets.tracking_running==0) */
-/* 	{ // need to start the timeout */
-/* 	  if((firewire_camera_interface_start_transmission(&fw_camera_inter))!=0) */
-/* 	    { */
-/* 	      fprintf(stderr,"in on_play_toggletoolbutton_toggled\n"); */
-/* 	      fprintf(stderr,"problem with firewire_camera_interface_start_transmission()\n"); */
-/* 	      return; */
-/* 	    } */
-/* 	  widgets.timeout_id=gtk_timeout_add(TIMEOUT_FOR_CAPTURE_MS,timeout_callback,NULL); */
-/* 	  widgets.video_running=1; */
-/* 	} */
-/*       else */
-/* 	{// timeout already run, set flag to update video */
-/* 	  widgets.video_running=1; */
-/* 	} */
-/*     } */
-/*   else */
-/*     { */
-/*       if(widgets.tracking_running==0) */
-/* 	{ */
-/* 	  // stop the timeout */
-/* 	  gtk_timeout_remove(widgets.timeout_id); */
-/* 	  widgets.video_running=0; */
-/* 	  if((firewire_camera_interface_stop_transmission(&fw_camera_inter))!=0) */
-/* 	    { */
-/* 	      fprintf(stderr,"in on_play_toggletoolbutton_toggled\n"); */
-/* 	      fprintf(stderr,"problem with firewire_camera_interface_stop_transmission()\n"); */
-/* 	      return; */
-/* 	    } */
-/* 	  firewire_camera_interface_save_rgb8_buffer_to_file(&fw_camera_inter, "ImageRGB.ppm"); */
-
-/* 	} */
-/*       else */
-/* 	{ */
-/* 	  // tracking is running, just change the video flag */
-/* 	  widgets.video_running=0; */
-/* 	  // firewire_camera_interface_save_rgb8_buffer_to_file(&fw_camera_inter, "ImageRGB.ppm"); */
-/* 	} */
-/*     } */
-/* } */
-
-/* void on_save_imagemenuitem_activate(GtkObject *object, gpointer user_data) */
-/* { */
-/*   fprintf(stderr,"on_save_imagemenuitme_activate\n"); */
-/* } */
-/* gint timeout_callback( gpointer data ) */
-/* { */
-  
-/*   // callback function to update the display and do the tracking */
-/*   // if video_running==1, then update the display */
-/*   // if tracking_running==1, then track the mouse */
- 
-/*   // first thing to do is to capture a video frame */
-/*   if((firewire_camera_interface_dequeue(&fw_camera_inter))!=0) */
-/*     { */
-/*       fprintf(stderr,"in timeout_callback\n"); */
-/*       fprintf(stderr,"problem with firewire_camera_interface_capture()\n"); */
-/*       return 1; */
-/*     } */
-/*   tk.time_last_frame=tk.time_current_frame; */
-/*   clock_gettime(CLOCK_REALTIME, &tk.time_current_frame); */
-/*   tk.duration_from_last_frame=diff(&tk.time_last_frame,&tk.time_current_frame); */
-/*   fprintf(stderr,"frame: %d, interval between frames %lf(ms)\n", tr.number_frames_tracked++, tk.duration_from_last_frame.tv_nsec/1000000.0); */
-
-/*   // transform the image from uyvy format to rgb */
-/*   clock_gettime(CLOCK_REALTIME, &tk.time_conversion_start); */
-/*   if((firewire_camera_interface_convert_to_RGB8(&fw_camera_inter))!=0) */
-/*     { */
-/*       fprintf(stderr,"in timeout_callback\n"); */
-/*       fprintf(stderr,"problem with firewire_camera_interface_convert_to_RGB8()\n"); */
-/*       return 1; */
-/*     } */
-/*     clock_gettime(CLOCK_REALTIME, &tk.time_conversion_end); */
-/*     tk.duration_conversion=diff(&tk.time_conversion_start,&tk.time_conversion_end); */
-/*     fprintf(stderr,"conversion time: %lf(ms)\n", tk.duration_conversion.tv_nsec/1000000.0); */
-
-/*  // free the buffer for new video data */
-/*     if((firewire_camera_interface_enqueue(&fw_camera_inter))!=0) */
-/*       { */
-/* 	fprintf(stderr,"in timeout_callback\n"); */
-/* 	fprintf(stderr,"problem with firewire_camera_interface_enqueue()\n"); */
-/* 	return 1; */
-/*       } */
-    
-
-/*     // get the lum array */
-/*     clock_gettime(CLOCK_REALTIME, &tk.time_lum_calculation_start); */
-/*     if((firewire_camera_interface_get_lum(&fw_camera_inter))!=0) */
-/*       { */
-/* 	fprintf(stderr,"in timeout_callback\n"); */
-/* 	fprintf(stderr,"problem with firewire_camera_interface_get_lum()\n"); */
-/* 	return 1; */
-/*       } */
-/*     clock_gettime(CLOCK_REALTIME, &tk.time_lum_calculation_end); */
-/*     tk.duration_lum_calculation=diff(&tk.time_lum_calculation_start,&tk.time_lum_calculation_end); */
-/*     fprintf(stderr,"lum calculation time: %lf(ms)\n", tk.duration_lum_calculation.tv_nsec/1000000.0); */
-
-/*     if(widgets.video_running==1) */
-/*       { */
-/* 	// display the frame on the window */
-	
-/*       } */
-
-/*     if(widgets.tracking_running==1) */
-/*       { */
-
-/* 	// find the mouse in the frame	 */
-/* 	clock_gettime(CLOCK_REALTIME, &tk.time_tracking_frame_start); */
-/* 	if((tracking_interface_tracking_rgb(&tr,fw_camera_inter.rgb_frame->image, fw_camera_inter.lum))!=0) */
-/* 	  { */
-/* 	    fprintf(stderr,"in timeout_callback\n"); */
-/* 	    fprintf(stderr,"problem with tracking_interface_tracking_rgb()\n"); */
-/* 	    return 1; */
-/* 	  } */
-/* 	clock_gettime(CLOCK_REALTIME, &tk.time_tracking_frame_end); */
-/* 	tk.duration_tracking_frame=diff(&tk.time_tracking_frame_start,&tk.time_tracking_frame_end); */
-/* 	fprintf(stderr,"tracking frame duration: %lf(ms)\n", tk.duration_tracking_frame.tv_nsec/1000000.0); */
-/*       } */
-/*     return 1; */
-/* } */
 
 struct timespec set_timespec_from_ms(double milisec)
 { // set the values in timespec structure
