@@ -44,7 +44,7 @@ File with declarations of the main structures and functions used in positrack
 #define _FILE_OFFSET_BITS 64 // to have files larger than 2GB
 #define NSEC_PER_SEC (1000000000) // The number of nsecs per sec
 
-#define INTERVAL_BETWEEN_TRACKING_CALLS_MS 1000 //CHANGED FROM 10 ON 03.12, works down to 25ms fine
+#define INTERVAL_BETWEEN_TRACKING_CALLS_MS 1000/30 //CHANGED FROM 10 ON 03.12, works down to 25ms fine
 #define COMEDI_INTERFACE_MAX_DEVICES 2
 #define TIMEOUT_FOR_CAPTURE_MS 20 // time before the timeout try to get a new frame
 #define FIREWIRE_CAMERA_INTERFACE_NUMBER_OF_FRAMES_IN_RING_BUFFER 10
@@ -88,12 +88,27 @@ struct tracking_interface
   gint width;
   //int height;
   gint height;
+
+  guint size;
+
+  //GstClockTime timestamp;
+  struct timespec timestamp_timespec;
+  int timestamp; //timestamp in nanoseconds
+
+  //GstClockTime duration;
+  struct timespec duration_timespec;
+  int duration; //timestamp in nanoseconds
+
+  GstCaps *caps; //allocated
+  guint offset;
+
   int number_of_pixels;
   int number_frames_tracked;
   int luminance_threshold;
   unsigned char* image; // pointer to the image coming from camera.
   int* lum; // pointer to the array containing the luminance of image.
   char* spot; // pointer to an array used in the detection of spots, to flag the pixels
+
 };
 struct tracking_interface tr;
 

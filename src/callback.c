@@ -484,49 +484,84 @@ gboolean tracking()
 {
   if(widgets.tracking_running==1)
     {
-      // get a buffer
-      buffer=gst_app_sink_pull_sample(appsink); 
-                                       
-      // get information about the buffer
-      caps=gst_sample_get_caps(buffer);
-      if (!caps)
+      // get a sample
+      sample=gst_app_sink_pull_sample(appsink); 
+      // get a buffer from sample
+      buffer=gst_sample_get_buffer(sample);
+                                             
+      // get information about the samples
+     
+      //caps
+      tr.caps=gst_sample_get_caps(sample);
+      if (!tr.caps)
       {
-	g_print ("could not get buffer format\n");
-	return FALSE;
+      	g_print ("could not get buffer format\n");
+      	return FALSE;
       }
-      s=gst_caps_get_structure(caps,0);
+      g_print("caps are %s\n" GST_PTR_FORMAT, gst_caps_to_string(tr.caps));
+      
+      s=gst_caps_get_structure(tr.caps,0);
+
+      //width
       res = gst_structure_get_int (s, "width", &tr.width);
-      if (!res) {
-	g_print ("could not get buffer/frame width\n");
-	return FALSE;
-      }
-      else
-	g_print("Buffer/Frame width: %d\n", tr.width);
-	
+      if (!res) 
+	{
+	  g_print ("could not get buffer/frame height\n");
+	  return FALSE;
+	}
 
-      res = gst_structure_get_int (s, "height", &tr.height);
-      if (!res) {
-	g_print ("could not get buffer/frame height\n");
-	return FALSE;
-      }
-      else
-	g_print("Buffer/Frame height: %d\n", tr.height);
+      //height
+      res = gst_structure_get_int (s, "height", &tr.height); 
+      if (!res) 
+	{
+	  g_print ("could not get buffer/frame height\n");
+	  return FALSE;
+	}
 
-      tr.number_of_pixels=tr.height*tr.width;
+      g_print("Buffer/Frame height: %d\n", tr.height);
+
+      /* //pixel number */
+      tr.number_of_pixels=tr.height*tr.width; 
       g_print("Number of pixels per buffer/frame: %d\n", tr.number_of_pixels);
 
+      //timestamp
+      GST_TIME_TO_TIMESPEC(GST_BUFFER_TIMESTAMP(buffer), tr.timestamp_timespec);
+      tr.timestamp=microsecond_from_timespec(&tr.timestamp_timespec);
+      g_print("timestamp: %d\n", tr.timestamp);
+      //g_print("timestamp: %" GST_TIME_FORMAT "\n", GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (buffer)) );
+
+      //duration
+      GST_TIME_TO_TIMESPEC(GST_BUFFER_DURATION(buffer), tr.timestamp_timespec);
+      tr.duration=microsecond_from_timespec(&tr.duration_timespec);
+      g_print("duration: %d\n", tr.duration);
+
+      //size
+      tr.size=gst_buffer_get_size(buffer);
+      g_print("buffer size: %d\n", tr.size);
+
+      //offset=frame number
+      tr.offset=GST_BUFFER_OFFSET(buffer);
+      g_print("real frame number: %d\n", tr.offset);
+      
       // print on the screen
       tr.number_frames_tracked++;
-      g_print("frame number: %d\n",tr.number_frames_tracked);
+      g_print("iteration counter: %d\n",tr.number_frames_tracked);
 
       //create a pixmap from each buffer
-      /* gst_buffer_map (buffer, &map, GST_MAP_READ); */
-      /* pixbuf = gdk_pixbuf_new_from_data (map.data,GDK_COLORSPACE_RGB, FALSE, 8, tr.width, tr.height,GST_ROUND_UP_4 (width * 3), NULL, NULL); */
+      gst_buffer_map (buffer, &map, GST_MAP_READ); 
+      pixbuf = gdk_pixbuf_new_from_data (map.data,
+					 GDK_COLORSPACE_RGB, FALSE, 8, 
+					 tr.width, tr.height,
+					 GST_ROUND_UP_4 (tr.width * 3), NULL, NULL);
 
       //OPTIONAL//
       //save the pixbuf
-
+      GError *error = NULL;
+      gdk_pixbuf_save (pixbuf, "snapshot.png", "png", &error, NULL);
+      gst_buffer_unmap (buffer, &map);
+      return FALSE;
       //unreference buffer
+      // gst_sample_unref(sample);
       gst_buffer_unref (buffer);    
  
       return TRUE;
