@@ -44,7 +44,7 @@ File with declarations of the main structures and functions used in positrack
 #define _FILE_OFFSET_BITS 64 // to have files larger than 2GB
 #define NSEC_PER_SEC (1000000000) // The number of nsecs per sec
 
-#define INTERVAL_BETWEEN_TRACKING_CALLS_MS 1000/30 //CHANGED FROM 10 ON 03.12, works down to 25ms fine
+#define INTERVAL_BETWEEN_TRACKING_CALLS_MS 100 //CHANGED FROM 10 ON 03.12, works down to 25ms fine
 #define COMEDI_INTERFACE_MAX_DEVICES 2
 #define TIMEOUT_FOR_CAPTURE_MS 20 // time before the timeout try to get a new frame
 #define FIREWIRE_CAMERA_INTERFACE_NUMBER_OF_FRAMES_IN_RING_BUFFER 10
@@ -55,7 +55,7 @@ File with declarations of the main structures and functions used in positrack
 #define DEBUG_TRACKING // to turn on debugging for the tracking
 #define DEBUG_IMAGE // to turn on debugging for the image processing
 
-#define CAPS "video/x-raw, format=RGB, width=160, pixel-aspect-ratio=1/1"
+//#define CAPS "video/x-raw, format=RGB, framerate=30/1 width=160, pixel-aspect-ratio=1/1"
 
 
 
@@ -97,11 +97,11 @@ struct tracking_interface
 
   //GstClockTime duration;
   struct timespec duration_timespec;
-  int duration; //timestamp in nanoseconds
+  int duration; //timestamp in nanoseconds 
 
-  GstCaps *caps; //allocated
   guint offset;
-
+  GstCaps *caps, *pad_caps;
+  GstPad *pad;
   int number_of_pixels;
   int number_frames_tracked;
   int luminance_threshold;
@@ -160,18 +160,19 @@ struct firewire_camera_interface fw_camera_inter;
 
 // to get the video data via gstreamer
 GstBus *bus;
-GstElement *pipeline, *source, *filter, *sink, *videotee, *appsink;
+GstElement *pipeline, *source, *filter, *sink, *videotee, *videoconvert, *videoscale, *appsink;
 //need to add queue elements for multithreading
 GstElement *sink_queue, *appsink_queue;
 //need to add queue pads
 GstPad *queue_sink_pad, *queue_appsink_pad;
+
 
 GstCaps *filtercaps; 
 GMainLoop *loop; // for gstreamer
 
 //added 
 GstPadTemplate *videotee_src_pad_template; //object stores the template of the Request pads which act as source pads in Tee
-GstPad *videotee_sink_pad, *videotee_appsink_pad; //declaration of request Pads themselves 
+GstPad *videotee_sink_pad, *videotee_appsink_pad, *videocovert_src_pad, *videotee_sink_pad; //declaration of request Pads themselves 
 GstPad *sink_sink_pad, *appsink_sink_pad; //declaration of alwazs pads with which the request pads need to be linked
 gint64 position; //26.11
 GstMessage *msg;
@@ -210,6 +211,7 @@ void on_aboutmenuitem_activate(GtkObject *object, gpointer user_data);
 void on_directorytoolbutton_clicked(GtkObject *object, gpointer user_data);
 int build_gstreamer_pipeline();
 int delete_gstreamer_pipeline();
+static void print_pad_capabilities (GstElement *element, gchar *pad_name);
 
 //declare a function to register the video frames from appsink
 gboolean tracking(); 

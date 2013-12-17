@@ -192,7 +192,29 @@ static gboolean bus_call (GstBus *bus, GstMessage *msg, gpointer data)
      }
    return TRUE;
  }
-
+static void print_pad_capabilities (GstElement *element, gchar *pad_name)
+{
+  pad = NULL;
+  pad_caps = NULL;
+   
+  /* Retrieve pad */
+  pad = gst_element_get_static_pad (element, pad_name);
+  if (!pad) {
+    g_printerr ("Could not retrieve pad '%s'\n", pad_name);
+    return;
+  }
+   
+  /* Retrieve negotiated caps (or acceptable caps if negotiation is not finished yet) */
+  pad_caps = gst_pad_get_negotiated_caps (pad);
+  if (!pad_caps)
+    pad_caps = gst_pad_get_caps_reffed (pad);
+   
+  /* Print and free */
+  g_print ("Caps for the %s pad:\n", pad_name);
+  print_caps (pad_caps, "      ");
+  gst_caps_unref (pad_caps);
+  gst_object_unref (pad);
+}
 
      
 int build_gstreamer_pipeline()
@@ -216,6 +238,24 @@ int build_gstreamer_pipeline()
     g_printerr("filter could not be created\n");
     return -1;
   }
+  
+  videoconvert = gst_element_factory_make ("videoconvert", "videoconvert");
+  if (videoconvert == NULL)
+    {  g_error ("Could not create 'videoconvert' element");
+      return -1;
+    }
+
+
+  /* ffmpegcolorspace = gst_element_factory_make ("ffmpegcolorspace", "ffmpegcolorspace"); */
+  /* if (ffmpegcolorspace == NULL) */
+  /*   {  g_error ("Could not create 'ffmpegcolorspace' element"); */
+  /*     return -1; */
+  /*   } */
+  videoscale = gst_element_factory_make ("videoscale", "videoscale");
+  if (videoscale == NULL)
+    {  g_error ("Could not create 'videoscale' element");
+      return -1;
+    }
   sink = gst_element_factory_make ("xvimagesink", "sink");
   if(!sink){
     g_printerr("sink could not be created\n");
@@ -246,9 +286,15 @@ int build_gstreamer_pipeline()
 
   else g_printerr("appsink_queue successfully created\n");
 
+  /* //define caps for appsink */
+  /* caps = gst_caps_new_simple ("video/x-raw", "format", G_TYPE_STRING, "RGB","width", G_TYPE_INT, 640,"height", G_TYPE_INT, 480,"framerate", GST_TYPE_FRACTION, 30, 1, NULL); */
+
   // set the filter to get right resolution and sampling rate
-  filtercaps = gst_caps_new_simple ("video/x-raw", "width", G_TYPE_INT, 640, "height", G_TYPE_INT, 480, "framerate", GST_TYPE_FRACTION, 30, 1, NULL);
+  filtercaps = gst_caps_new_simple ("video/x-raw", "format", G_TYPE_STRING, "YV12", "width", G_TYPE_INT, 640, "height", G_TYPE_INT, 480, "framerate", GST_TYPE_FRACTION, 30, 1, NULL);
   g_object_set (G_OBJECT (filter), "caps", filtercaps, NULL);
+
+  g_print("filtercaps are %s\n" GST_PTR_FORMAT, gst_caps_to_string(filtercaps));
+
   gst_caps_unref (filtercaps);
 
   // set the sink of the video in the proper drawing area of the application
@@ -259,11 +305,11 @@ int build_gstreamer_pipeline()
   //gst_x_overlay_set_xwindow_id(GST_X_OVERLAY(sink), window_handle);
 
   // add the elements to the pipeline
-  gst_bin_add_many (GST_BIN (pipeline), source, filter, videotee, sink, appsink, sink_queue, appsink_queue, NULL); 
+  gst_bin_add_many (GST_BIN (pipeline), source, videoscale, videoconvert, filter, videotee, sink, appsink, sink_queue, appsink_queue, NULL); 
 
   // Link all elements that can be automatically linked because they have "Always" pads 
 
-  if(gst_element_link_many(source, filter, videotee, NULL) != TRUE)
+  if(gst_element_link_many(source, videoscale, videoconvert, filter, videotee, NULL) != TRUE)
     {g_printerr("Could not link Thread 1\n");
       gst_object_unref (pipeline);
       return -1;
@@ -298,18 +344,26 @@ int build_gstreamer_pipeline()
   videotee_appsink_pad=gst_element_request_pad (videotee, videotee_src_pad_template, NULL, NULL);
   g_print ("Obtained request pad %s for appsink branch.\n", gst_pad_get_name (videotee_appsink_pad));
   queue_appsink_pad=gst_element_get_static_pad (appsink_queue,"sink");
-
+  
   //connect tee to the two branches and emit feedback
   if (gst_pad_link (videotee_sink_pad, queue_sink_pad) != GST_PAD_LINK_OK ||
     gst_pad_link (videotee_appsink_pad, queue_appsink_pad) != GST_PAD_LINK_OK) {
   g_printerr ("Tee could not be linked.\n");
   gst_object_unref (pipeline);
   return -1; }
+  
+  //print videoconvert pad caps
+  videoconvert_sink_pad=gst_element_request_pad (videoconvert, videoconvert_sink_pad_template, NULL, NULL);
+print_pad_capabilities (videoconvert, videoconvert_sink_pad);
+videotee_src_pad=gst_element_request_pad (videotee, videotee_src_pad_template, NULL, NULL);
+print_pad_capabilities (videotee, videotee_src_pad);
 
   // get a bus from the pipeline to listen to its messages
   bus = gst_pipeline_get_bus (GST_PIPELINE (pipeline));
   gst_bus_add_watch (bus,bus_call,loop);
   
+
+
   gst_object_unref (bus);
   widgets.video_running=0;
   return 0;
@@ -395,10 +449,12 @@ gboolean tracking()
 {
   if(widgets.tracking_running==1)
     {
+      
       // get a sample
       sample=gst_app_sink_pull_sample(appsink); 
       // get a buffer from sample
       buffer=gst_sample_get_buffer(sample);
+
       // get the caps of the sample
       tr.caps=gst_sample_get_caps(sample);
       if (!tr.caps)
@@ -449,21 +505,21 @@ gboolean tracking()
       tr.number_frames_tracked++;
       g_print("iteration counter: %d\n",tr.number_frames_tracked);
 
-      //create a pixmap from each buffer
-      gst_buffer_map (buffer, &map, GST_MAP_READ); 
-      pixbuf = gdk_pixbuf_new_from_data (map.data,
-					 GDK_COLORSPACE_RGB, FALSE, 8, 
-					 tr.width, tr.height,
-					 GST_ROUND_UP_4 (tr.width * 3), NULL, NULL);
+      /* //create a pixmap from each buffer */
+      /* gst_buffer_map (buffer, &map, GST_MAP_READ);  */
+      /* pixbuf = gdk_pixbuf_new_from_data (map.data, */
+      /* 					 GDK_COLORSPACE_RGB, FALSE, 8,  */
+      /* 					 tr.width, tr.height, */
+      /* 					 GST_ROUND_UP_4 (tr.width * 3), NULL, NULL); */
 
-      //OPTIONAL//
-      //save the pixbuf
-      GError *error = NULL;
-      gdk_pixbuf_save (pixbuf, "snapshot.png", "png", &error, NULL);
-      gst_buffer_unmap (buffer, &map);
-      return FALSE;
+      /* //OPTIONAL// */
+      /* //save the pixbuf */
+      /* GError *error = NULL; */
+      /* gdk_pixbuf_save (pixbuf, "snapshot.png", "png", &error, NULL); */
+      /* gst_buffer_unmap (buffer, &map); */
+      /* return FALSE; */
+      
       //unreference buffer
-      // gst_sample_unref(sample);
       gst_buffer_unref (buffer);    
  
       return TRUE;
