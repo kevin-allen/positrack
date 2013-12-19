@@ -194,9 +194,7 @@ static gboolean bus_call (GstBus *bus, GstMessage *msg, gpointer data)
  }
 static void print_pad_capabilities (GstElement *element, gchar *pad_name)
 {
-  pad = NULL;
-  pad_caps = NULL;
-   
+     
   /* Retrieve pad */
   pad = gst_element_get_static_pad (element, pad_name);
   if (!pad) {
@@ -352,11 +350,11 @@ int build_gstreamer_pipeline()
   gst_object_unref (pipeline);
   return -1; }
   
-  //print videoconvert pad caps
-  videoconvert_sink_pad=gst_element_request_pad (videoconvert, videoconvert_sink_pad_template, NULL, NULL);
-print_pad_capabilities (videoconvert, videoconvert_sink_pad);
-videotee_src_pad=gst_element_request_pad (videotee, videotee_src_pad_template, NULL, NULL);
-print_pad_capabilities (videotee, videotee_src_pad);
+  /* //print videoconvert pad caps */
+/*   videoconvert_src_pad=gst_element_get_static_pad (videoconvert, "src"); */
+/*   print_pad_capabilities (videoconvert, videoconvert_src_pad); */
+/* videotee_sink_pad=gst_element_get_static_pad (videotee, "sink"); */
+/* print_pad_capabilities (videotee, videotee_sink_pad); */
 
   // get a bus from the pipeline to listen to its messages
   bus = gst_pipeline_get_bus (GST_PIPELINE (pipeline));
