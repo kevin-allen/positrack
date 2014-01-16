@@ -511,19 +511,19 @@ gboolean tracking()
       tr.number_frames_tracked++;
       g_print("iteration counter: %d\n",tr.number_frames_tracked);
 
-      /* //create a pixmap from each buffer */
-      /* gst_buffer_map (buffer, &map, GST_MAP_READ);  */
-      /* pixbuf = gdk_pixbuf_new_from_data (map.data, */
-      /* 					 GDK_COLORSPACE_RGB, FALSE, 8,  */
-      /* 					 tr.width, tr.height, */
-      /* 					 GST_ROUND_UP_4 (tr.width * 3), NULL, NULL); */
+      //create a pixmap from each buffer
+      gst_buffer_map (buffer, &map, GST_MAP_READ);
+      pixbuf = gdk_pixbuf_new_from_data (map.data,
+      					 GDK_COLORSPACE_RGB, FALSE, 8,
+      					 tr.width, tr.height,
+      					 GST_ROUND_UP_4 (tr.width * 3), NULL, NULL);
 
-      /* //OPTIONAL// */
-      /* //save the pixbuf */
-      /* GError *error = NULL; */
-      /* gdk_pixbuf_save (pixbuf, "snapshot.png", "png", &error, NULL); */
-      /* gst_buffer_unmap (buffer, &map); */
-      /* return FALSE; */
+      //OPTIONAL//
+      //save the pixbuf
+      GError *error = NULL;
+      gdk_pixbuf_save (pixbuf, "snapshot.png", "png", &error, NULL);
+      gst_buffer_unmap (buffer, &map);
+      return FALSE;
       
       //unreference buffer
       gst_buffer_unref (buffer);    
