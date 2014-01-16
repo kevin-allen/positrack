@@ -236,24 +236,43 @@ int build_gstreamer_pipeline()
     g_printerr("filter could not be created\n");
     return -1;
   }
+
+
   
   videoconvert = gst_element_factory_make ("videoconvert", "videoconvert");
   if (videoconvert == NULL)
     {  g_error ("Could not create 'videoconvert' element");
       return -1;
     }
+  videoconvert_sink = gst_element_factory_make ("videoconvert", "videoconvert_sink");
+  if (videoconvert_sink == NULL)
+    {  g_error ("Could not create 'videoconvert_sink' element");
+      return -1;
+    }
+   videoconvert_appsink = gst_element_factory_make ("videoconvert", "videoconvert_appsink");
+  if (videoconvert_appsink == NULL)
+    {  g_error ("Could not create 'videoconvert_appsink' element");
+      return -1;
+    }
 
 
-  /* ffmpegcolorspace = gst_element_factory_make ("ffmpegcolorspace", "ffmpegcolorspace"); */
-  /* if (ffmpegcolorspace == NULL) */
-  /*   {  g_error ("Could not create 'ffmpegcolorspace' element"); */
-  /*     return -1; */
-  /*   } */
   videoscale = gst_element_factory_make ("videoscale", "videoscale");
   if (videoscale == NULL)
     {  g_error ("Could not create 'videoscale' element");
       return -1;
     }
+   videoscale_sink = gst_element_factory_make ("videoscale", "videoscale_sink");
+  if (videoscale_sink == NULL)
+    {  g_error ("Could not create 'videoscale_sink' element");
+      return -1;
+    }
+   videoscale_appsink = gst_element_factory_make ("videoscale", "videoscale_appsink");
+  if (videoscale_appsink == NULL)
+    {  g_error ("Could not create 'videoscale_appsink' element");
+      return -1;
+    }
+
+  
   sink = gst_element_factory_make ("xvimagesink", "sink");
   if(!sink){
     g_printerr("sink could not be created\n");
@@ -269,26 +288,21 @@ int build_gstreamer_pipeline()
     g_printerr("appsink could not be created\n");
     return -1;
   }
-  sink_queue=gst_element_factory_make("queue", "video_queue_1");
+  sink_queue=gst_element_factory_make("queue", "sink_queue");
   if(!sink_queue){
     g_printerr("sink_queue could not be created\n");
     return -1;
   }
-  else g_printerr("sink_queue successfully created\n");
-
-  appsink_queue=gst_element_factory_make("queue", "video_queue_2");
+ 
+  appsink_queue=gst_element_factory_make("queue", "appsink_queue");
   if(!appsink_queue){
     g_printerr("appsink_queue could not be created\n");
     return -1;
   }
 
-  else g_printerr("appsink_queue successfully created\n");
-
-  /* //define caps for appsink */
-  /* caps = gst_caps_new_simple ("video/x-raw", "format", G_TYPE_STRING, "RGB","width", G_TYPE_INT, 640,"height", G_TYPE_INT, 480,"framerate", GST_TYPE_FRACTION, 30, 1, NULL); */
 
   // set the filter to get right resolution and sampling rate
-  filtercaps = gst_caps_new_simple ("video/x-raw", "format", G_TYPE_STRING, "YV12", "width", G_TYPE_INT, 640, "height", G_TYPE_INT, 480, "framerate", GST_TYPE_FRACTION, 30, 1, NULL);
+  filtercaps = gst_caps_new_simple ("video/x-raw", "format", G_TYPE_STRING, "RGB", "width", G_TYPE_INT, 640, "height", G_TYPE_INT, 480, "framerate", GST_TYPE_FRACTION, 30, 1, NULL);
   g_object_set (G_OBJECT (filter), "caps", filtercaps, NULL);
 
   g_print("filtercaps are %s\n" GST_PTR_FORMAT, gst_caps_to_string(filtercaps));
@@ -303,25 +317,25 @@ int build_gstreamer_pipeline()
   //gst_x_overlay_set_xwindow_id(GST_X_OVERLAY(sink), window_handle);
 
   // add the elements to the pipeline
-  gst_bin_add_many (GST_BIN (pipeline), source, videoscale, videoconvert, filter, videotee, sink, appsink, sink_queue, appsink_queue, NULL); 
+  gst_bin_add_many (GST_BIN (pipeline), source, videoscale, videoscale_sink, videoscale_appsink, videoconvert, videoconvert_sink, videoconvert_appsink, filter, videotee, sink, appsink, sink_queue, appsink_queue, NULL); 
 
   // Link all elements that can be automatically linked because they have "Always" pads 
 
-  if(gst_element_link_many(source, videoscale, videoconvert, filter, videotee, NULL) != TRUE)
+  if(gst_element_link_many(source, videoconvert, videoscale, filter, videotee, NULL) != TRUE)
     {g_printerr("Could not link Thread 1\n");
       gst_object_unref (pipeline);
       return -1;
     }
   else g_printerr("Thread 1 linked\n");
   
-  if(gst_element_link_many (sink_queue, sink, NULL) != TRUE)
+  if(gst_element_link_many (sink_queue, videoconvert_sink, videoscale_sink, sink, NULL) != TRUE)
     {g_printerr("Could not link Thread 2\n");
       gst_object_unref (pipeline);
       return -1;
     }
   else g_printerr("Thread 2 linked\n");
   
-  if (gst_element_link_many (appsink_queue, appsink, NULL) != TRUE) 
+  if (gst_element_link_many (appsink_queue, videoconvert_appsink, videoscale_appsink, appsink, NULL) != TRUE) 
     {g_printerr("Could not link Thread 3\n");
       gst_object_unref (pipeline);
       return -1;
@@ -350,13 +364,7 @@ int build_gstreamer_pipeline()
   gst_object_unref (pipeline);
   return -1; }
   
-  /* //print videoconvert pad caps */
-/*   videoconvert_src_pad=gst_element_get_static_pad (videoconvert, "src"); */
-/*   print_pad_capabilities (videoconvert, videoconvert_src_pad); */
-/* videotee_sink_pad=gst_element_get_static_pad (videotee, "sink"); */
-/* print_pad_capabilities (videotee, videotee_sink_pad); */
-
-  // get a bus from the pipeline to listen to its messages
+   // get a bus from the pipeline to listen to its messages
   bus = gst_pipeline_get_bus (GST_PIPELINE (pipeline));
   gst_bus_add_watch (bus,bus_call,loop);
   
