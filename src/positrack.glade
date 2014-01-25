@@ -1,14 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
-  <requires lib="gtk+" version="2.24"/>
-  <!-- interface-naming-policy project-wide -->
+  <!-- interface-requires gtk+ 3.0 -->
   <object class="GtkAboutDialog" id="about_dialog">
     <property name="can_focus">False</property>
     <property name="border_width">5</property>
     <property name="type_hint">normal</property>
     <property name="program_name">positrack</property>
     <property name="version">0.01</property>
-    <property name="copyright" translatable="yes">Copyright @ 2013 Kevin Allen</property>
+    <property name="copyright" translatable="yes">Copyright @ 2013 Kevin Allen and Mihai Ancau</property>
     <property name="comments" translatable="yes">Position tracking software GNU/linux operating systems
 
 http://savannah.nongnu.org/projects/positrack/
@@ -21,12 +20,12 @@ You should have received a copy of the GNU General Public License along with gac
     <property name="authors">Kevin Allen</property>
     <property name="wrap_license">True</property>
     <child internal-child="vbox">
-      <object class="GtkVBox" id="dialog-vbox7">
+      <object class="GtkBox" id="dialog-vbox7">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
         <property name="spacing">2</property>
         <child internal-child="action_area">
-          <object class="GtkHButtonBox" id="dialog-action_area7">
+          <object class="GtkButtonBox" id="dialog-action_area7">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="layout_style">end</property>
@@ -50,11 +49,11 @@ You should have received a copy of the GNU General Public License along with gac
     <property name="title" translatable="yes">Recording preferences</property>
     <property name="type_hint">dialog</property>
     <child internal-child="vbox">
-      <object class="GtkVBox" id="dialog-vbox9">
+      <object class="GtkBox" id="dialog-vbox9">
         <property name="can_focus">False</property>
         <property name="spacing">2</property>
         <child internal-child="action_area">
-          <object class="GtkHButtonBox" id="dialog-action_area9">
+          <object class="GtkButtonBox" id="dialog-action_area9">
             <property name="can_focus">False</property>
             <property name="layout_style">end</property>
             <child>
@@ -63,7 +62,6 @@ You should have received a copy of the GNU General Public License along with gac
             <child>
               <object class="GtkButton" id="ok_recording_button">
                 <property name="label">gtk-ok</property>
-                <property name="use_action_appearance">False</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
@@ -98,6 +96,9 @@ You should have received a copy of the GNU General Public License along with gac
                     <property name="height_request">400</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
+                    <child internal-child="selection">
+                      <object class="GtkTreeSelection" id="treeview-selection1"/>
+                    </child>
                   </object>
                 </child>
               </object>
@@ -113,7 +114,6 @@ You should have received a copy of the GNU General Public License along with gac
                 <property name="can_focus">False</property>
                 <child>
                   <object class="GtkToolButton" id="add_toolbutton">
-                    <property name="use_action_appearance">False</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="label" translatable="yes">previous</property>
@@ -127,7 +127,6 @@ You should have received a copy of the GNU General Public License along with gac
                 </child>
                 <child>
                   <object class="GtkToolButton" id="remove_toolbutton">
-                    <property name="use_action_appearance">False</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="label" translatable="yes">previous</property>
@@ -177,7 +176,6 @@ You should have received a copy of the GNU General Public License along with gac
                 <child>
                   <object class="GtkButton" id="directory_button">
                     <property name="label">gtk-open</property>
-                    <property name="use_action_appearance">False</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
@@ -229,7 +227,6 @@ You should have received a copy of the GNU General Public License along with gac
             <property name="can_focus">False</property>
             <child>
               <object class="GtkMenuItem" id="filemenuitem">
-                <property name="use_action_appearance">False</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="label" translatable="yes">_File</property>
@@ -240,7 +237,6 @@ You should have received a copy of the GNU General Public License along with gac
                     <property name="can_focus">False</property>
                     <child>
                       <object class="GtkSeparatorMenuItem" id="separatormenuitem1">
-                        <property name="use_action_appearance">False</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                       </object>
@@ -248,7 +244,6 @@ You should have received a copy of the GNU General Public License along with gac
                     <child>
                       <object class="GtkImageMenuItem" id="quitmenuitem">
                         <property name="label">gtk-quit</property>
-                        <property name="use_action_appearance">False</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="use_underline">True</property>
@@ -262,7 +257,6 @@ You should have received a copy of the GNU General Public License along with gac
             </child>
             <child>
               <object class="GtkMenuItem" id="videomenuitem">
-                <property name="use_action_appearance">False</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="label" translatable="yes">_Video</property>
@@ -274,7 +268,6 @@ You should have received a copy of the GNU General Public License along with gac
                     <child>
                       <object class="GtkImageMenuItem" id="playvideomenuitem">
                         <property name="label">gtk-media-play</property>
-                        <property name="use_action_appearance">False</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="use_underline">True</property>
@@ -285,7 +278,6 @@ You should have received a copy of the GNU General Public License along with gac
                     <child>
                       <object class="GtkImageMenuItem" id="stopvideomenuitem">
                         <property name="label">gtk-media-stop</property>
-                        <property name="use_action_appearance">False</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="use_underline">True</property>
@@ -299,7 +291,6 @@ You should have received a copy of the GNU General Public License along with gac
             </child>
             <child>
               <object class="GtkMenuItem" id="trackingmenuitem">
-                <property name="use_action_appearance">False</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="label" translatable="yes">_Tracking</property>
@@ -311,7 +302,6 @@ You should have received a copy of the GNU General Public License along with gac
                     <child>
                       <object class="GtkImageMenuItem" id="playtrackingenuitem">
                         <property name="label">gtk-media-play</property>
-                        <property name="use_action_appearance">False</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="use_underline">True</property>
@@ -322,7 +312,6 @@ You should have received a copy of the GNU General Public License along with gac
                     <child>
                       <object class="GtkImageMenuItem" id="stoptrackingmenuitem">
                         <property name="label">gtk-media-stop</property>
-                        <property name="use_action_appearance">False</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="use_underline">True</property>
@@ -336,7 +325,6 @@ You should have received a copy of the GNU General Public License along with gac
             </child>
             <child>
               <object class="GtkMenuItem" id="menuitem4">
-                <property name="use_action_appearance">False</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="label" translatable="yes">_Help</property>
@@ -348,7 +336,6 @@ You should have received a copy of the GNU General Public License along with gac
                     <child>
                       <object class="GtkImageMenuItem" id="aboutmenuitem">
                         <property name="label">gtk-about</property>
-                        <property name="use_action_appearance">False</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="use_underline">True</property>
@@ -438,8 +425,6 @@ You should have received a copy of the GNU General Public License along with gac
                             <property name="text" translatable="yes">ka99-130313_</property>
                             <property name="primary_icon_activatable">False</property>
                             <property name="secondary_icon_activatable">False</property>
-                            <property name="primary_icon_sensitive">True</property>
-                            <property name="secondary_icon_sensitive">True</property>
                           </object>
                           <packing>
                             <property name="expand">True</property>
@@ -477,8 +462,6 @@ You should have received a copy of the GNU General Public License along with gac
                             <property name="invisible_char">●</property>
                             <property name="primary_icon_activatable">False</property>
                             <property name="secondary_icon_activatable">False</property>
-                            <property name="primary_icon_sensitive">True</property>
-                            <property name="secondary_icon_sensitive">True</property>
                             <property name="adjustment">trial_no_adjustment</property>
                           </object>
                           <packing>
@@ -521,10 +504,10 @@ You should have received a copy of the GNU General Public License along with gac
                     <child>
                       <object class="GtkRadioButton" id="singlewhiteradiobutton">
                         <property name="label" translatable="yes">Single white spot</property>
-                        <property name="use_action_appearance">False</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="receives_default">False</property>
+                        <property name="xalign">0.5</property>
                         <property name="active">True</property>
                         <property name="draw_indicator">True</property>
                       </object>
@@ -537,10 +520,10 @@ You should have received a copy of the GNU General Public License along with gac
                     <child>
                       <object class="GtkRadioButton" id="singleredradiobutton">
                         <property name="label" translatable="yes">Single red spot</property>
-                        <property name="use_action_appearance">False</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="receives_default">False</property>
+                        <property name="xalign">0.5</property>
                         <property name="draw_indicator">True</property>
                         <property name="group">singlewhiteradiobutton</property>
                       </object>
@@ -553,10 +536,10 @@ You should have received a copy of the GNU General Public License along with gac
                     <child>
                       <object class="GtkRadioButton" id="redbluegreenradiobutton">
                         <property name="label" translatable="yes">Red-blue-green spots</property>
-                        <property name="use_action_appearance">False</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="receives_default">False</property>
+                        <property name="xalign">0.5</property>
                         <property name="draw_indicator">True</property>
                         <property name="group">singlewhiteradiobutton</property>
                       </object>
@@ -632,7 +615,6 @@ You should have received a copy of the GNU General Public License along with gac
             <property name="can_focus">False</property>
             <child>
               <object class="GtkToolButton" id="directorytoolbutton">
-                <property name="use_action_appearance">False</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="label" translatable="yes">toolbutton1</property>
