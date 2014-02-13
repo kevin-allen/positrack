@@ -149,6 +149,15 @@ int main (int argc, char *argv[])
       g_printerr("Could not build the gstreamer pipeline with build_gstreamer_pipeline()\n");
       return -1;
     }
+  
+  if(tracking_interface_init(&tr)!=0)
+    {
+      g_printerr("Could not initiate tracking interface\n");
+      return -1;
+    }
+
+
+
 
   // wait for something to happen in the gui
   gtk_main ();

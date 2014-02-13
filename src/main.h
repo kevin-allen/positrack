@@ -49,10 +49,15 @@ File with declarations of the main structures and functions used in positrack
 #define TIMEOUT_FOR_CAPTURE_MS 20 // time before the timeout try to get a new frame
 #define FIREWIRE_CAMERA_INTERFACE_NUMBER_OF_FRAMES_IN_RING_BUFFER 10
 
-#define TRACKING_INTERFACE_LUMINANCE_THRESHOLD 100
+
 #define VIDEO_SOURCE_USB_WIDTH 640
 #define VIDEO_SOURCE_USB_HEIGHT 480
 #define VIDEO_SOURCE_USB_FRAMERATE 30
+
+#define TRACKING_INTERFACE_LUMINANCE_THRESHOLD 100
+#define TRACKING_INTERFACE_WIDTH 640
+#define TRACKING_INTERFACE_HEIGHT 480
+
 //#define DEBUG_ACQ // to turn on debugging output for the comedi card
 #define DEBUG_CAMERA // to turn on debugging for the camera
 #define DEBUG_TRACKING // to turn on debugging for the tracking
@@ -90,6 +95,7 @@ struct tracking_interface
   gint width;
   gint height;
   guint size;
+  int rowstride;
   struct timespec timestamp_timespec;
   int timestamp; //timestamp in nanoseconds
   struct timespec duration_timespec;
@@ -104,9 +110,12 @@ struct tracking_interface
   int* lum; // pointer to the array containing the luminance of image.
   char* spot; // pointer to an array used in the detection of spots, to flag the pixels
   GdkPixbuf *pixbuf; // image data  
-
 };
 struct tracking_interface tr;
+
+
+
+
 
 
 struct time_keeper
@@ -239,11 +248,12 @@ to get the data from firewire camera
 defined in tracking_interface.c
 to do the tracking
 ********************************/
-int tracking_interface_init(struct tracking_interface* tr, unsigned int width, unsigned int height);
+int tracking_interface_init(struct tracking_interface* tr);
 int tracking_interface_free(struct tracking_interface* tr);
+int tracking_interface_get_buffer(struct tracking_interface* tr);
+int tracking_interface_tracking_one_bright_spot(struct tracking_interface* tr);
 int tracking_interface_tracking_rgb(struct tracking_interface* tr, unsigned char *rgb_image,int* lum);
-int tracking_interface_hux_findspot(
-				    unsigned char *rgb,	/* image, range from 0 to 255, X-d (x,y,ncolours)array of pixel data */
+int tracking_interface_hux_findspot(unsigned char *rgb,	/* image, range from 0 to 255, X-d (x,y,ncolours)array of pixel data */
 				    int *lum,  /* 2-d (x,y) array with the luminance values */
 				    char *spot,	/* 2-d (x,y) spot definition array - should be initialised to "0" before the first call to this function, -1 are ignored*/
 				    int *spotindex, /* array to hold a list of indices to positive pixels in the spot array */
