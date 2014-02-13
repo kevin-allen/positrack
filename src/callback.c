@@ -126,8 +126,8 @@ int init_window()
   p=getpwnam(username);
   saving_directory_name=strcat(p->pw_dir,"/");
 
-  //widgets.video_running=0;
-  // widgets.tracking_running=0;
+  widgets.video_running=0;
+  widgets.tracking_running=0;
   
   // show the main window
   gtk_widget_show (widgets.window);      
@@ -139,6 +139,9 @@ int init_window()
 void on_quitmenuitem_activate(GtkObject *object, gpointer user_data)
 {
   g_printerr("on_quitmenuitem_activate\n");
+
+  // need to stop the tracking here
+  
   if(widgets.video_running==1)
     {
       g_main_loop_quit (loop);
@@ -160,7 +163,6 @@ void on_window_destroy (GtkObject *object, gpointer user_data)
     {
       g_main_loop_quit (loop);
       gst_element_set_state (pipeline, GST_STATE_PAUSED);
-      
     }
   widgets.video_running=0;
   delete_gstreamer_pipeline();
@@ -192,21 +194,19 @@ static gboolean bus_call (GstBus *bus, GstMessage *msg, gpointer data)
      }
    return TRUE;
  }
+
 static void print_pad_capabilities (GstElement *element, gchar *pad_name)
 {
-     
   /* Retrieve pad */
-  pad = gst_element_get_static_pad (element, pad_name);
+  pad = gst_element_get_static_pad(element, pad_name);
   if (!pad) {
     g_printerr ("Could not retrieve pad '%s'\n", pad_name);
     return;
   }
-   
   /* Retrieve negotiated caps (or acceptable caps if negotiation is not finished yet) */
   pad_caps = gst_pad_get_negotiated_caps (pad);
   if (!pad_caps)
     pad_caps = gst_pad_get_caps_reffed (pad);
-   
   /* Print and free */
   g_print ("Caps for the %s pad:\n", pad_name);
   print_caps (pad_caps, "      ");
@@ -226,7 +226,7 @@ int build_gstreamer_pipeline()
     g_printerr("Pipeline could not be created\n");
     return -1;
   }
-  source = gst_element_factory_make ("v4l2src", "file-source");
+  source = gst_element_factory_make("v4l2src", "file-source");
   if(!source){
     g_printerr("v4l2src could not be created\n");
     return -1;
@@ -236,9 +236,6 @@ int build_gstreamer_pipeline()
     g_printerr("filter could not be created\n");
     return -1;
   }
-
-
-  
   videoconvert = gst_element_factory_make ("videoconvert", "videoconvert");
   if (videoconvert == NULL)
     {  g_error ("Could not create 'videoconvert' element");
@@ -249,30 +246,26 @@ int build_gstreamer_pipeline()
     {  g_error ("Could not create 'videoconvert_sink' element");
       return -1;
     }
-   videoconvert_appsink = gst_element_factory_make ("videoconvert", "videoconvert_appsink");
+  videoconvert_appsink = gst_element_factory_make ("videoconvert", "videoconvert_appsink");
   if (videoconvert_appsink == NULL)
     {  g_error ("Could not create 'videoconvert_appsink' element");
       return -1;
     }
-
-
   videoscale = gst_element_factory_make ("videoscale", "videoscale");
   if (videoscale == NULL)
     {  g_error ("Could not create 'videoscale' element");
       return -1;
     }
-   videoscale_sink = gst_element_factory_make ("videoscale", "videoscale_sink");
+  videoscale_sink = gst_element_factory_make ("videoscale", "videoscale_sink");
   if (videoscale_sink == NULL)
     {  g_error ("Could not create 'videoscale_sink' element");
       return -1;
     }
-   videoscale_appsink = gst_element_factory_make ("videoscale", "videoscale_appsink");
+  videoscale_appsink = gst_element_factory_make ("videoscale", "videoscale_appsink");
   if (videoscale_appsink == NULL)
     {  g_error ("Could not create 'videoscale_appsink' element");
       return -1;
     }
-
-  
   sink = gst_element_factory_make ("xvimagesink", "sink");
   if(!sink){
     g_printerr("sink could not be created\n");
@@ -293,68 +286,61 @@ int build_gstreamer_pipeline()
     g_printerr("sink_queue could not be created\n");
     return -1;
   }
- 
   appsink_queue=gst_element_factory_make("queue", "appsink_queue");
   if(!appsink_queue){
     g_printerr("appsink_queue could not be created\n");
     return -1;
   }
 
-
   // set the filter to get right resolution and sampling rate
-  filtercaps = gst_caps_new_simple ("video/x-raw", "format", G_TYPE_STRING, "RGB", "width", G_TYPE_INT, 640, "height", G_TYPE_INT, 480, "framerate", GST_TYPE_FRACTION, 30, 1, NULL);
+  filtercaps = gst_caps_new_simple ("video/x-raw", "format", G_TYPE_STRING, "RGB", "width", G_TYPE_INT, VIDEO_SOURCE_USB_WIDTH, "height", G_TYPE_INT, VIDEO_SOURCE_USB_HEIGHT, "framerate", GST_TYPE_FRACTION, VIDEO_SOURCE_USB_FRAMERATE, 1, NULL);
+  if(!filtercaps){
+    g_printerr("filtercaps could not be created\n");
+    return -1;
+  }
   g_object_set (G_OBJECT (filter), "caps", filtercaps, NULL);
-
-  g_print("filtercaps are %s\n" GST_PTR_FORMAT, gst_caps_to_string(filtercaps));
-
+  //g_print("filtercaps are %s\n" GST_PTR_FORMAT, gst_caps_to_string(filtercaps));
   gst_caps_unref (filtercaps);
 
-  // set the sink of the video in the proper drawing area of the application
-  GdkWindow *window = gtk_widget_get_window (widgets.videodrawingarea);
-  guintptr window_handle = GDK_WINDOW_XID (window);
-  //gst_x_overlay_set_window_handle(GST_X_OVERLAY (sink), window_handle);
-  gst_video_overlay_set_window_handle(GST_VIDEO_OVERLAY(sink), window_handle);
-  //gst_x_overlay_set_xwindow_id(GST_X_OVERLAY(sink), window_handle);
 
+  // set the sink of the video in the proper drawing area of the application
+  GdkWindow *window = gtk_widget_get_window(widgets.videodrawingarea);
+  guintptr window_handle = GDK_WINDOW_XID(window);
+  gst_video_overlay_set_window_handle(GST_VIDEO_OVERLAY(sink), window_handle);
+  
   // add the elements to the pipeline
   gst_bin_add_many (GST_BIN (pipeline), source, videoscale, videoscale_sink, videoscale_appsink, videoconvert, videoconvert_sink, videoconvert_appsink, filter, videotee, sink, appsink, sink_queue, appsink_queue, NULL); 
 
   // Link all elements that can be automatically linked because they have "Always" pads 
-
   if(gst_element_link_many(source, videoconvert, videoscale, filter, videotee, NULL) != TRUE)
     {g_printerr("Could not link Thread 1\n");
       gst_object_unref (pipeline);
       return -1;
     }
-  else g_printerr("Thread 1 linked\n");
-  
   if(gst_element_link_many (sink_queue, videoconvert_sink, videoscale_sink, sink, NULL) != TRUE)
     {g_printerr("Could not link Thread 2\n");
       gst_object_unref (pipeline);
       return -1;
     }
-  else g_printerr("Thread 2 linked\n");
-  
   if (gst_element_link_many (appsink_queue, videoconvert_appsink, videoscale_appsink, appsink, NULL) != TRUE) 
     {g_printerr("Could not link Thread 3\n");
       gst_object_unref (pipeline);
       return -1;
-    } else g_printerr("Thread 3 linked\n");
+    } 
   
   
-  //26.11 videotee=NULL;
   // Manually link the Tee, which has "Request" pads 
   videotee_src_pad_template = gst_element_class_get_pad_template (GST_ELEMENT_GET_CLASS (videotee), "src_%u"); 
-  g_print("Got video_src_pad_template\n");
+  //g_print("Got video_src_pad_template\n");
 
   //create src pad for sink (usual) branch of the videotee
   videotee_sink_pad=gst_element_request_pad (videotee, videotee_src_pad_template, NULL, NULL);
-  g_print ("Obtained request pad %s for sink (usual) branch.\n", gst_pad_get_name (videotee_sink_pad)); 
+  //g_print ("Obtained request pad %s for sink (usual) branch.\n", gst_pad_get_name (videotee_sink_pad)); 
   queue_sink_pad=gst_element_get_static_pad (sink_queue,"sink");
 
   //create src pad for appsink branch of the videotee
   videotee_appsink_pad=gst_element_request_pad (videotee, videotee_src_pad_template, NULL, NULL);
-  g_print ("Obtained request pad %s for appsink branch.\n", gst_pad_get_name (videotee_appsink_pad));
+  //g_print ("Obtained request pad %s for appsink branch.\n", gst_pad_get_name (videotee_appsink_pad));
   queue_appsink_pad=gst_element_get_static_pad (appsink_queue,"sink");
   
   //connect tee to the two branches and emit feedback
@@ -368,10 +354,7 @@ int build_gstreamer_pipeline()
   bus = gst_pipeline_get_bus (GST_PIPELINE (pipeline));
   gst_bus_add_watch (bus,bus_call,loop);
   
-
-
   gst_object_unref (bus);
-  widgets.video_running=0;
   return 0;
 }
 
@@ -380,23 +363,13 @@ int delete_gstreamer_pipeline()
 {
   //release the request tabs we have obtained
   gst_element_release_request_pad (videotee, videotee_sink_pad);
-  g_printerr("videotee_sink_pad successfully released\n"); 
+  gst_object_unref (videotee_sink_pad);  
   gst_element_release_request_pad (videotee, videotee_appsink_pad);
-  g_printerr("videotee_appsink_pad successfully released\n"); 
-  gst_object_unref (videotee_sink_pad);
-  g_printerr("videotee_sink_pad successfully unreferenced\n"); 
   gst_object_unref (videotee_appsink_pad);
-  g_printerr("videotee_appsink_pad successfully unreferenced\n"); 
-
-  g_printerr("delete_gstreamer_pipeline\n");
   gst_element_set_state (pipeline, GST_STATE_NULL); //setting the pipeline to the NULL state ensures freeing of the allocated resources
   gst_object_unref(GST_OBJECT(pipeline)); //destroys the pipeline and its contents
-  //release the sink pads we have obtained
   gst_object_unref (queue_sink_pad);
-  g_printerr("queue_sink_pad unreferenced successfully\n");
   gst_object_unref (queue_appsink_pad);
-  g_printerr("queue_appsink_pad unreferenced successfully\n");
-   
   return 0;
 }
 
@@ -407,13 +380,15 @@ void on_playvideomenuitem_activate(GtkObject *object, gpointer user_data)
   if(widgets.video_running==0) // flag to know if already runs
     {
       widgets.video_running=1;
-      loop = g_main_loop_new (NULL, FALSE);
+      loop = g_main_loop_new (NULL, FALSE); // gstreamer loop
       gst_element_set_state (pipeline, GST_STATE_PLAYING);
       g_main_loop_run (loop); // flow will stay here until the loop is quit
     }
 }
 void on_stopvideomenuitem_activate(GtkObject *object, gpointer user_data)
 {
+  if(widgets.tracking_running==1)
+    widgets.tracking_running=0; // this will stop timer by making tracking function to return FALSE
   if(widgets.video_running==1)
     {
       gst_element_set_state (pipeline, GST_STATE_PAUSED);
@@ -423,7 +398,6 @@ void on_stopvideomenuitem_activate(GtkObject *object, gpointer user_data)
 } 
 void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
 {
-  g_print("widgets.tracking_running=%d\n",widgets.tracking_running);
   if(widgets.video_running==0) // need to start video first, could we emit a signal to trigger it?
     {
       g_printerr("You need to start video to do tracking, from on_playtrackingmenuitem_activate()\n");
@@ -432,13 +406,13 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
   if(widgets.tracking_running==1)
     {
       g_printerr("Tracking already underway, from on_playtrackingmenuitem_activate()\n");
-      // start the ticking of a timer 
       return;
     }
+  
   tr.number_frames_tracked=0;
   widgets.tracking_running=1;
-  g_timeout_add(tr.interval_between_tracking_calls_ms,tracking,user_data);
-  g_printerr("leaving playtrackingmenuitem_activate, tracking_running: %d\n",widgets.tracking_running);
+  g_timeout_add(tr.interval_between_tracking_calls_ms,tracking,user_data); // timer to trigger a tracking event
+  //g_printerr("leaving playtrackingmenuitem_activate, tracking_running: %d\n",widgets.tracking_running);
 }
 void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
 {
@@ -449,7 +423,7 @@ void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
   index=gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widgets.trialnospinbutton));
   index++;
   gtk_spin_button_set_value(GTK_SPIN_BUTTON(widgets.trialnospinbutton),(gdouble)index);
-  g_printerr("tracking_running: %d\n",widgets.tracking_running);
+  //g_printerr("tracking_running: %d\n",widgets.tracking_running);
 }
 gboolean tracking()
 {
@@ -468,7 +442,7 @@ gboolean tracking()
       	g_print ("could not get caps from sample\n");
       	return FALSE;
       }
-      g_print("caps are %s\n" GST_PTR_FORMAT, gst_caps_to_string(tr.caps));
+      // g_print("caps are %s\n" GST_PTR_FORMAT, gst_caps_to_string(tr.caps));
       
       // get caps structure
       s=gst_caps_get_structure(tr.caps,0);
@@ -491,47 +465,51 @@ gboolean tracking()
 
       //pixel number
       tr.number_of_pixels=tr.height*tr.width; 
-      g_print("Frame height: %d, width: %d, pixels:%d\n", tr.height, tr.width,tr.number_of_pixels);
+      //g_print("Frame height: %d, width: %d, pixels:%d\n", tr.height, tr.width,tr.number_of_pixels);
 
 
       //timestamp
       GST_TIME_TO_TIMESPEC(GST_BUFFER_TIMESTAMP(buffer), tr.timestamp_timespec);
       tr.timestamp=microsecond_from_timespec(&tr.timestamp_timespec);
-      g_print("timestamp: %d ms\n", tr.timestamp/1000);
+      //g_print("timestamp: %d ms\n", tr.timestamp/1000);
       
       //size
       tr.size=gst_buffer_get_size(buffer);
-      g_print("buffer size: %d\n", tr.size);
+      //      g_print("buffer size: %d\n", tr.size);
 
       //offset=frame number
       tr.offset=GST_BUFFER_OFFSET(buffer);
-      g_print("real frame number: %d\n", tr.offset);
+      //g_print("real frame number: %d\n", tr.offset);
       
       // print on the screen
       tr.number_frames_tracked++;
-      g_print("iteration counter: %d\n",tr.number_frames_tracked);
+      //g_print("iteration counter: %d\n",tr.number_frames_tracked);
 
       //create a pixmap from each buffer
       gst_buffer_map (buffer, &map, GST_MAP_READ);
-      pixbuf = gdk_pixbuf_new_from_data (map.data,
-      					 GDK_COLORSPACE_RGB, FALSE, 8,
-      					 tr.width, tr.height,
-      					 GST_ROUND_UP_4 (tr.width * 3), NULL, NULL);
+      tr.pixbuf = gdk_pixbuf_new_from_data (map.data,
+					    GDK_COLORSPACE_RGB, FALSE, 8,
+					    tr.width, tr.height,
+					    GST_ROUND_UP_4 (tr.width * 3), NULL, NULL);
 
-      //OPTIONAL//
-      //save the pixbuf
-      GError *error = NULL;
-      gdk_pixbuf_save (pixbuf, "snapshot.png", "png", &error, NULL);
-      gst_buffer_unmap (buffer, &map);
-      return FALSE;
       
+       
       //unreference buffer
+      gst_buffer_unmap (buffer, &map);
       gst_buffer_unref (buffer);    
  
       return TRUE;
     }
   else
-    return FALSE;
+    return FALSE; // returning false will stop the loop
+}
+
+void save_pixbuf_to_file()
+{
+  //save the pixbuf
+  //GError *error = NULL;
+  //gdk_pixbuf_save (pixbuf, "snapshot.png", "png", &error, NULL);
+  //gst_buffer_unmap (buffer, &map);
 }
 void on_aboutmenuitem_activate(GtkObject *object, gpointer user_data)
 {

@@ -44,12 +44,15 @@ File with declarations of the main structures and functions used in positrack
 #define _FILE_OFFSET_BITS 64 // to have files larger than 2GB
 #define NSEC_PER_SEC (1000000000) // The number of nsecs per sec
 
-#define INTERVAL_BETWEEN_TRACKING_CALLS_MS 100 //CHANGED FROM 10 ON 03.12, works down to 25ms fine
+#define INTERVAL_BETWEEN_TRACKING_CALLS_MS 50 //CHANGED FROM 10 ON 03.12, works down to 25ms fine
 #define COMEDI_INTERFACE_MAX_DEVICES 2
 #define TIMEOUT_FOR_CAPTURE_MS 20 // time before the timeout try to get a new frame
 #define FIREWIRE_CAMERA_INTERFACE_NUMBER_OF_FRAMES_IN_RING_BUFFER 10
 
 #define TRACKING_INTERFACE_LUMINANCE_THRESHOLD 100
+#define VIDEO_SOURCE_USB_WIDTH 640
+#define VIDEO_SOURCE_USB_HEIGHT 480
+#define VIDEO_SOURCE_USB_FRAMERATE 30
 //#define DEBUG_ACQ // to turn on debugging output for the comedi card
 #define DEBUG_CAMERA // to turn on debugging for the camera
 #define DEBUG_TRACKING // to turn on debugging for the tracking
@@ -84,21 +87,13 @@ struct all_widget widgets; //defines a structure named widgets of the all_widget
 struct tracking_interface
 {
   int interval_between_tracking_calls_ms;
-  //int width;
   gint width;
-  //int height;
   gint height;
-
   guint size;
-
-  //GstClockTime timestamp;
   struct timespec timestamp_timespec;
   int timestamp; //timestamp in nanoseconds
-
-  //GstClockTime duration;
   struct timespec duration_timespec;
   int duration; //timestamp in nanoseconds 
-
   guint offset;
   GstCaps *caps, *pad_caps;
   GstPad *pad;
@@ -108,6 +103,7 @@ struct tracking_interface
   unsigned char* image; // pointer to the image coming from camera.
   int* lum; // pointer to the array containing the luminance of image.
   char* spot; // pointer to an array used in the detection of spots, to flag the pixels
+  GdkPixbuf *pixbuf; // image data  
 
 };
 struct tracking_interface tr;
@@ -165,31 +161,23 @@ GstElement *pipeline, *source, *filter, *sink, *videotee, *videoconvert, *videoc
 GstElement *sink_queue, *appsink_queue;
 //need to add queue pads
 GstPad *queue_sink_pad, *queue_appsink_pad;
-
-
 GstCaps *filtercaps; 
 GMainLoop *loop; // for gstreamer
-
-//added 
 GstPadTemplate *videotee_src_pad_template; //object stores the template of the Request pads which act as source pads in Tee
 GstPad *videotee_sink_pad, *videotee_appsink_pad, *videocovert_src_pad, *videotee_sink_pad, *pad; //declaration of request Pads themselves 
 GstPad *sink_sink_pad, *appsink_sink_pad; //declaration of alwazs pads with which the request pads need to be linked
-gint64 position; //26.11
+gint64 position;
 GstMessage *msg;
-GstSample *sample; //26.11
-GdkPixbuf *pixbuf;  //26.11
-gboolean res; //26.11
-GstMapInfo map; //26.11
-//GError *error=NULL; //26.11
-//gint width, height; //26.11
-GstBuffer *buffer; //26.11
-GstCaps *caps, *pad_caps; //26.11
-GstStructure *s; //26.11
+GstSample *sample;
+gboolean res;
+GstMapInfo map; 
+GstBuffer *buffer;
+GstCaps *caps, *pad_caps;
+GstStructure *s;
  
 
 
 GtkBuilder *builder; // to build the interface from glade
-
 gchar* trk_file_name; // directory + file name from gui
 gchar* saving_directory_name; // 
 
@@ -211,6 +199,7 @@ void on_aboutmenuitem_activate(GtkObject *object, gpointer user_data);
 void on_directorytoolbutton_clicked(GtkObject *object, gpointer user_data);
 int build_gstreamer_pipeline();
 int delete_gstreamer_pipeline();
+void save_pixbuf_to_file();
 static void print_pad_capabilities (GstElement *element, gchar *pad_name);
 
 //declare a function to register the video frames from appsink
