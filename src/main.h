@@ -44,7 +44,7 @@ File with declarations of the main structures and functions used in positrack
 #define _FILE_OFFSET_BITS 64 // to have files larger than 2GB
 #define NSEC_PER_SEC (1000000000) // The number of nsecs per sec
 
-#define INTERVAL_BETWEEN_TRACKING_CALLS_MS 10 //
+#define INTERVAL_BETWEEN_TRACKING_CALLS_MS 50 //
 #define COMEDI_INTERFACE_MAX_DEVICES 2
 #define TIMEOUT_FOR_CAPTURE_MS 20 // time before the timeout try to get a new frame
 #define FIREWIRE_CAMERA_INTERFACE_NUMBER_OF_FRAMES_IN_RING_BUFFER 10
@@ -52,7 +52,7 @@ File with declarations of the main structures and functions used in positrack
 
 #define VIDEO_SOURCE_USB_WIDTH 640
 #define VIDEO_SOURCE_USB_HEIGHT 480
-#define VIDEO_SOURCE_USB_FRAMERATE 30
+#define VIDEO_SOURCE_USB_FRAMERATE 20
 
 #define TRACKING_INTERFACE_LUMINANCE_THRESHOLD 100
 #define TRACKING_INTERFACE_WIDTH 640
@@ -98,11 +98,11 @@ struct tracking_interface
   int n_channels;
   int rowstride;
   int num_spots_detection_calls;
-  struct timespec timestamp_timespec;
-  int timestamp; //timestamp in nanoseconds
-  struct timespec duration_timespec;
-  int duration; //timestamp in nanoseconds 
-  guint offset;
+  struct timespec current_buffer_time;
+  struct timespec previous_buffer_time;
+  struct timespec inter_buffer_duration;
+  guint current_buffer_offset;
+  guint previous_buffer_offset;
   GstCaps *caps, *pad_caps;
   GstPad *pad;
   int number_of_pixels;
@@ -117,6 +117,7 @@ struct tracking_interface
   GdkPixbuf *pixbuf; // image data
   guchar *pixels; // to point to the pixels of pixbuf
   guchar *p; // to point to a specific pixel
+  int already_waiting;
 };
 struct tracking_interface tr;
 
@@ -281,3 +282,4 @@ int tracking_interface_hux_findspot(unsigned char *rgb,	/* image, range from 0 t
 				    double *result ); /* should be of size 6 */
 				   
 double mean(int num_data, double* data, double invalid);
+void set_array_to_value (double* array, int array_size, double value);

@@ -284,7 +284,7 @@ int build_gstreamer_pipeline()
   }
 
   // limit the number of buffer that can be queued in the appsink element
-  gst_app_sink_set_max_buffers(appsink,100);
+  gst_app_sink_set_max_buffers((GstAppSink*)appsink,100);
   gst_app_sink_set_drop((GstAppSink*)appsink,TRUE);
 
   sink_queue=gst_element_factory_make("queue", "sink_queue");
