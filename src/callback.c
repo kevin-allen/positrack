@@ -301,7 +301,7 @@ int build_gstreamer_pipeline()
   }
   g_object_set(G_OBJECT (filter), "caps", filtercaps, NULL);
   //g_print("filtercaps are %s\n" GST_PTR_FORMAT, gst_caps_to_string(filtercaps));
-  gst_caps_unref (filtercaps);
+
 
 
   // set the sink of the video in the proper drawing area of the application
@@ -358,8 +358,11 @@ int build_gstreamer_pipeline()
   gst_bus_add_watch (bus,bus_call,loop);
   gst_object_unref (bus);
 
-
-  
+  // memory leak when pipeline is playing, about 5% computer memory after 20 sec, depend on video frame rate
+  gst_caps_unref (filtercaps);
+  gst_object_unref(queue_sink_pad);
+  gst_object_unref(queue_appsink_pad);
+  gst_object_unref(videotee_src_pad_template);
 
   return 0;
 }
@@ -368,14 +371,10 @@ int build_gstreamer_pipeline()
 int delete_gstreamer_pipeline()
 {
   //release the request tabs we have obtained
-  gst_element_release_request_pad (videotee, videotee_sink_pad);
-  gst_object_unref (videotee_sink_pad);  
-  gst_element_release_request_pad (videotee, videotee_appsink_pad);
-  gst_object_unref (videotee_appsink_pad);
   gst_element_set_state (pipeline, GST_STATE_NULL); //setting the pipeline to the NULL state ensures freeing of the allocated resources
   gst_object_unref(GST_OBJECT(pipeline)); //destroys the pipeline and its contents
-  gst_object_unref (queue_sink_pad);
-  gst_object_unref (queue_appsink_pad);
+  gst_element_release_request_pad (videotee, videotee_sink_pad); // causes warning if videotee_sink_pad is already unref
+  gst_element_release_request_pad (videotee, videotee_appsink_pad); // causes warning if ...
   return 0;
 }
 

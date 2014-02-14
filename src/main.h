@@ -181,7 +181,6 @@ GstCaps *filtercaps;
 GMainLoop *loop; // for gstreamer
 GstPadTemplate *videotee_src_pad_template; //object stores the template of the Request pads which act as source pads in Tee
 GstPad *videotee_sink_pad, *videotee_appsink_pad, *videocovert_src_pad, *videotee_sink_pad, *pad; //declaration of request Pads themselves 
-GstPad *sink_sink_pad, *appsink_sink_pad; //declaration of alwazs pads with which the request pads need to be linked
 gint64 position;
 GstMessage *msg;
 GstSample *sample;

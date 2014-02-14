@@ -160,6 +160,10 @@ int tracking_interface_get_buffer(struct tracking_interface* tr)
   // free the buffer
   gst_buffer_unmap (buffer, &map);
   gst_buffer_unref (buffer);
+
+
+
+
   return 0;
 }
 int tracking_interface_free_buffer(struct tracking_interface* tr)
