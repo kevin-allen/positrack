@@ -14,6 +14,8 @@ int tracking_interface_init(struct tracking_interface* tr)
   tr->height=TRACKING_INTERFACE_HEIGHT;
   tr->number_of_pixels=tr->width*tr->height;
   tr->max_number_spots=TRACKING_INTERFACE_MAX_NUMBER_SPOTS;
+  tr->luminance_threshold=TRACKING_INTERFACE_LUMINANCE_THRESHOLD;
+
   if((tr->lum=malloc(sizeof(double)*tr->width*tr->height))==NULL)
     {
       fprintf(stderr, "problem allocating memory for tr->lum\n");
@@ -363,13 +365,22 @@ int tracking_interface_find_spots_recursive(struct tracking_interface* tr)
 
   // set the spot array to 0
   set_array_to_value (tr->spot,tr->number_of_pixels,0); // set spot array to 0  
-  
-  
-  // while(tr->number_spots<tr->max_number_spots&&find_positive_luminance_pixel(tr->lum,tr->width,tr->height,tr->spot,tr->positive_pixels_x,tr->positive_pixels_y,tr->number_positive_pixels))
+    
+  // while(tr->number_spots<tr->max_number_spots&&find_positive_luminance_pixel(tr->lum,tr->width,tr->height,tr->spot,tr->positive_pixels_x,tr->positive_pixels_y,tr->number_positive_pixels,tr->luminance_threshold))
   // {
-      // find_an_adjacent_positive_pixel(tr->lum,tr->width,tr->height,tr->spot,tr->positive_pixels_x,tr->positive_pixels_y,tr->number_positive_pixels);
-      
+      // find_an_adjacent_positive_pixel(tr->lum,tr->width,tr->height,tr->spot,tr->positive_pixels_x,tr->positive_pixels_y,tr->number_positive_pixels,tr->luminance_threshold);
   // }
+
+  // for each spot we need
+  // mean x 
+  /*     Peakx[i] = Results[0]; */
+  /*     Peaky[i] = Results[1]; */
+  /*     Meanx[i] = Results[2]; */
+  /*     Meany[i] = Results[3]; */
+  /*     MeanRed[i] = Results[4]; */
+  /*     MeanGreen[i] = Results[5]; */
+  /*     MeanBlue[i] = Results[6]; */
+  /*     NumberPixels[i] = Results[7]; */
 }
 double mean(int num_data, double* data, double invalid)
 {

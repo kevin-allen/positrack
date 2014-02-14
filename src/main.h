@@ -54,7 +54,7 @@ File with declarations of the main structures and functions used in positrack
 #define VIDEO_SOURCE_USB_HEIGHT 480
 #define VIDEO_SOURCE_USB_FRAMERATE 20
 
-#define TRACKING_INTERFACE_LUMINANCE_THRESHOLD 100
+#define TRACKING_INTERFACE_LUMINANCE_THRESHOLD 130
 #define TRACKING_INTERFACE_WIDTH 640
 #define TRACKING_INTERFACE_HEIGHT 480
 #define TRACKING_INTERFACE_MAX_NUMBER_SPOTS 5
@@ -108,7 +108,7 @@ struct tracking_interface
   GstPad *pad;
   int number_of_pixels;
   int number_frames_tracked;
-  int luminance_threshold;
+  double luminance_threshold;
   double mean_luminance;
   double mean_red;
   double mean_blue;
