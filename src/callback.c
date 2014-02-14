@@ -299,7 +299,7 @@ int build_gstreamer_pipeline()
     g_printerr("filtercaps could not be created\n");
     return -1;
   }
-  g_object_set (G_OBJECT (filter), "caps", filtercaps, NULL);
+  g_object_set(G_OBJECT (filter), "caps", filtercaps, NULL);
   //g_print("filtercaps are %s\n" GST_PTR_FORMAT, gst_caps_to_string(filtercaps));
   gst_caps_unref (filtercaps);
 
@@ -346,16 +346,21 @@ int build_gstreamer_pipeline()
   
   //connect tee to the two branches and emit feedback
   if (gst_pad_link (videotee_sink_pad, queue_sink_pad) != GST_PAD_LINK_OK ||
-    gst_pad_link (videotee_appsink_pad, queue_appsink_pad) != GST_PAD_LINK_OK) {
-  g_printerr ("Tee could not be linked.\n");
-  gst_object_unref (pipeline);
-  return -1; }
+      gst_pad_link (videotee_appsink_pad, queue_appsink_pad) != GST_PAD_LINK_OK) 
+    {
+      g_printerr ("Tee could not be linked.\n");
+      gst_object_unref (pipeline);
+      return -1; 
+    }
   
-   // get a bus from the pipeline to listen to its messages
+  // get a bus from the pipeline to listen to its messages
   bus = gst_pipeline_get_bus (GST_PIPELINE (pipeline));
   gst_bus_add_watch (bus,bus_call,loop);
-  
   gst_object_unref (bus);
+
+
+  
+
   return 0;
 }
 
@@ -427,27 +432,6 @@ void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
   //g_printerr("tracking_running: %d\n",widgets.tracking_running);
 }
 
-gboolean tracking()
-{
-  if(widgets.tracking_running==1)
-    {
-      if(tracking_interface_get_buffer(&tr)!=0)
-	{
-	  g_printerr("tracking(), tracking_interface_get_buffer() did not return 0\n");
-	  return FALSE;
-	}
-      
-      // depending on tracking type 
-      tracking_interface_tracking_one_bright_spot(&tr);
-      
-
-
-      
-      return TRUE;
-    }
-  else
-    return FALSE; // returning false will stop the loop
-}
 
 void save_pixbuf_to_file()
 {
@@ -522,231 +506,3 @@ int microsecond_from_timespec(struct timespec* duration)
   return ms;
 }
 
-int tracking_interface_init(struct tracking_interface* tr)
-{
-  tr->width=TRACKING_INTERFACE_WIDTH;
-  tr->height=TRACKING_INTERFACE_HEIGHT;
-  
-  return 0;
-}
-int tracking_interface_free(struct tracking_interface* tr)
-{
-  return 0;
-}
-int tracking_interface_get_buffer(struct tracking_interface* tr)
-{
-  
-  int current_height, current_width;
-    
-  // get a sample
-  sample=gst_app_sink_pull_sample(appsink); 
-  // get a buffer from sample
-  buffer=gst_sample_get_buffer(sample);
-  // get the caps of the sample
-  tr->caps=gst_sample_get_caps(sample);
-  if (!tr->caps)
-    {
-      g_printerr("could not get caps from sample\n");
-      return FALSE;
-    }
-  // g_print("caps are %s\n" GST_PTR_FORMAT, gst_caps_to_string(tr->caps));
-  
-  // get caps structure
-  s=gst_caps_get_structure(tr->caps,0);
-  
-  //width from structure
-  res = gst_structure_get_int (s, "width", &current_width);
-  if (!res) 
-    {
-      g_printerr("could not get buffer/frame height\n");
-      return FALSE;
-    }
-
-  if(current_width!=tr->width)
-    {
-      g_printerr("current_width!=tr->width\n%d, %d",current_width,tr->width);
-      return FALSE;
-    }
-
-  //height from structure
-  res = gst_structure_get_int (s, "height", &current_height); 
-  if (!res) 
-    {
-      g_printerr("could not get buffer/frame height\n");
-      return FALSE;
-    }
-  if(current_height!=tr->height)
-    {
-      g_printerr("current_height!=tr->height\n");
-      return FALSE;
-    }
-  
-  
-  //timestamp
-  GST_TIME_TO_TIMESPEC(GST_BUFFER_TIMESTAMP(buffer), tr->timestamp_timespec);
-  tr->timestamp=microsecond_from_timespec(&tr->timestamp_timespec);
-  //g_print("timestamp: %d ms\n", tr->timestamp/1000);
-  
-   
-  //offset=frame number
-  tr->offset=GST_BUFFER_OFFSET(buffer);
-  
-  if(tr->offset!=tr->number_frames_tracked)
-    {
-      g_printerr("tr->offset!=number_frames_tracked\n");
-      return FALSE;
-    }
-  
-  tr->number_frames_tracked++;
-  
-  
-  //create a pixmap from each buffer
-  gst_buffer_map (buffer, &map, GST_MAP_READ);
-  tr->pixbuf = gdk_pixbuf_new_from_data (map.data,
-					GDK_COLORSPACE_RGB, FALSE, 8,
-					tr->width, tr->height,
-					GST_ROUND_UP_4 (tr->width * 3), NULL, NULL);
-  //unreference buffer
-  gst_buffer_unmap (buffer, &map);
-  gst_buffer_unref (buffer);    
-  return 0;
-}
-int tracking_interface_tracking_one_bright_spot(struct tracking_interface* tr)
-{
-
-  // the data are in tr->pixbuf
-
-  
-  /* //1. create an array with the luminance for each pixel */
-  /* int j = 0;  // j is an index to access the data, that takes 5.5 ms */
-  /* for (int i = 0; i < mNumberPixelsFrame; i++) */
-  /*   { */
-  /*     j = mFrameDepth * i; */
-  /*     pPixelLuminance[i] = mpPixelBuffer[j] + mpPixelBuffer[j+1] + mpPixelBuffer[j+2]; */
-  /*   } */
-  
-  /* //2. initialize the spot array to 0, which is the size of the x and y dimension of the frame */
-  /* // check if automatic initi at 0, that takes 5.5 ms */
-  /* for (int i = 0; i < mNumberPixelsFrame; i++) */
-  /*   { */
-  /*     pSpot[i] = 0; */
-  /*   } */
-  
-  /* // define a luminance treshold */
-  /* int LuminanceTreshold = 100; // that was 130 */
-  
-  /* // 3. find the brigth spots.  */
-  /* // the hux_findspot returns a bright spot each time and  */
-  /* // save characteristics in the array Results */
-  /* // returns -2 or -1 if no spot is found */
-  
-  /* for (int i = 0; i < NumberCallsHux; i++) */
-  /*   { */
-  /*     hux_findspot( */
-  /* 		   mpPixelBuffer,	// 3-d (x,y,colours) colours pixel array  */
-  /* 		   pPixelLuminance, */
-  /* 		   pSpot,	// 2-d (x,y) spot definition array - should be initialised to "0" to start, -1 to ignore  */
-  /* 		   mpPositivePix, */
-  /* 		   LuminanceTreshold,	// luminance threshold for inclusion in spot  */
-  /* 		   mFrameWidth,	// total width of pixel array  */
-  /* 		   mFrameHeight,	// total height of pixel array  */
-  /* 		   mFrameDepth,	// total height of pixel array (number of colours)  */
-  /* 		   mTrackingRectangle.left, // search box for spots, range 0 to xlimit-1 or ylimit-1  */
-  /* 		   mTrackingRectangle.top,  */
-  /* 		   mTrackingRectangle.right,  */
-  /* 		   mTrackingRectangle.bottom,  */
-  /* 		   2, // red */
-  /* 		   1, // green */
-  /* 		   0, // blue   */
-  /* 		   Results */
-  /* 		   ); */
-      
-  /*     Peakx[i] = Results[0]; */
-  /*     Peaky[i] = Results[1]; */
-  /*     Meanx[i] = Results[2]; */
-  /*     Meany[i] = Results[3]; */
-  /*     MeanRed[i] = Results[4]; */
-  /*     MeanGreen[i] = Results[5]; */
-  /*     MeanBlue[i] = Results[6]; */
-  /*     NumberPixels[i] = Results[7]; */
-  /*   } */
-  /* // 4. Find the largest spot out of the list of spots we have in this frame */
-  
-  /* double Score = 0; */
-  /* double MaxScore = 0; */
-  /* int SpotIndex = -1;  // to access the arrays with the data (Peakx[] etc..) */
-  
-  /* // the largest spot is the one with the more pixels, */
-  /* // it needs to be more than 10 pixels */
-  /* MaxScore = -1; */
-  /* for (int i = 0; i < NumberCallsHux; i++) */
-  /*   { */
-  /*     if ((MeanRed[i] != -1) && (MeanRed[i] != -2)) */
-  /* 	{ */
-  /* 	  Score = NumberPixels[i]; */
-  /* 	  if ((Score > MaxScore) && (NumberPixels[i] > 10)) */
-  /* 	    { */
-  /* 	      MaxScore = Score; */
-  /* 	      SpotIndex = i; */
-  /* 	    } */
-  /* 	} */
-  /*   } */
-  
-  /* // 5. Now save the x and y coordinates and the number of positive pixels for the */
-  /* //    spot */
-  /* if (SpotIndex != -1) */
-  /*   { */
-  /*     mpTrackingData[1] = (int)mMath.mRoundDouble(Meanx[SpotIndex],0); */
-  /*     mpTrackingData[2] = (int)mMath.mRoundDouble(Meany[SpotIndex],0); */
-  /*     mpTrackingData[3] = (int)mMath.mRoundDouble(NumberPixels[SpotIndex],0); */
-  /*     MeanPositive.SetPoint(mRectFrame.left + mpTrackingData[1],mRectFrame.top + mpTrackingData[2]); */
-  /*     dc.SelectObject(&mRedThickPen); */
-  /*     dc.Rectangle(MeanPositive.x - 1,MeanPositive.y - 1, MeanPositive.x + 1, MeanPositive.y +1); */
-  /*   } */
-  /* else */
-  /*   { */
-  /*     mpTrackingData[1] = -1; */
-  /*     mpTrackingData[2] = -1; */
-  /*     mpTrackingData[3] = 0; */
-  /*   } */
-  
-  /* // set the green and blue spots to -1 */
-  /* mpTrackingData[4] = -1; */
-  /* mpTrackingData[5] = -1; */
-  /* mpTrackingData[6] = 0; */
-  /* mpTrackingData[7] = -1; */
-  /* mpTrackingData[8] = -1; */
-  /* mpTrackingData[9] = 0; */
-  
-  
-  /* // 6 Write on the window when there is no positive pixel of any colour */
-  /* if(mpTrackingData[3] == 0) // if no red pixel in the tracking zone */
-  /*   { */
-  /*     mNoRedPixelCount++; */
-  /*     s.Format("Red Problems:%d", mNoRedPixelCount); */
-  /*     dc.TextOut(mRectFrame.left+5,mRectFrame.top+5,s); */
-  /*   } */
-  
-  /* mpTrackingData[10] = -1;  */
-  
-  /* // */
-  /* // 7 get head position, set to spot location */
-  /* mpTrackingData[11]=mpTrackingData[1]; */
-  /* mpTrackingData[12]=mpTrackingData[2]; */
-  
-  
-  /* // 8 draw on screen */
-  /* MeanPositive.SetPoint(mRectFrame.left + (int)mpTrackingData[11],mRectFrame.top + (int)mpTrackingData[12]); */
-  /* dc.SelectObject(&mBlackThickPen); */
-  /* dc.Rectangle(MeanPositive.x - 1,MeanPositive.y - 1, MeanPositive.x + 1, MeanPositive.y +1); */
-  
-  /* ///////////////////////////////////////////////////////////////////////////////////////////////////// */
-  /* //////////////////////////////////////////write to dat file/////////////////////////////////////////// */
-  /* ////////////////////////////////////////////////////////////////////////////////////////////////////// */
-  
-  /* mfTrackingSaveFile(); */
-  /* mParallelPort.write_bit_data_port(0,0); */
-  
-
-  return 0;
-}

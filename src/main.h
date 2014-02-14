@@ -44,7 +44,7 @@ File with declarations of the main structures and functions used in positrack
 #define _FILE_OFFSET_BITS 64 // to have files larger than 2GB
 #define NSEC_PER_SEC (1000000000) // The number of nsecs per sec
 
-#define INTERVAL_BETWEEN_TRACKING_CALLS_MS 50 //CHANGED FROM 10 ON 03.12, works down to 25ms fine
+#define INTERVAL_BETWEEN_TRACKING_CALLS_MS 10 //
 #define COMEDI_INTERFACE_MAX_DEVICES 2
 #define TIMEOUT_FOR_CAPTURE_MS 20 // time before the timeout try to get a new frame
 #define FIREWIRE_CAMERA_INTERFACE_NUMBER_OF_FRAMES_IN_RING_BUFFER 10
@@ -57,6 +57,7 @@ File with declarations of the main structures and functions used in positrack
 #define TRACKING_INTERFACE_LUMINANCE_THRESHOLD 100
 #define TRACKING_INTERFACE_WIDTH 640
 #define TRACKING_INTERFACE_HEIGHT 480
+#define TRACKING_INTERFACE_SPOT_DETECTION_CALLS 6
 
 //#define DEBUG_ACQ // to turn on debugging output for the comedi card
 #define DEBUG_CAMERA // to turn on debugging for the camera
@@ -64,7 +65,6 @@ File with declarations of the main structures and functions used in positrack
 #define DEBUG_IMAGE // to turn on debugging for the image processing
 
 //#define CAPS "video/x-raw, format=RGB, framerate=30/1 width=160, pixel-aspect-ratio=1/1"
-
 
 
 /***********************************************************************************
@@ -95,7 +95,9 @@ struct tracking_interface
   gint width;
   gint height;
   guint size;
+  int n_channels;
   int rowstride;
+  int num_spots_detection_calls;
   struct timespec timestamp_timespec;
   int timestamp; //timestamp in nanoseconds
   struct timespec duration_timespec;
@@ -106,10 +108,15 @@ struct tracking_interface
   int number_of_pixels;
   int number_frames_tracked;
   int luminance_threshold;
-  unsigned char* image; // pointer to the image coming from camera.
-  int* lum; // pointer to the array containing the luminance of image.
+  double mean_luminance;
+  double mean_red;
+  double mean_blue;
+  double mean_green;
+  double* lum; // pointer to the array containing the luminance of image, use double so that we can filter in place
   char* spot; // pointer to an array used in the detection of spots, to flag the pixels
-  GdkPixbuf *pixbuf; // image data  
+  GdkPixbuf *pixbuf; // image data
+  guchar *pixels; // to point to the pixels of pixbuf
+  guchar *p; // to point to a specific pixel
 };
 struct tracking_interface tr;
 
@@ -251,6 +258,10 @@ to do the tracking
 int tracking_interface_init(struct tracking_interface* tr);
 int tracking_interface_free(struct tracking_interface* tr);
 int tracking_interface_get_buffer(struct tracking_interface* tr);
+int tracking_interface_free_buffer(struct tracking_interface* tr);
+int tracking_interface_valid_buffer(struct tracking_interface* tr);
+int tracking_interface_get_luminance(struct tracking_interface* tr);
+int tracking_interface_get_mean_luminosity(struct tracking_interface* tr);
 int tracking_interface_tracking_one_bright_spot(struct tracking_interface* tr);
 int tracking_interface_tracking_rgb(struct tracking_interface* tr, unsigned char *rgb_image,int* lum);
 int tracking_interface_hux_findspot(unsigned char *rgb,	/* image, range from 0 to 255, X-d (x,y,ncolours)array of pixel data */
@@ -270,3 +281,4 @@ int tracking_interface_hux_findspot(unsigned char *rgb,	/* image, range from 0 t
 				    int blueindex,
 				    double *result ); /* should be of size 6 */
 				   
+double mean(int num_data, double* data, double invalid);
