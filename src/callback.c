@@ -282,6 +282,11 @@ int build_gstreamer_pipeline()
     g_printerr("appsink could not be created\n");
     return -1;
   }
+
+  // limit the number of buffer that can be queued in the appsink element
+  gst_app_sink_set_max_buffers(appsink,100);
+  gst_app_sink_set_drop((GstAppSink*)appsink,TRUE);
+
   sink_queue=gst_element_factory_make("queue", "sink_queue");
   if(!sink_queue){
     g_printerr("sink_queue could not be created\n");
@@ -292,6 +297,9 @@ int build_gstreamer_pipeline()
     g_printerr("appsink_queue could not be created\n");
     return -1;
   }
+
+
+
 
   // set the filter to get right resolution and sampling rate
   filtercaps = gst_caps_new_simple ("video/x-raw", "format", G_TYPE_STRING, "RGB", "width", G_TYPE_INT, VIDEO_SOURCE_USB_WIDTH, "height", G_TYPE_INT, VIDEO_SOURCE_USB_HEIGHT, "framerate", GST_TYPE_FRACTION, VIDEO_SOURCE_USB_FRAMERATE, 1, NULL);
@@ -358,12 +366,9 @@ int build_gstreamer_pipeline()
   gst_bus_add_watch (bus,bus_call,loop);
   gst_object_unref (bus);
 
-  // memory leak when pipeline is playing, about 5% computer memory after 20 sec, depend on video frame rate
-  gst_caps_unref (filtercaps);
-  gst_object_unref(queue_sink_pad);
-  gst_object_unref(queue_appsink_pad);
-  gst_object_unref(videotee_src_pad_template);
 
+  gst_caps_unref (filtercaps);
+  
   return 0;
 }
 
@@ -373,8 +378,11 @@ int delete_gstreamer_pipeline()
   //release the request tabs we have obtained
   gst_element_set_state (pipeline, GST_STATE_NULL); //setting the pipeline to the NULL state ensures freeing of the allocated resources
   gst_object_unref(GST_OBJECT(pipeline)); //destroys the pipeline and its contents
-  gst_element_release_request_pad (videotee, videotee_sink_pad); // causes warning if videotee_sink_pad is already unref
-  gst_element_release_request_pad (videotee, videotee_appsink_pad); // causes warning if ...
+  //gst_object_unref(queue_sink_pad);
+  //gst_object_unref(queue_appsink_pad);
+  //gst_object_unref(videotee_src_pad_template);
+  //gst_element_release_request_pad (videotee, videotee_sink_pad); // causes warning if videotee_sink_pad is already unref
+  //gst_element_release_request_pad (videotee, videotee_appsink_pad); // causes warning if ...
   return 0;
 }
 
