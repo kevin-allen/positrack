@@ -13,7 +13,7 @@ int tracking_interface_init(struct tracking_interface* tr)
   tr->width=TRACKING_INTERFACE_WIDTH;
   tr->height=TRACKING_INTERFACE_HEIGHT;
   tr->number_of_pixels=tr->width*tr->height;
-  tr->num_spots_detection_calls=TRACKING_INTERFACE_SPOT_DETECTION_CALLS;
+  tr->max_number_spots=TRACKING_INTERFACE_MAX_NUMBER_SPOTS;
   if((tr->lum=malloc(sizeof(double)*tr->width*tr->height))==NULL)
     {
       fprintf(stderr, "problem allocating memory for tr->lum\n");
@@ -24,12 +24,27 @@ int tracking_interface_init(struct tracking_interface* tr)
       fprintf(stderr, "problem allocating memory for tr->spot\n");
       return -1;
     }
+  if((tr->positive_pixels_x=malloc(sizeof(int)*tr->width*tr->height))==NULL)
+    {
+      fprintf(stderr, "problem allocating memory for tr->positive_pixel_x\n");
+      return -1;
+    }
+  if((tr->positive_pixels_y=malloc(sizeof(int)*tr->width*tr->height))==NULL)
+    {
+      fprintf(stderr, "problem allocating memory for tr->positive_pixel_y\n");
+      return -1;
+    }
+
+
+
   return 0;
 }
 int tracking_interface_free(struct tracking_interface* tr)
 {
   free(tr->lum);
   free(tr->spot);
+  free(tr->positive_pixels_x);
+  free(tr->positive_pixels_y);
   return 0;
 }
 
@@ -215,10 +230,13 @@ int tracking_interface_tracking_one_bright_spot(struct tracking_interface* tr)
   //1. create an array with the luminance for each pixel
   tracking_interface_get_luminosity(tr);
   tracking_interface_get_mean_luminance(tr);
-  set_array_to_value (tr->spot,tr->number_of_pixels,0); // set spot array to 0
 
 
-  printf("frame: %d, %d, %f\n",tr->number_frames_tracked,tr->number_of_pixels, tr->mean_luminance);
+  
+  // find all the spots recursively
+  tracking_interface_find_spots_recursive(tr);
+
+  //printf("frame: %d, %d, %f\n",tr->number_frames_tracked,tr->number_of_pixels, tr->mean_luminance);
   
   /* // define a luminance treshold */
   /* int LuminanceTreshold = 100; // that was 130 */
@@ -338,7 +356,21 @@ int tracking_interface_tracking_one_bright_spot(struct tracking_interface* tr)
 
   return 0;
 }
+int tracking_interface_find_spots_recursive(struct tracking_interface* tr)
+{
+  tr->number_spots=0;
+  tr->number_positive_pixels=0;
 
+  // set the spot array to 0
+  set_array_to_value (tr->spot,tr->number_of_pixels,0); // set spot array to 0  
+  
+  
+  // while(tr->number_spots<tr->max_number_spots&&find_positive_luminance_pixel(tr->lum,tr->width,tr->height,tr->spot,tr->positive_pixels_x,tr->positive_pixels_y,tr->number_positive_pixels))
+  // {
+      // find_an_adjacent_positive_pixel(tr->lum,tr->width,tr->height,tr->spot,tr->positive_pixels_x,tr->positive_pixels_y,tr->number_positive_pixels);
+      
+  // }
+}
 double mean(int num_data, double* data, double invalid)
 {
   /*
@@ -368,10 +400,11 @@ double mean(int num_data, double* data, double invalid)
   mean = sum/valid;
   return mean;
 }
-void set_array_to_value (double* array, int array_size, double value)
+void set_array_to_value (char* array, int array_size, double value)
 {
   /* set all the data of an array to a specific value */
-  for (int i = 0; i < array_size; i++)
+  int i;
+  for (i = 0; i < array_size; i++)
     {
       array[i]=value;
     }

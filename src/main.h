@@ -57,7 +57,7 @@ File with declarations of the main structures and functions used in positrack
 #define TRACKING_INTERFACE_LUMINANCE_THRESHOLD 100
 #define TRACKING_INTERFACE_WIDTH 640
 #define TRACKING_INTERFACE_HEIGHT 480
-#define TRACKING_INTERFACE_SPOT_DETECTION_CALLS 6
+#define TRACKING_INTERFACE_MAX_NUMBER_SPOTS 5
 
 //#define DEBUG_ACQ // to turn on debugging output for the comedi card
 #define DEBUG_CAMERA // to turn on debugging for the camera
@@ -97,7 +97,8 @@ struct tracking_interface
   guint size;
   int n_channels;
   int rowstride;
-  int num_spots_detection_calls;
+  int max_number_spots;
+  int number_spots;
   struct timespec current_buffer_time;
   struct timespec previous_buffer_time;
   struct timespec inter_buffer_duration;
@@ -114,6 +115,9 @@ struct tracking_interface
   double mean_green;
   double* lum; // pointer to the array containing the luminance of image, use double so that we can filter in place
   char* spot; // pointer to an array used in the detection of spots, to flag the pixels
+  int* positive_pixels_x;
+  int* positive_pixels_y;
+  int number_positive_pixels;
   GdkPixbuf *pixbuf; // image data
   guchar *pixels; // to point to the pixels of pixbuf
   guchar *p; // to point to a specific pixel
@@ -263,6 +267,7 @@ int tracking_interface_valid_buffer(struct tracking_interface* tr);
 int tracking_interface_get_luminance(struct tracking_interface* tr);
 int tracking_interface_get_mean_luminosity(struct tracking_interface* tr);
 int tracking_interface_tracking_one_bright_spot(struct tracking_interface* tr);
+int tracking_interface_find_spots_recursive(struct tracking_interface* tr);
 int tracking_interface_tracking_rgb(struct tracking_interface* tr, unsigned char *rgb_image,int* lum);
 int tracking_interface_hux_findspot(unsigned char *rgb,	/* image, range from 0 to 255, X-d (x,y,ncolours)array of pixel data */
 				    int *lum,  /* 2-d (x,y) array with the luminance values */
@@ -282,4 +287,4 @@ int tracking_interface_hux_findspot(unsigned char *rgb,	/* image, range from 0 t
 				    double *result ); /* should be of size 6 */
 				   
 double mean(int num_data, double* data, double invalid);
-void set_array_to_value (double* array, int array_size, double value);
+void set_array_to_value (char* array, int array_size, double value);
