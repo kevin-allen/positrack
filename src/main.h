@@ -44,7 +44,7 @@ File with declarations of the main structures and functions used in positrack
 #define _FILE_OFFSET_BITS 64 // to have files larger than 2GB
 #define NSEC_PER_SEC (1000000000) // The number of nsecs per sec
 
-#define INTERVAL_BETWEEN_TRACKING_CALLS_MS 50 //
+#define INTERVAL_BETWEEN_TRACKING_CALLS_MS 12 //
 #define COMEDI_INTERFACE_MAX_DEVICES 2
 #define TIMEOUT_FOR_CAPTURE_MS 20 // time before the timeout try to get a new frame
 #define FIREWIRE_CAMERA_INTERFACE_NUMBER_OF_FRAMES_IN_RING_BUFFER 10
@@ -52,9 +52,9 @@ File with declarations of the main structures and functions used in positrack
 
 #define VIDEO_SOURCE_USB_WIDTH 640
 #define VIDEO_SOURCE_USB_HEIGHT 480
-#define VIDEO_SOURCE_USB_FRAMERATE 20
+#define VIDEO_SOURCE_USB_FRAMERATE 30
 
-#define TRACKING_INTERFACE_LUMINANCE_THRESHOLD 130
+#define TRACKING_INTERFACE_LUMINANCE_THRESHOLD 175
 #define TRACKING_INTERFACE_WIDTH 640
 #define TRACKING_INTERFACE_HEIGHT 480
 #define TRACKING_INTERFACE_MAX_NUMBER_SPOTS 5
@@ -128,7 +128,7 @@ struct tracking_interface
   GdkPixbuf *pixbuf; // image data
   guchar *pixels; // to point to the pixels of pixbuf
   guchar *p; // to point to a specific pixel
-  int already_waiting;
+  int skip_next_tick;
   int* spot_positive_pixels;
   int* spot_peak_x;
   int* spot_peak_y;
@@ -285,6 +285,9 @@ int tracking_interface_get_mean_luminosity(struct tracking_interface* tr);
 int tracking_interface_tracking_one_bright_spot(struct tracking_interface* tr);
 int tracking_interface_find_spots_recursive(struct tracking_interface* tr);
 int tracking_interface_spot_summary(struct tracking_interface* tr);
+int tracking_interface_draw_spot(struct tracking_interface* tr);
+int tracking_interface_clear_drawingarea(struct tracking_interface* tr);
+int tracking_interface_print_luminance_array(struct tracking_interface* tr);
 int tracking_interface_tracking_rgb(struct tracking_interface* tr, unsigned char *rgb_image,int* lum);
 int tracking_interface_hux_findspot(unsigned char *rgb,	/* image, range from 0 to 255, X-d (x,y,ncolours)array of pixel data */
 				    int *lum,  /* 2-d (x,y) array with the luminance values */

@@ -9,7 +9,7 @@ change the camera without having to rewrite too much
 
 int tracking_interface_init(struct tracking_interface* tr)
 {
-  tr->already_waiting=0;
+  tr->skip_next_tick=0;
   tr->width=TRACKING_INTERFACE_WIDTH;
   tr->height=TRACKING_INTERFACE_HEIGHT;
   tr->number_of_pixels=tr->width*tr->height;
@@ -107,21 +107,26 @@ gboolean tracking()
     */
   if(widgets.tracking_running==1)
     {// the tracking is on
-      if(tr.already_waiting==1)
-	{// already waiting for buffer, exit here
-	  printf("tracking quick exit\n");
+      
+      if(tr.skip_next_tick==1) // do nothing this time
+	{
+	  tr.skip_next_tick=0;
 	  return TRUE;
 	}
-      tr.already_waiting=1;
       if(tracking_interface_get_buffer(&tr)!=0)
 	{
 	  g_printerr("tracking(), tracking_interface_get_buffer() did not return 0\n");
-	  tr.already_waiting=0;
 	  tr.number_frames_tracked=0;
 	  return FALSE;
 	}
-      tr.already_waiting=0;
       
+      if(microsecond_from_timespec(&tr.waiting_buffer_duration)/1000>INTERVAL_BETWEEN_TRACKING_CALLS_MS/2)
+	{ // we are waiting a long time for frames, will ignore the next buffer
+	  // to give time for buffer to arrive without having the thread 
+	  // beinng stuck waiting
+	  tr.skip_next_tick=1;
+	}
+
       // check if the buffer contain a valid buffer
       clock_gettime(CLOCK_REALTIME, &tr.start_tracking_time); // get the time we start tracking
       if(tracking_interface_valid_buffer(&tr)!=0)
@@ -140,14 +145,13 @@ gboolean tracking()
 	}
 
 
-
       tracking_interface_free_buffer(&tr);
             
 
       clock_gettime(CLOCK_REALTIME, &tr.end_tracking_time); // get the time we start tracking
       tr.tracking_time_duration=diff(&tr.start_tracking_time,&tr.end_tracking_time);
      
-      g_printerr("waiting time: %d ms, processing time: %d ms, current sampling rate: %.2lf Hz\n",microsecond_from_timespec(&tr.waiting_buffer_duration)/1000, microsecond_from_timespec(&tr.tracking_time_duration)/1000,tr.current_sampling_rate);
+      g_printerr("offset: %d, lum: %lf, waiting time: %d ms, processing time: %d ms, current sampling rate: %.2lf Hz\n",tr.current_buffer_offset,tr.mean_luminance,microsecond_from_timespec(&tr.waiting_buffer_duration)/1000, microsecond_from_timespec(&tr.tracking_time_duration)/1000,tr.current_sampling_rate);
 
       // update the tracked_object (with long term memory of its position, direction of movement, head direction, distanced travelled, average speed, etc)
 
@@ -255,7 +259,7 @@ int tracking_interface_valid_buffer(struct tracking_interface* tr)
   tr->inter_buffer_duration=diff(&tr->previous_buffer_time,&tr->current_buffer_time);
   if(tr->number_frames_tracked>0)
     {
-      if(microsecond_from_timespec(&tr->inter_buffer_duration)>1000000/VIDEO_SOURCE_USB_FRAMERATE+20000)// 20 ms too late, do something about it!
+      if(microsecond_from_timespec(&tr->inter_buffer_duration)>1000000/VIDEO_SOURCE_USB_FRAMERATE+50000)// 50 ms too late, do something about it!
 	{
 	  g_printerr("unexpected delay between frames: %d ms\n", microsecond_from_timespec(&tr->inter_buffer_duration)/1000);
 	  return -1;
@@ -270,7 +274,13 @@ int tracking_interface_valid_buffer(struct tracking_interface* tr)
     }
   return 0;
 }
-
+int tracking_interface_print_luminance_array(struct tracking_interface* tr)
+{
+  int x,y;
+  for (x=0;x<tr->width;x++)
+    for(y=0;y<tr->height;y++)
+      printf("1 %d %d %lf\n",x,tr->height-y,tr->lum[(y*tr->width)+x]);
+}
 
 int tracking_interface_tracking_one_bright_spot(struct tracking_interface* tr)
 {
@@ -279,54 +289,16 @@ int tracking_interface_tracking_one_bright_spot(struct tracking_interface* tr)
   tracking_interface_get_luminosity(tr);
   tracking_interface_get_mean_luminance(tr);
 
-  // find all the spots recursively
-
+  // find all the spots recursively, get the summary data for each spot
   if(tracking_interface_find_spots_recursive(tr)!=0)
     {
       g_printerr("tracking_interface_find_spots_recursive() did not return 0\n");
       return -1;
     }
 
-  printf("frame: %d, %d, %f\n",tr->number_frames_tracked,tr->number_of_pixels, tr->mean_luminance);
   
-  /* // define a luminance treshold */
-  /* int LuminanceTreshold = 100; // that was 130 */
   
-  /* // 3. find the brigth spots.  */
-  /* // the hux_findspot returns a bright spot each time and  */
-  /* // save characteristics in the array Results */
-  /* // returns -2 or -1 if no spot is found */
-  
-  /* for (int i = 0; i < NumberCallsHux; i++) */
-  /*   { */
-  /*     hux_findspot( */
-  /* 		   mpPixelBuffer,	// 3-d (x,y,colours) colours pixel array  */
-  /* 		   pPixelLuminance, */
-  /* 		   pSpot,	// 2-d (x,y) spot definition array - should be initialised to "0" to start, -1 to ignore  */
-  /* 		   mpPositivePix, */
-  /* 		   LuminanceTreshold,	// luminance threshold for inclusion in spot  */
-  /* 		   mFrameWidth,	// total width of pixel array  */
-  /* 		   mFrameHeight,	// total height of pixel array  */
-  /* 		   mFrameDepth,	// total height of pixel array (number of colours)  */
-  /* 		   mTrackingRectangle.left, // search box for spots, range 0 to xlimit-1 or ylimit-1  */
-  /* 		   mTrackingRectangle.top,  */
-  /* 		   mTrackingRectangle.right,  */
-  /* 		   mTrackingRectangle.bottom,  */
-  /* 		   2, // red */
-  /* 		   1, // green */
-  /* 		   0, // blue   */
-  /* 		   Results */
-  /* 		   ); */
-      
-  /*     Peakx[i] = Results[0]; */
-  /*     Peaky[i] = Results[1]; */
-  /*     Meanx[i] = Results[2]; */
-  /*     Meany[i] = Results[3]; */
-  /*     MeanRed[i] = Results[4]; */
-  /*     MeanGreen[i] = Results[5]; */
-  /*     MeanBlue[i] = Results[6]; */
-  /*     NumberPixels[i] = Results[7]; */
-  /*   } */
+
   /* // 4. Find the largest spot out of the list of spots we have in this frame */
   
   /* double Score = 0; */
@@ -401,8 +373,6 @@ int tracking_interface_tracking_one_bright_spot(struct tracking_interface* tr)
   /* //////////////////////////////////////////write to dat file/////////////////////////////////////////// */
   /* ////////////////////////////////////////////////////////////////////////////////////////////////////// */
   
-  /* mfTrackingSaveFile(); */
-  /* mParallelPort.write_bit_data_port(0,0); */
   
 
   return 0;
@@ -426,11 +396,14 @@ int tracking_interface_get_mean_luminance(struct tracking_interface* tr)
   tr->mean_luminance=mean(tr->number_of_pixels,tr->lum,-1.0);
   return 0;
 }
+
+
 int tracking_interface_find_spots_recursive(struct tracking_interface* tr)
 {
+
   tr->number_spots=0;
   tr->number_positive_pixels=0;
-
+  //tracking_interface_clear_drawingarea(tr);
   // set the spot array to 0
   set_array_to_value (tr->spot,tr->number_of_pixels,0); // set spot array to 0  
 
@@ -453,58 +426,12 @@ int tracking_interface_find_spots_recursive(struct tracking_interface* tr)
 				      &tr->number_positive_pixels,
 				      tr->luminance_threshold);
       
-      // no more adjacent positive pixels to add
-      // get the summary of the spot
+      // get the summary of the spot, from the positive_pixels
       tracking_interface_spot_summary(tr);
-      printf("spot: %d, number_positive_pixels: %d\n",tr->number_spots,tr->number_positive_pixels);
+      //      tracking_interface_draw_spot(tr);
       tr->number_spots++;
-
       tr->number_positive_pixels=0; // reset the count for next spot
     }
-
-  return -1;
-}
-
-int tracking_interface_spot_summary(struct tracking_interface* tr)
-{
-  int i,si;
-  si=tr->number_spots; // spot index
-  
-  // number of positive pixels in current spot
-  tr->spot_positive_pixels[si]=tr->number_positive_pixels;
-
-
-  // find the pixels with the peak in the positive pixels
-  // by default start with the first pixel as peak
-  tr->spot_peak_x[si]=tr->positive_pixels_x[0];
-  tr->spot_peak_y[si]=tr->positive_pixels_y[0];
-  for(i=1;i<tr->number_positive_pixels;i++)
-    {
-      if(tr->lum[(tr->positive_pixels_x[i]*tr->height)+tr->positive_pixels_y[i]] >
-	 tr->lum[(tr->spot_peak_x[si]*tr->height)+tr->spot_peak_y[si]])
-	{
-	  tr->spot_peak_x[si]=tr->positive_pixels_x[i];
-	  tr->spot_peak_y[si]=tr->positive_pixels_y[i];
-	}
-    }
-
-  tr->spot_mean_x[si]=mean_int(tr->number_positive_pixels,tr->positive_pixels_x,-1.0);
-  tr->spot_mean_y[si]=mean_int(tr->number_positive_pixels,tr->positive_pixels_y,-1.0);
-
-
-  printf("spot: %d, num_pix: %d, peak_x:%d, peak_y:%d, mean_x: %lf, mean_y: %lf\n",
-	 tr->number_spots,
-	 tr->spot_positive_pixels[si],
-	 tr->spot_peak_x[si],
-	 tr->spot_peak_y[si],
-	 tr->spot_mean_x[si],
-	 tr->spot_peak_y[si]);
-  
-  //double* spot_mean_red;
-  //double* spot_mean_green;
-  //double* spot_mean_blue;
-  
-  
   return 0;
 }
 int find_max_positive_luminance_pixel(double* lum,
@@ -536,9 +463,9 @@ int find_max_positive_luminance_pixel(double* lum,
   if(lum[max_index]>threshold)
     {
       positive_pixels_map[max_index]=1;
-      positive_x[*num_positive_pixels]=max_index/num_bins_y;
-      positive_y[*num_positive_pixels]=max_index%num_bins_y;
-      printf("find max, peak at %d, %d, lum: %lf\n",positive_x[*num_positive_pixels],positive_y[*num_positive_pixels],lum[max_index]);
+      positive_x[*num_positive_pixels]=max_index%num_bins_x;
+      positive_y[*num_positive_pixels]=max_index/num_bins_x;
+      //  printf("find max, peak at %d, %d, lum: %lf\n",positive_x[*num_positive_pixels],positive_y[*num_positive_pixels],lum[max_index]);
       (*num_positive_pixels)++;
       return 1;
     }
@@ -558,10 +485,10 @@ int find_an_adjacent_positive_pixel(double* lum,
   for(x=positive_x[*num_positive_pixels-1]-1;x<=positive_x[*num_positive_pixels-1]+1;x++)
     for(y=positive_y[*num_positive_pixels-1]-1;y<=positive_y[*num_positive_pixels-1]+1;y++)
       if(x>=0 && x<num_bins_x && y>=0 && y<num_bins_y &&  // within the frame
-	 lum[(x*num_bins_y)+y]>threshold && // above threshold
-	 positive_pixels_map[(x*num_bins_y)+y]!=1) // have not been added yet
+	 lum[(y*num_bins_x)+x]>threshold && // above threshold
+	 positive_pixels_map[(y*num_bins_x)+x]!=1) // have not been added yet
 	{
-	  positive_pixels_map[(x*num_bins_y)+y]=1;
+	  positive_pixels_map[(y*num_bins_x)+x]=1;
 	  positive_x[*num_positive_pixels]=x;
 	  positive_y[*num_positive_pixels]=y;
 	  (*num_positive_pixels)++;
@@ -575,6 +502,118 @@ int find_an_adjacent_positive_pixel(double* lum,
 					  threshold); // recursive search
 	  return 1;
 	}
+  return 0;
+}
+
+int tracking_interface_clear_drawingarea(struct tracking_interface* tr)
+{
+  cairo_t * cr;
+  cairo_t * buffer_cr;
+  cairo_surface_t *buffer_surface;
+  cairo_surface_t *drawable_surface;
+  int width_start, height_start,i,si;
+  gdk_drawable_get_size(gtk_widget_get_window(widgets.trackingdrawingarea),&width_start, &height_start);
+
+  // get a cairo context to draw on drawing_area
+  cr = gdk_cairo_create(gtk_widget_get_window(widgets.trackingdrawingarea));
+  drawable_surface = cairo_get_target (cr);
+  buffer_surface= cairo_surface_create_similar(drawable_surface,
+					       CAIRO_CONTENT_COLOR_ALPHA,
+					       width_start,
+					       height_start);
+  buffer_cr=cairo_create(buffer_surface);
+
+  /* Set surface to opaque color (r, g, b) */
+  cairo_set_source_rgb (buffer_cr, 0.9, 0.9, 0.9);
+  cairo_paint (buffer_cr);
+  // copy the buffer surface to the drawable widget
+  cairo_set_source_surface (cr,buffer_surface,0,0);
+  cairo_paint (cr);
+  cairo_destroy(cr);
+  cairo_destroy(buffer_cr);
+  cairo_surface_destroy(buffer_surface);
+
+  
+}
+
+int tracking_interface_draw_spot(struct tracking_interface* tr)
+{
+  cairo_t * cr;
+  cairo_t * buffer_cr;
+  cairo_surface_t *buffer_surface;
+  cairo_surface_t *drawable_surface;
+  int width_start, height_start,i,si;
+  si=tr->number_spots;
+
+  gdk_drawable_get_size(gtk_widget_get_window(widgets.trackingdrawingarea),&width_start, &height_start);
+
+  // get a cairo context to draw on drawing_area
+  cr = gdk_cairo_create(gtk_widget_get_window(widgets.trackingdrawingarea));
+  drawable_surface = cairo_get_target (cr);
+  buffer_surface= cairo_surface_create_similar(drawable_surface,
+					       CAIRO_CONTENT_COLOR_ALPHA,
+					       width_start,
+					       height_start);
+  buffer_cr=cairo_create(buffer_surface);
+
+
+  cairo_set_line_width (buffer_cr, 1);
+  cairo_set_source_rgb (buffer_cr, 1.0/si,1-(1.0/si),0.1);
+  for(i=0; i < tr->spot_positive_pixels[si];i++)
+    {
+      cairo_move_to(buffer_cr, tr->positive_pixels_x[i]-1, tr->positive_pixels_y[i]-1);
+      cairo_line_to(buffer_cr, tr->positive_pixels_x[i], tr->positive_pixels_y[i]);
+    }
+  cairo_stroke (buffer_cr);
+
+  // copy the buffer surface to the drawable widget
+  cairo_set_source_surface (cr,buffer_surface,0,0);
+  cairo_paint (cr);
+  cairo_destroy(cr);
+  cairo_destroy(buffer_cr);
+  cairo_surface_destroy(buffer_surface);
+}
+
+int tracking_interface_spot_summary(struct tracking_interface* tr)
+{
+  int i,si;
+  si=tr->number_spots; // spot index
+  
+  // number of positive pixels in current spot
+  tr->spot_positive_pixels[si]=tr->number_positive_pixels;
+
+
+  // find the pixels with the peak in the positive pixels
+  // by default start with the first pixel as peak
+  tr->spot_peak_x[si]=tr->positive_pixels_x[0];
+  tr->spot_peak_y[si]=tr->positive_pixels_y[0];
+  for(i=1;i<tr->number_positive_pixels;i++)
+    {
+      if(tr->lum[(tr->positive_pixels_x[i]*tr->height)+tr->positive_pixels_y[i]] >
+	 tr->lum[(tr->spot_peak_x[si]*tr->height)+tr->spot_peak_y[si]])
+	{
+	  tr->spot_peak_x[si]=tr->positive_pixels_x[i];
+	  tr->spot_peak_y[si]=tr->positive_pixels_y[i];
+	}
+    }
+
+  tr->spot_mean_x[si]=mean_int(tr->number_positive_pixels,tr->positive_pixels_x,-1.0);
+  tr->spot_mean_y[si]=mean_int(tr->number_positive_pixels,tr->positive_pixels_y,-1.0);
+
+
+    /* printf("spot: %d, num_pix: %d, peak_x:%d, peak_y:%d, mean_x: %lf, mean_y: %lf\n", */
+    /* 	 tr->number_spots, */
+    /* 	 tr->spot_positive_pixels[si], */
+    /* 	 tr->spot_peak_x[si], */
+    /* 	 tr->spot_peak_y[si], */
+    /* 	 tr->spot_mean_x[si], */
+    /* 	 tr->spot_peak_y[si]); */
+  
+  //double* spot_mean_red;
+  //double* spot_mean_green;
+  //double* spot_mean_blue;
+  
+  
   return 0;
 }
 
