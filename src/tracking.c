@@ -14,6 +14,48 @@ int tracking_interface_init(struct tracking_interface* tr)
   tr->height=TRACKING_INTERFACE_HEIGHT;
   tr->number_of_pixels=tr->width*tr->height;
   tr->max_number_spots=TRACKING_INTERFACE_MAX_NUMBER_SPOTS;
+
+  if((tr->spot_positive_pixels=malloc(sizeof(int)*tr->max_number_spots))==NULL)
+    {
+      fprintf(stderr, "problem allocating memory for tr->spot_positive_pixels\n");
+      return -1;
+    }
+  if((tr->spot_peak_x=malloc(sizeof(int)*tr->max_number_spots))==NULL)
+    {
+      fprintf(stderr, "problem allocating memory for tr->spot_peak_x\n");
+      return -1;
+    }
+  if((tr->spot_peak_y=malloc(sizeof(int)*tr->max_number_spots))==NULL)
+    {
+      fprintf(stderr, "problem allocating memory for tr->spot_peak_y\n");
+      return -1;
+    }
+  if((tr->spot_mean_x=malloc(sizeof(double)*tr->max_number_spots))==NULL)
+    {
+      fprintf(stderr, "problem allocating memory for tr->spot_mean_x\n");
+      return -1;
+    }
+  if((tr->spot_mean_y=malloc(sizeof(double)*tr->max_number_spots))==NULL)
+    {
+      fprintf(stderr, "problem allocating memory for tr->spot_mean_y\n");
+      return -1;
+    }
+  if((tr->spot_mean_red=malloc(sizeof(double)*tr->max_number_spots))==NULL)
+    {
+      fprintf(stderr, "problem allocating memory for tr->spot_mean_red\n");
+      return -1;
+    }
+  if((tr->spot_mean_green=malloc(sizeof(double)*tr->max_number_spots))==NULL)
+    {
+      fprintf(stderr, "problem allocating memory for tr->spot_mean_green\n");
+      return -1;
+    }
+  if((tr->spot_mean_blue=malloc(sizeof(double)*tr->max_number_spots))==NULL)
+    {
+      fprintf(stderr, "problem allocating memory for tr->spot_mean_blue\n");
+      return -1;
+    }
+
   tr->luminance_threshold=TRACKING_INTERFACE_LUMINANCE_THRESHOLD;
 
   if((tr->lum=malloc(sizeof(double)*tr->width*tr->height))==NULL)
@@ -45,6 +87,14 @@ int tracking_interface_free(struct tracking_interface* tr)
 {
   free(tr->lum);
   free(tr->spot);
+  free(tr->spot_positive_pixels);
+  free(tr->spot_peak_x);
+  free(tr->spot_peak_y);
+  free(tr->spot_mean_x);
+  free(tr->spot_mean_y);
+  free(tr->spot_mean_red);
+  free(tr->spot_mean_green);
+  free(tr->spot_mean_blue);
   free(tr->positive_pixels_x);
   free(tr->positive_pixels_y);
   return 0;
@@ -71,10 +121,9 @@ gboolean tracking()
 	  return FALSE;
 	}
       tr.already_waiting=0;
-	
-      // synchronization pulse goes up here
-
-
+      
+      // check if the buffer contain a valid buffer
+      clock_gettime(CLOCK_REALTIME, &tr.start_tracking_time); // get the time we start tracking
       if(tracking_interface_valid_buffer(&tr)!=0)
 	{
 	  g_printerr("tracking(), tracking_interface_valid_buffer() did not return 0\n");
@@ -83,26 +132,38 @@ gboolean tracking()
 	}
 
       // depending on tracking type 
-      tracking_interface_tracking_one_bright_spot(&tr);
+      if(tracking_interface_tracking_one_bright_spot(&tr)!=0)
+	{
+	  g_printerr("tracking(), tracking_interface_tracking_one_bright_spot() did not return 0\n");
+	  tr.number_frames_tracked=0;
+	  return FALSE;
+	}
+
 
 
       tracking_interface_free_buffer(&tr);
             
+
+      clock_gettime(CLOCK_REALTIME, &tr.end_tracking_time); // get the time we start tracking
+      tr.tracking_time_duration=diff(&tr.start_tracking_time,&tr.end_tracking_time);
+     
+      g_printerr("waiting time: %d ms, processing time: %d ms, current sampling rate: %.2lf Hz\n",microsecond_from_timespec(&tr.waiting_buffer_duration)/1000, microsecond_from_timespec(&tr.tracking_time_duration)/1000,tr.current_sampling_rate);
+
       // update the tracked_object (with long term memory of its position, direction of movement, head direction, distanced travelled, average speed, etc)
 
 
-      g_object_unref(tr.pixbuf);
+
 
       // draw the object on the tracking screen
 
       // save position data into a data file
 
       // synchronization pulse goes down here
-      tr.number_frames_tracked=0;
+      tr.number_frames_tracked++;
       return TRUE;
     }
   else
-    tr.number_frames_tracked++;
+    tr.number_frames_tracked=0;
     return FALSE; // returning false will stop the loop
 }
 
@@ -113,10 +174,15 @@ int tracking_interface_get_buffer(struct tracking_interface* tr)
   
   
   GdkPixbuf *tmp_pixbuf;
+  clock_gettime(CLOCK_REALTIME, &tr->start_waiting_buffer_time); // get the time we start waiting
   // get a sample
   sample=gst_app_sink_pull_sample((GstAppSink*)appsink); 
   // get a buffer from sample
   buffer=gst_sample_get_buffer(sample);
+  clock_gettime(CLOCK_REALTIME, &tr->end_waiting_buffer_time); // get the time we end waiting
+  tr->waiting_buffer_duration=diff(&tr->start_waiting_buffer_time,&tr->end_waiting_buffer_time);
+  
+  
   //get the time of buffer
   tr->previous_buffer_time=tr->current_buffer_time;
   GST_TIME_TO_TIMESPEC(GST_BUFFER_TIMESTAMP(buffer), tr->current_buffer_time);
@@ -142,7 +208,7 @@ int tracking_interface_get_buffer(struct tracking_interface* tr)
 }
 int tracking_interface_free_buffer(struct tracking_interface* tr)
 {
-
+  g_object_unref(tr->pixbuf);
   return 0;
 }
 
@@ -194,10 +260,8 @@ int tracking_interface_valid_buffer(struct tracking_interface* tr)
 	  g_printerr("unexpected delay between frames: %d ms\n", microsecond_from_timespec(&tr->inter_buffer_duration)/1000);
 	  return -1;
 	}
-      else
-	{
-	  g_printerr("current sampling rate: %d Hz\n", 1000/(microsecond_from_timespec(&tr->inter_buffer_duration)/1000));
-	}
+      tr->current_sampling_rate=1000.0/(microsecond_from_timespec(&tr->inter_buffer_duration)/1000.0);
+    
       if(tr->current_buffer_offset>tr->previous_buffer_offset+1)
 	{
 	  g_printerr("we are dropping frames\n");
@@ -208,24 +272,6 @@ int tracking_interface_valid_buffer(struct tracking_interface* tr)
 }
 
 
-int tracking_interface_get_luminosity(struct tracking_interface* tr)
-{
-  int i;
-  guint length;
-  tr->pixels=gdk_pixbuf_get_pixels_with_length(tr->pixbuf,&length);
-  for(i=0; i<tr->number_of_pixels;i++) 
-    { 
-      tr->p = tr->pixels+i*tr->n_channels; // 3 chars per sample
-      tr->lum[i]=(double)(tr->p[0]+tr->p[1]+tr->p[2])/3.0;
-    }
-  return 0;
-}
-
-int tracking_interface_get_mean_luminance(struct tracking_interface* tr)
-{
-  tr->mean_luminance=mean(tr->number_of_pixels,tr->lum,-1.0);
-  return 0;
-}
 int tracking_interface_tracking_one_bright_spot(struct tracking_interface* tr)
 {
 
@@ -233,12 +279,15 @@ int tracking_interface_tracking_one_bright_spot(struct tracking_interface* tr)
   tracking_interface_get_luminosity(tr);
   tracking_interface_get_mean_luminance(tr);
 
-
-  
   // find all the spots recursively
-  tracking_interface_find_spots_recursive(tr);
 
-  //printf("frame: %d, %d, %f\n",tr->number_frames_tracked,tr->number_of_pixels, tr->mean_luminance);
+  if(tracking_interface_find_spots_recursive(tr)!=0)
+    {
+      g_printerr("tracking_interface_find_spots_recursive() did not return 0\n");
+      return -1;
+    }
+
+  printf("frame: %d, %d, %f\n",tr->number_frames_tracked,tr->number_of_pixels, tr->mean_luminance);
   
   /* // define a luminance treshold */
   /* int LuminanceTreshold = 100; // that was 130 */
@@ -358,6 +407,25 @@ int tracking_interface_tracking_one_bright_spot(struct tracking_interface* tr)
 
   return 0;
 }
+
+int tracking_interface_get_luminosity(struct tracking_interface* tr)
+{
+  int i;
+  guint length;
+  tr->pixels=gdk_pixbuf_get_pixels_with_length(tr->pixbuf,&length);
+  for(i=0; i<tr->number_of_pixels;i++) 
+    { 
+      tr->p = tr->pixels+i*tr->n_channels; // 3 chars per sample
+      tr->lum[i]=(tr->p[0]+tr->p[1]+tr->p[2])/3.0;
+    }
+  return 0;
+}
+
+int tracking_interface_get_mean_luminance(struct tracking_interface* tr)
+{
+  tr->mean_luminance=mean(tr->number_of_pixels,tr->lum,-1.0);
+  return 0;
+}
 int tracking_interface_find_spots_recursive(struct tracking_interface* tr)
 {
   tr->number_spots=0;
@@ -365,22 +433,166 @@ int tracking_interface_find_spots_recursive(struct tracking_interface* tr)
 
   // set the spot array to 0
   set_array_to_value (tr->spot,tr->number_of_pixels,0); // set spot array to 0  
-    
-  // while(tr->number_spots<tr->max_number_spots&&find_positive_luminance_pixel(tr->lum,tr->width,tr->height,tr->spot,tr->positive_pixels_x,tr->positive_pixels_y,tr->number_positive_pixels,tr->luminance_threshold))
-  // {
-      // find_an_adjacent_positive_pixel(tr->lum,tr->width,tr->height,tr->spot,tr->positive_pixels_x,tr->positive_pixels_y,tr->number_positive_pixels,tr->luminance_threshold);
-  // }
 
-  // for each spot we need
-  // mean x 
-  /*     Peakx[i] = Results[0]; */
-  /*     Peaky[i] = Results[1]; */
-  /*     Meanx[i] = Results[2]; */
-  /*     Meany[i] = Results[3]; */
-  /*     MeanRed[i] = Results[4]; */
-  /*     MeanGreen[i] = Results[5]; */
-  /*     MeanBlue[i] = Results[6]; */
-  /*     NumberPixels[i] = Results[7]; */
+  while(tr->number_spots<tr->max_number_spots &&
+	find_max_positive_luminance_pixel(tr->lum,
+					  tr->width,
+					  tr->height,
+					  tr->spot,
+					  tr->positive_pixels_x,
+					  tr->positive_pixels_y,
+					  &tr->number_positive_pixels,
+					  tr->luminance_threshold))
+    {
+      find_an_adjacent_positive_pixel(tr->lum,
+				      tr->width,
+				      tr->height,
+				      tr->spot,
+				      tr->positive_pixels_x,
+				      tr->positive_pixels_y,
+				      &tr->number_positive_pixels,
+				      tr->luminance_threshold);
+      
+      // no more adjacent positive pixels to add
+      // get the summary of the spot
+      tracking_interface_spot_summary(tr);
+      printf("spot: %d, number_positive_pixels: %d\n",tr->number_spots,tr->number_positive_pixels);
+      tr->number_spots++;
+
+      tr->number_positive_pixels=0; // reset the count for next spot
+    }
+
+  return -1;
+}
+
+int tracking_interface_spot_summary(struct tracking_interface* tr)
+{
+  int i,si;
+  si=tr->number_spots; // spot index
+  
+  // number of positive pixels in current spot
+  tr->spot_positive_pixels[si]=tr->number_positive_pixels;
+
+
+  // find the pixels with the peak in the positive pixels
+  // by default start with the first pixel as peak
+  tr->spot_peak_x[si]=tr->positive_pixels_x[0];
+  tr->spot_peak_y[si]=tr->positive_pixels_y[0];
+  for(i=1;i<tr->number_positive_pixels;i++)
+    {
+      if(tr->lum[(tr->positive_pixels_x[i]*tr->height)+tr->positive_pixels_y[i]] >
+	 tr->lum[(tr->spot_peak_x[si]*tr->height)+tr->spot_peak_y[si]])
+	{
+	  tr->spot_peak_x[si]=tr->positive_pixels_x[i];
+	  tr->spot_peak_y[si]=tr->positive_pixels_y[i];
+	}
+    }
+
+  tr->spot_mean_x[si]=mean_int(tr->number_positive_pixels,tr->positive_pixels_x,-1.0);
+  tr->spot_mean_y[si]=mean_int(tr->number_positive_pixels,tr->positive_pixels_y,-1.0);
+
+
+  printf("spot: %d, num_pix: %d, peak_x:%d, peak_y:%d, mean_x: %lf, mean_y: %lf\n",
+	 tr->number_spots,
+	 tr->spot_positive_pixels[si],
+	 tr->spot_peak_x[si],
+	 tr->spot_peak_y[si],
+	 tr->spot_mean_x[si],
+	 tr->spot_peak_y[si]);
+  
+  //double* spot_mean_red;
+  //double* spot_mean_green;
+  //double* spot_mean_blue;
+  
+  
+  return 0;
+}
+int find_max_positive_luminance_pixel(double* lum,
+				      int num_bins_x, 
+				      int num_bins_y,
+				      char* positive_pixels_map, 
+				      int* positive_x, 
+				      int* positive_y, 
+				      int* num_positive_pixels,
+				      double threshold)
+{
+  // if find positive pixel, return 1; else return 0
+  int max_index,i,size;
+  double max_value;
+  size=num_bins_x*num_bins_y;
+  // start with first pixel as max
+  max_index=0;
+  max_value=lum[max_index];
+  // find the max in the array that was not previously taken
+  for(i=1;i<size;i++)
+    {
+      if(lum[i]>max_value&&positive_pixels_map[i]!=1)
+	{
+	  max_index=i;
+	  max_value=lum[i];
+	}
+    }
+  // check if above lum threshold
+  if(lum[max_index]>threshold)
+    {
+      positive_pixels_map[max_index]=1;
+      positive_x[*num_positive_pixels]=max_index/num_bins_y;
+      positive_y[*num_positive_pixels]=max_index%num_bins_y;
+      printf("find max, peak at %d, %d, lum: %lf\n",positive_x[*num_positive_pixels],positive_y[*num_positive_pixels],lum[max_index]);
+      (*num_positive_pixels)++;
+      return 1;
+    }
+  return 0;
+}
+int find_an_adjacent_positive_pixel(double* lum,
+				    int num_bins_x, 
+				    int num_bins_y,
+				    char* positive_pixels_map, 
+				    int* positive_x, 
+				    int* positive_y, 
+				    int* num_positive_pixels,
+				    double threshold)
+{
+  // if find positive pixel, return 1; else return 0
+  int x,y;
+  for(x=positive_x[*num_positive_pixels-1]-1;x<=positive_x[*num_positive_pixels-1]+1;x++)
+    for(y=positive_y[*num_positive_pixels-1]-1;y<=positive_y[*num_positive_pixels-1]+1;y++)
+      if(x>=0 && x<num_bins_x && y>=0 && y<num_bins_y &&  // within the frame
+	 lum[(x*num_bins_y)+y]>threshold && // above threshold
+	 positive_pixels_map[(x*num_bins_y)+y]!=1) // have not been added yet
+	{
+	  positive_pixels_map[(x*num_bins_y)+y]=1;
+	  positive_x[*num_positive_pixels]=x;
+	  positive_y[*num_positive_pixels]=y;
+	  (*num_positive_pixels)++;
+	  find_an_adjacent_positive_pixel(lum,
+					  num_bins_x, 
+					  num_bins_y,
+					  positive_pixels_map, 
+					  positive_x, 
+					  positive_y, 
+					  num_positive_pixels,
+					  threshold); // recursive search
+	  return 1;
+	}
+  return 0;
+}
+
+int find_max_index(int num_data,double* data)
+{
+  /* returns the index of the maximum value in an array */
+  double max=data[0];
+  int index=0;
+  int i;
+  for (i =1; i < num_data; i++)
+    {
+      if (data[i]>max)
+	{
+	  index=i;
+	  max=data[i];
+	}
+    }
+  return index;
 }
 double mean(int num_data, double* data, double invalid)
 {
@@ -411,6 +623,38 @@ double mean(int num_data, double* data, double invalid)
   mean = sum/valid;
   return mean;
 }
+
+double mean_int(int num_data, int* data, double invalid)
+{
+  /*
+    calculate the mean of array of size num_data
+    return mean
+  */
+  if(num_data==0)
+    {
+      return -1;
+    }
+  double mean=0;
+  double sum = 0;
+  int valid = 0;
+  int i;
+  for(i = 0; i < num_data; i++)
+    {
+      if (data[i] != invalid)
+	{
+	  sum = sum + data[i];
+	  valid++;
+	}
+    }
+  if(valid==0)
+    {
+      return -1;
+    }
+  mean = sum/valid;
+  return mean;
+}
+
+
 void set_array_to_value (char* array, int array_size, double value)
 {
   /* set all the data of an array to a specific value */

@@ -102,6 +102,13 @@ struct tracking_interface
   struct timespec current_buffer_time;
   struct timespec previous_buffer_time;
   struct timespec inter_buffer_duration;
+  double current_sampling_rate;
+  struct timespec start_tracking_time;
+  struct timespec end_tracking_time;
+  struct timespec tracking_time_duration;
+  struct timespec start_waiting_buffer_time;
+  struct timespec end_waiting_buffer_time;
+  struct timespec waiting_buffer_duration;
   guint current_buffer_offset;
   guint previous_buffer_offset;
   GstCaps *caps, *pad_caps;
@@ -122,6 +129,15 @@ struct tracking_interface
   guchar *pixels; // to point to the pixels of pixbuf
   guchar *p; // to point to a specific pixel
   int already_waiting;
+  int* spot_positive_pixels;
+  int* spot_peak_x;
+  int* spot_peak_y;
+  double* spot_mean_x;
+  double* spot_mean_y;
+  double* spot_mean_red;
+  double* spot_mean_green;
+  double* spot_mean_blue;
+  
 };
 struct tracking_interface tr;
 
@@ -268,6 +284,7 @@ int tracking_interface_get_luminance(struct tracking_interface* tr);
 int tracking_interface_get_mean_luminosity(struct tracking_interface* tr);
 int tracking_interface_tracking_one_bright_spot(struct tracking_interface* tr);
 int tracking_interface_find_spots_recursive(struct tracking_interface* tr);
+int tracking_interface_spot_summary(struct tracking_interface* tr);
 int tracking_interface_tracking_rgb(struct tracking_interface* tr, unsigned char *rgb_image,int* lum);
 int tracking_interface_hux_findspot(unsigned char *rgb,	/* image, range from 0 to 255, X-d (x,y,ncolours)array of pixel data */
 				    int *lum,  /* 2-d (x,y) array with the luminance values */
@@ -285,6 +302,24 @@ int tracking_interface_hux_findspot(unsigned char *rgb,	/* image, range from 0 t
 				    int greenindex,
 				    int blueindex,
 				    double *result ); /* should be of size 6 */
-				   
+		
+int find_max_index(int num_data,double* data);		   
 double mean(int num_data, double* data, double invalid);
+double mean_int(int num_data, int* data, double invalid);
 void set_array_to_value (char* array, int array_size, double value);
+int find_max_positive_luminance_pixel(double* lum,
+				      int num_bins_x, 
+				      int num_bins_y,
+				      char* positive_pixels_map, 
+				      int* positive_x, 
+				      int* positive_y, 
+				      int* num_positive_pixels, // single int
+				      double threshold);
+int find_an_adjacent_positive_pixel(double* lum,
+				    int num_bins_x, 
+				    int num_bins_y,
+				    char* positive_pixels_map, 
+				    int* positive_x, 
+				    int* positive_y, 
+				    int* num_positive_pixels, // single int
+				    double threshold);
