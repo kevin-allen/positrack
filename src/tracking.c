@@ -623,14 +623,7 @@ int tracking_interface_spot_summary(struct tracking_interface* tr)
   tr->spot_mean_y[si]=mean_int(tr->number_positive_pixels,tr->positive_pixels_y,-1.0);
 
 
-    /* printf("spot: %d, num_pix: %d, peak_x:%d, peak_y:%d, mean_x: %lf, mean_y: %lf\n", */
-    /* 	 tr->number_spots, */
-    /* 	 tr->spot_positive_pixels[si], */
-    /* 	 tr->spot_peak_x[si], */
-    /* 	 tr->spot_peak_y[si], */
-    /* 	 tr->spot_mean_x[si], */
-    /* 	 tr->spot_peak_y[si]); */
-  
+  // get the mean color of the spots
   //double* spot_mean_red;
   //double* spot_mean_green;
   //double* spot_mean_blue;

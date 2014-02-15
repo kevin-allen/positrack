@@ -60,6 +60,8 @@ File with declarations of the main structures and functions used in positrack
 #define TRACKING_INTERFACE_MAX_NUMBER_SPOTS 5 
 #define TRACKING_INTERFACE_MAX_MEAN_LUMINANCE_FOR_TRACKING 130
 
+#define TRACKED_OBJECT_BUFFER_LENGTH 432000 // 432000 should give 240 minutes at 30Hz.
+
 //#define DEBUG_ACQ // to turn on debugging output for the comedi card
 #define DEBUG_CAMERA // to turn on debugging for the camera
 #define DEBUG_TRACKING // to turn on debugging for the tracking
@@ -92,6 +94,10 @@ struct all_widget widgets; //defines a structure named widgets of the all_widget
 
 struct tracking_interface
 {
+  // the tracking interface job is to find the spots or
+  // whatever is in the image frame that is used to 
+  // find location of tracked object and update tracked_object structure
+
   int interval_between_tracking_calls_ms;
   gint width;
   gint height;
@@ -141,6 +147,29 @@ struct tracking_interface
   double* spot_mean_blue;  
 };
 struct tracking_interface tr;
+
+
+struct tracked_object
+{
+  // the tracked object is the subject being tracked
+  // the structure keep track of the position in time
+  // do the drawing of the object in tracking area of gui
+  double* x; // given by traking_interface
+  double* y; // given by tracking interface
+  double* head_direction; // given by tracking interface
+  double* movment_heading;
+  double* speed;
+  int position_invalid;
+  int head_direction_invalid;
+  int num_samples;
+  double percentage_position_invalid_total;
+  double percentage_position_invalid_last_100;
+  double travelled_distance;
+  double samples_per_seconds;
+  int buffer_length; // can't be bother to roll the buffer, just make it big enough to contain an recording file.
+                     // after the limit is reached, it will start at the beginning and overwrite old data
+};
+struct tracked_object tob;
 
 
 
@@ -265,23 +294,13 @@ int tracking_interface_draw_spot(struct tracking_interface* tr);
 int tracking_interface_clear_drawingarea(struct tracking_interface* tr);
 int tracking_interface_print_luminance_array(struct tracking_interface* tr);
 int tracking_interface_print_spot_array(struct tracking_interface* tr);
-int tracking_interface_tracking_rgb(struct tracking_interface* tr, unsigned char *rgb_image,int* lum);
-int tracking_interface_hux_findspot(unsigned char *rgb,	/* image, range from 0 to 255, X-d (x,y,ncolours)array of pixel data */
-				    int *lum,  /* 2-d (x,y) array with the luminance values */
-				    char *spot,	/* 2-d (x,y) spot definition array - should be initialised to "0" before the first call to this function, -1 are ignored*/
-				    int *spotindex, /* array to hold a list of indices to positive pixels in the spot array */
-				    int thresh, /* luminance threshold for spot detection */
-				    int xlimit,   /* total width of pixel array */
-				    int ylimit,	/* total height of pixel array */
-				    int ncolours,   /* total height of pixel array (number of colours) */
-				    int xmin, /* search box for spots, range 0 to xlimit-1 or ylimit-1 */
-				    int ymin,
-				    int xmax,
-				    int ymax,
-				    int redindex, /* index to values of each colour */
-				    int greenindex,
-				    int blueindex,
-				    double *result ); /* should be of size 6 */
+
+
+/********************************
+defined in tracked_object.c
+********************************/
+int update_tracked_object_position(double x, double y, double head_direction);
+
 		
 int find_max_index(int num_data,double* data);		   
 double mean(int num_data, double* data, double invalid);
