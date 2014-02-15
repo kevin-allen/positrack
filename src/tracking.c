@@ -13,6 +13,7 @@ int tracking_interface_init(struct tracking_interface* tr)
   tr->width=TRACKING_INTERFACE_WIDTH;
   tr->height=TRACKING_INTERFACE_HEIGHT;
   tr->number_of_pixels=tr->width*tr->height;
+  tr->max_mean_luminance_for_tracking = TRACKING_INTERFACE_MAX_MEAN_LUMINANCE_FOR_TRACKING;
   tr->max_number_spots=TRACKING_INTERFACE_MAX_NUMBER_SPOTS;
 
   if((tr->spot_positive_pixels=malloc(sizeof(int)*tr->max_number_spots))==NULL)
@@ -63,7 +64,7 @@ int tracking_interface_init(struct tracking_interface* tr)
       fprintf(stderr, "problem allocating memory for tr->lum\n");
       return -1;
     }
-  if((tr->spot=malloc(sizeof(char)*tr->width*tr->height))==NULL)
+  if((tr->spot=malloc(sizeof(int)*tr->width*tr->height))==NULL)
     {
       fprintf(stderr, "problem allocating memory for tr->spot\n");
       return -1;
@@ -281,24 +282,38 @@ int tracking_interface_print_luminance_array(struct tracking_interface* tr)
     for(y=0;y<tr->height;y++)
       printf("1 %d %d %lf\n",x,tr->height-y,tr->lum[(y*tr->width)+x]);
 }
+int tracking_interface_print_spot_array(struct tracking_interface* tr)
+{
+  int x,y;
+  for (x=0;x<tr->width;x++)
+    for(y=0;y<tr->height;y++)
+      printf("1 %d %d %lf\n",x,tr->height-y,tr->spot[(y*tr->width)+x]);
+}
+
+
 
 int tracking_interface_tracking_one_bright_spot(struct tracking_interface* tr)
 {
 
+  tracking_interface_clear_drawingarea(tr);
   //1. create an array with the luminance for each pixel
   tracking_interface_get_luminosity(tr);
   tracking_interface_get_mean_luminance(tr);
-
+  //  tracking_interface_print_luminance_array(tr);
+  
+  if(tr->mean_luminance>tr->max_mean_luminance_for_tracking)
+    {
+      g_printerr("mean_luminance is too high for tracking\n");
+      return -1;
+    }
+  
   // find all the spots recursively, get the summary data for each spot
   if(tracking_interface_find_spots_recursive(tr)!=0)
     {
       g_printerr("tracking_interface_find_spots_recursive() did not return 0\n");
       return -1;
     }
-
   
-  
-
   /* // 4. Find the largest spot out of the list of spots we have in this frame */
   
   /* double Score = 0; */
@@ -428,16 +443,19 @@ int tracking_interface_find_spots_recursive(struct tracking_interface* tr)
       
       // get the summary of the spot, from the positive_pixels
       tracking_interface_spot_summary(tr);
-      //      tracking_interface_draw_spot(tr);
+      
+      fprintf(stderr,"spot: %d, num_pix: %d, peakx: %d, peaky: %d\n",tr->number_spots,tr->number_positive_pixels,tr->spot_peak_x[tr->number_spots],tr->spot_peak_y[tr->number_spots]);
+      //tracking_interface_draw_spot(tr);
       tr->number_spots++;
       tr->number_positive_pixels=0; // reset the count for next spot
     }
+
   return 0;
 }
 int find_max_positive_luminance_pixel(double* lum,
 				      int num_bins_x, 
 				      int num_bins_y,
-				      char* positive_pixels_map, 
+				      int* positive_pixels_map, 
 				      int* positive_x, 
 				      int* positive_y, 
 				      int* num_positive_pixels,
@@ -474,7 +492,7 @@ int find_max_positive_luminance_pixel(double* lum,
 int find_an_adjacent_positive_pixel(double* lum,
 				    int num_bins_x, 
 				    int num_bins_y,
-				    char* positive_pixels_map, 
+				    int* positive_pixels_map, 
 				    int* positive_x, 
 				    int* positive_y, 
 				    int* num_positive_pixels,
@@ -482,11 +500,13 @@ int find_an_adjacent_positive_pixel(double* lum,
 {
   // if find positive pixel, return 1; else return 0
   int x,y;
-  for(x=positive_x[*num_positive_pixels-1]-1;x<=positive_x[*num_positive_pixels-1]+1;x++)
-    for(y=positive_y[*num_positive_pixels-1]-1;y<=positive_y[*num_positive_pixels-1]+1;y++)
+  int n = *num_positive_pixels-1;
+  for(x=positive_x[n]-1;x<=positive_x[n]+1;x++)
+    for(y=positive_y[n]-1;y<=positive_y[n]+1;y++)
+
       if(x>=0 && x<num_bins_x && y>=0 && y<num_bins_y &&  // within the frame
 	 lum[(y*num_bins_x)+x]>threshold && // above threshold
-	 positive_pixels_map[(y*num_bins_x)+x]!=1) // have not been added yet
+	 positive_pixels_map[(y*num_bins_x)+x]==0) // have not been added yet
 	{
 	  positive_pixels_map[(y*num_bins_x)+x]=1;
 	  positive_x[*num_positive_pixels]=x;
@@ -500,7 +520,6 @@ int find_an_adjacent_positive_pixel(double* lum,
 					  positive_y, 
 					  num_positive_pixels,
 					  threshold); // recursive search
-	  return 1;
 	}
   return 0;
 }
@@ -545,6 +564,7 @@ int tracking_interface_draw_spot(struct tracking_interface* tr)
   int width_start, height_start,i,si;
   si=tr->number_spots;
 
+  // get size
   gdk_drawable_get_size(gtk_widget_get_window(widgets.trackingdrawingarea),&width_start, &height_start);
 
   // get a cairo context to draw on drawing_area
@@ -558,13 +578,15 @@ int tracking_interface_draw_spot(struct tracking_interface* tr)
 
 
   cairo_set_line_width (buffer_cr, 1);
-  cairo_set_source_rgb (buffer_cr, 1.0/si,1-(1.0/si),0.1);
+  cairo_set_source_rgb (buffer_cr,(double)1/si,0.0,0.0);
   for(i=0; i < tr->spot_positive_pixels[si];i++)
     {
+
       cairo_move_to(buffer_cr, tr->positive_pixels_x[i]-1, tr->positive_pixels_y[i]-1);
       cairo_line_to(buffer_cr, tr->positive_pixels_x[i], tr->positive_pixels_y[i]);
+
     }
-  cairo_stroke (buffer_cr);
+      cairo_stroke (buffer_cr);
 
   // copy the buffer surface to the drawable widget
   cairo_set_source_surface (cr,buffer_surface,0,0);
@@ -694,7 +716,7 @@ double mean_int(int num_data, int* data, double invalid)
 }
 
 
-void set_array_to_value (char* array, int array_size, double value)
+void set_array_to_value (int* array, int array_size, double value)
 {
   /* set all the data of an array to a specific value */
   int i;

@@ -156,9 +156,7 @@ int main (int argc, char *argv[])
       return -1;
     }
 
-
-
-
+  
   // wait for something to happen in the gui
   gtk_main ();
   

@@ -44,7 +44,7 @@ File with declarations of the main structures and functions used in positrack
 #define _FILE_OFFSET_BITS 64 // to have files larger than 2GB
 #define NSEC_PER_SEC (1000000000) // The number of nsecs per sec
 
-#define INTERVAL_BETWEEN_TRACKING_CALLS_MS 12 //
+#define INTERVAL_BETWEEN_TRACKING_CALLS_MS 15 //
 #define COMEDI_INTERFACE_MAX_DEVICES 2
 #define TIMEOUT_FOR_CAPTURE_MS 20 // time before the timeout try to get a new frame
 #define FIREWIRE_CAMERA_INTERFACE_NUMBER_OF_FRAMES_IN_RING_BUFFER 10
@@ -54,10 +54,11 @@ File with declarations of the main structures and functions used in positrack
 #define VIDEO_SOURCE_USB_HEIGHT 480
 #define VIDEO_SOURCE_USB_FRAMERATE 30
 
-#define TRACKING_INTERFACE_LUMINANCE_THRESHOLD 175
+#define TRACKING_INTERFACE_LUMINANCE_THRESHOLD 200
 #define TRACKING_INTERFACE_WIDTH 640
 #define TRACKING_INTERFACE_HEIGHT 480
-#define TRACKING_INTERFACE_MAX_NUMBER_SPOTS 5
+#define TRACKING_INTERFACE_MAX_NUMBER_SPOTS 5 
+#define TRACKING_INTERFACE_MAX_MEAN_LUMINANCE_FOR_TRACKING 130
 
 //#define DEBUG_ACQ // to turn on debugging output for the comedi card
 #define DEBUG_CAMERA // to turn on debugging for the camera
@@ -117,11 +118,12 @@ struct tracking_interface
   int number_frames_tracked;
   double luminance_threshold;
   double mean_luminance;
+  double max_mean_luminance_for_tracking;
   double mean_red;
   double mean_blue;
   double mean_green;
   double* lum; // pointer to the array containing the luminance of image, use double so that we can filter in place
-  char* spot; // pointer to an array used in the detection of spots, to flag the pixels
+  int* spot; // pointer to an array used in the detection of spots, to flag the pixels
   int* positive_pixels_x;
   int* positive_pixels_y;
   int number_positive_pixels;
@@ -136,37 +138,11 @@ struct tracking_interface
   double* spot_mean_y;
   double* spot_mean_red;
   double* spot_mean_green;
-  double* spot_mean_blue;
-  
+  double* spot_mean_blue;  
 };
 struct tracking_interface tr;
 
 
-
-
-
-
-struct time_keeper
-{
-  struct timespec time_tracking_start;
-  struct timespec time_tracking_end;
-  struct timespec duration_tracking;
-  struct timespec time_last_frame; 
-  struct timespec time_current_frame;
-  struct timespec tracking_duration;
-  struct timespec duration_from_last_frame;
-  struct timespec duration_from_tracking_start;
-  struct timespec time_conversion_start;
-  struct timespec time_conversion_end;
-  struct timespec duration_conversion;
-  struct timespec time_lum_calculation_start;
-  struct timespec time_lum_calculation_end;
-  struct timespec duration_lum_calculation;
-  struct timespec time_tracking_frame_start; // to track a single frame
-  struct timespec time_tracking_frame_end;
-  struct timespec duration_tracking_frame;
-};
-struct time_keeper tk;
 
 struct firewire_camera_interface
 {
@@ -288,6 +264,7 @@ int tracking_interface_spot_summary(struct tracking_interface* tr);
 int tracking_interface_draw_spot(struct tracking_interface* tr);
 int tracking_interface_clear_drawingarea(struct tracking_interface* tr);
 int tracking_interface_print_luminance_array(struct tracking_interface* tr);
+int tracking_interface_print_spot_array(struct tracking_interface* tr);
 int tracking_interface_tracking_rgb(struct tracking_interface* tr, unsigned char *rgb_image,int* lum);
 int tracking_interface_hux_findspot(unsigned char *rgb,	/* image, range from 0 to 255, X-d (x,y,ncolours)array of pixel data */
 				    int *lum,  /* 2-d (x,y) array with the luminance values */
@@ -309,11 +286,11 @@ int tracking_interface_hux_findspot(unsigned char *rgb,	/* image, range from 0 t
 int find_max_index(int num_data,double* data);		   
 double mean(int num_data, double* data, double invalid);
 double mean_int(int num_data, int* data, double invalid);
-void set_array_to_value (char* array, int array_size, double value);
+void set_array_to_value (int* array, int array_size, double value);
 int find_max_positive_luminance_pixel(double* lum,
 				      int num_bins_x, 
 				      int num_bins_y,
-				      char* positive_pixels_map, 
+				      int* positive_pixels_map, 
 				      int* positive_x, 
 				      int* positive_y, 
 				      int* num_positive_pixels, // single int
@@ -321,7 +298,7 @@ int find_max_positive_luminance_pixel(double* lum,
 int find_an_adjacent_positive_pixel(double* lum,
 				    int num_bins_x, 
 				    int num_bins_y,
-				    char* positive_pixels_map, 
+				    int* positive_pixels_map, 
 				    int* positive_x, 
 				    int* positive_y, 
 				    int* num_positive_pixels, // single int
