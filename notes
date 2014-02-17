@@ -19,7 +19,6 @@ Features:
 
 Example of capture code in c: http://tldp.org/HOWTO/html_single/libdc1394-HOWTO/#example
 
-
 Despite trouble with firewire source, I still think gstreamer is the right choice because
 of its flexibility. We can choose from many pluggins. This should prevent facing the same
 problem as now with the old Windows Tracking System. I suspect it will be around for at
@@ -31,24 +30,18 @@ that I can move forward with the rest of the application. In the end, I will onl
 change the source of the video feed. I might even be able to use a webcam to do the
 tracking. Who knows.
 
+17 February 2014
+I now need the new tracking system to do an experiment. I order a new firewire camera to track the animal 
+with infrared leds. The visual spectrum will be removed with a filter.
 
-1-. Get the webcam gstreamer pipeline to display the video feed from a c program (done 12 March 2013) 
-2-. Put the video stream in the GUI window (done 13 March 2013)
-3-. Build a very basic GUI. Like the old one but with two windows (video and tracking) (done 13 March 2013).
-4-. Play and stop video streaming from menu (done 13 March 2013).
+The plan is the following. We control the 1394 camera with the libdc library. We set the camera as we want it
+and we start the acquisition. We process each frame when it arrives. For the video play back of the data, I will
+try to use a gstreamer pipeline. This will be done using an appsrc element.
 
-4.5 Develop the GUI further (file name, etc)
-5. Design of the tracking loop. What makes more sense? Timer or message from gstreamer that frame has arrived?
-6. Get the image buffer from the pipeline, in the right format.
-7. Write up the part of the code to do the tracking (take code from old tracking system. Perhaps implement a convolution method to look for small circular bright spots.).
-8. Add comedi support for synchronization.
-9. Implement the firewire source
-11. Testing with flashing LED driven from arduino microcontroler to know if there is some jitter. Check if all aligns in dat files.
-
-
-Problems encountered
-1. Can't manage to stream from the 1394 camera
-   Using webcam for now.
-   Try with another computer when possible
-2. Can't compile with the gstreamer-interfaces library: solved
-   remove/reinstall gstreamer-plugins-base-devel and it worked
+So the next steps are
+1. Get all the information needed from the camera.
+2. Set the right sampling rate for the camera.
+3. Start the acquisition on the camera.
+4. Get frames from the camera.
+5. Send each frame to the gstreamer pipeline for playback.
+6. Do the tracking of the frame.

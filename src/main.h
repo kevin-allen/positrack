@@ -92,12 +92,12 @@ struct all_widget
 };
 struct all_widget widgets; //defines a structure named widgets of the all_widget type
 
+
 struct tracking_interface
 {
   // the tracking interface job is to find the spots or
   // whatever is in the image frame that is used to 
   // find location of tracked object and update tracked_object structure
-
   int interval_between_tracking_calls_ms;
   gint width;
   gint height;
@@ -193,7 +193,9 @@ struct firewire_camera_interface
   dc1394error_t err;
   int * lum; // array with lum data
 };
-struct firewire_camera_interface fw_camera_inter;
+struct firewire_camera_interface fw_inter;
+
+
 
 
 // to get the video data via gstreamer
@@ -262,19 +264,19 @@ int microsecond_from_timespec(struct timespec* duration);
 defined in camera_interface.c
 to get the data from firewire camera
 ****************************************/
-/* int firewire_camera_interface_init(struct firewire_camera_interface* cam); */
-/* int firewire_camera_interface_free(struct firewire_camera_interface* cam); */
-/* int firewire_camera_interface_print_info(struct firewire_camera_interface* cam); */
-/* int firewire_camera_interface_save_buffer_to_file(struct firewire_camera_interface* cam, char* file_name); */
-/* int firewire_camera_interface_save_rgb8_buffer_to_file(struct firewire_camera_interface* cam, char* file_name); */
-/* int firewire_camera_interface_dequeue(struct firewire_camera_interface* cam); */
-/* int firewire_camera_interface_enqueue(struct firewire_camera_interface* cam); */
-/* int firewire_camera_interface_start_transmission(struct firewire_camera_interface* cam); */
-/* int firewire_camera_interface_stop_transmission(struct firewire_camera_interface* cam); */
-/* int firewire_camera_interface_convert_to_RGB8(struct firewire_camera_interface* cam); */
-/* int firewire_camera_interface_get_lum(struct firewire_camera_interface* cam); */
-/* void firewire_camera_interface_print_format( uint32_t format ); */
-/* void firewire_camera_interface_print_frame_rate( uint32_t format ); */
+int firewire_camera_interface_init(struct firewire_camera_interface* cam);
+int firewire_camera_interface_free(struct firewire_camera_interface* cam);
+int firewire_camera_interface_print_info(struct firewire_camera_interface* cam);
+int firewire_camera_interface_save_buffer_to_file(struct firewire_camera_interface* cam, char* file_name);
+int firewire_camera_interface_save_rgb8_buffer_to_file(struct firewire_camera_interface* cam, char* file_name);
+int firewire_camera_interface_dequeue(struct firewire_camera_interface* cam);
+int firewire_camera_interface_enqueue(struct firewire_camera_interface* cam);
+int firewire_camera_interface_start_transmission(struct firewire_camera_interface* cam);
+int firewire_camera_interface_stop_transmission(struct firewire_camera_interface* cam);
+int firewire_camera_interface_convert_to_RGB8(struct firewire_camera_interface* cam);
+int firewire_camera_interface_get_lum(struct firewire_camera_interface* cam);
+void firewire_camera_interface_print_format( uint32_t format );
+void firewire_camera_interface_print_frame_rate( uint32_t format );
 
 /********************************
 defined in tracking_interface.c
