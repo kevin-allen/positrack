@@ -25,6 +25,7 @@ int init_window()
 {
   // function to complete the interface built with glade
   builder = gtk_builder_new ();
+
   char* glade_file_name;
   char* file_name = "positrack_sed.glade"; // positrack_sed.glade
   glade_file_name=file_name;// g_strdup_printf("%s/%s",DATADIR,file_name);
