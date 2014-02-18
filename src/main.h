@@ -79,6 +79,7 @@ struct all_widget
   GtkWidget *videodrawingarea; //  draw the video
   GtkWidget *trackingdrawingarea; // draw the tracking results 
   GtkAdjustment *trial_no_adjustment;
+  GtkWidget *videosource_dlg;
   GtkWidget *about_dlg; // about dialog
   GtkWidget *savingdirectorydlg; // about dialog
   GtkWidget *toolbar;
@@ -234,6 +235,10 @@ gchar* saving_directory_name; //
 int init_window(); // to complete building the interface
 void on_window_destroy (GtkObject *object, gpointer user_data);
 void on_quitmenuitem_activate(GtkObject *object, gpointer user_data);
+void on_videosourceitem_activate(GtkObject *object, gpointer user_data);
+void on_okbutton_source_clicked(GtkObject *object, gpointer user_data);
+void on_videosource_dialog_delete_event(GtkObject *object, gpointer user_data);
+
 void on_playvideomenuitem_activate(GtkObject *object, gpointer user_data);
 void on_stopvideomenuitem_activate(GtkObject *object, gpointer user_data);
 void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data);

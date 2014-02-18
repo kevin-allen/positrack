@@ -214,6 +214,97 @@ You should have received a copy of the GNU General Public License along with gac
     <property name="step_increment">1</property>
     <property name="page_increment">10</property>
   </object>
+  <object class="GtkDialog" id="videosource_dialog">
+    <property name="can_focus">False</property>
+    <property name="border_width">5</property>
+    <property name="title" translatable="yes">Video source</property>
+    <property name="role">Choose a video source for the tracking</property>
+    <property name="type_hint">dialog</property>
+    <signal name="delete-event" handler="on_videosource_dialog_delete_event" after="yes" swapped="no"/>
+    <child internal-child="vbox">
+      <object class="GtkBox" id="dialog-vbox2">
+        <property name="can_focus">False</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">2</property>
+        <child internal-child="action_area">
+          <object class="GtkButtonBox" id="dialog-action_area2">
+            <property name="can_focus">False</property>
+            <property name="layout_style">end</property>
+            <child>
+              <object class="GtkButton" id="okbutton_source">
+                <property name="label" translatable="yes">Ok</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <signal name="clicked" handler="on_okbutton_source_clicked" after="yes" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <placeholder/>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="pack_type">end</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkVBox" id="vbox3">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <child>
+              <object class="GtkRadioButton" id="usbcameraradiobutton">
+                <property name="label" translatable="yes">USB camera via v4l2</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">False</property>
+                <property name="xalign">0</property>
+                <property name="active">True</property>
+                <property name="draw_indicator">True</property>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkRadioButton" id="firewirecameraradiobutton">
+                <property name="label" translatable="yes">Firewire camera via libdc1394</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">False</property>
+                <property name="xalign">0</property>
+                <property name="active">True</property>
+                <property name="draw_indicator">True</property>
+                <property name="group">usbcameraradiobutton</property>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+    <action-widgets>
+      <action-widget response="0">okbutton_source</action-widget>
+    </action-widgets>
+  </object>
   <object class="GtkWindow" id="window">
     <property name="can_focus">False</property>
     <signal name="destroy" handler="on_window_destroy" swapped="no"/>
@@ -271,6 +362,7 @@ You should have received a copy of the GNU General Public License along with gac
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">_Video source</property>
                         <property name="use_underline">True</property>
+                        <signal name="activate" handler="on_videosourceitem_activate" after="yes" swapped="no"/>
                       </object>
                     </child>
                     <child>
@@ -278,6 +370,14 @@ You should have received a copy of the GNU General Public License along with gac
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">_Tracking</property>
+                        <property name="use_underline">True</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkMenuItem" id="synchronizationmenuitem">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">_Synchronization</property>
                         <property name="use_underline">True</property>
                       </object>
                     </child>

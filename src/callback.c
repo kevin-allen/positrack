@@ -47,6 +47,7 @@ int init_window()
   widgets.statusbar=GTK_WIDGET(gtk_builder_get_object (builder, "statusbar"));
   widgets.savingdirectorydlg=GTK_WIDGET(gtk_builder_get_object (builder, "savingdirectorydlg"));
 
+  widgets.videosource_dlg =GTK_WIDGET (gtk_builder_get_object (builder, "videosource_dialog"));
   //  widgets.video_image=GTK_WIDGET(gtk_builder_get_object (builder, "video_image"));
   // widgets.pixbuf=gdk_pixbuf_new(GDK_COLORSPACE_RGB,FALSE,8,fw_camera_inter.width, fw_camera_inter.height);
   /*
@@ -153,6 +154,19 @@ void on_quitmenuitem_activate(GtkObject *object, gpointer user_data)
   tracking_interface_free(&tr);
   gtk_main_quit();
 }
+void on_videosourceitem_activate(GtkObject *object, gpointer user_data)
+{
+  gtk_widget_show(widgets.videosource_dlg);
+}
+void on_okbutton_source_clicked(GtkObject *object, gpointer user_data)
+{
+  gtk_widget_hide(widgets.videosource_dlg);
+}
+void on_videosource_dialog_delete_event(GtkObject *object, gpointer user_data)
+{
+  gtk_widget_hide(widgets.videosource_dlg);
+}
+
 
 // callback for the main window 
 void on_window_destroy (GtkObject *object, gpointer user_data)
