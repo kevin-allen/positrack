@@ -40,8 +40,6 @@ int main (int argc, char *argv[])
   // flag for each option
   int with_h_opt=0; // help
   int with_v_opt=0; // version
-  int with_t_opt=0; // terminal
-  int with_C_opt=0; // camera
 
   // initialize the libraries
   gtk_init (&argc, &argv);
@@ -55,12 +53,10 @@ int main (int argc, char *argv[])
 	{
 	  {"help", no_argument,0,'h'},
 	  {"version", no_argument,0,'v'},
-	  {"terminal", required_argument,0,'t'},
-	  {"camera", no_argument,0,'C'},
 	  {0, 0, 0, 0}
 	};
       int option_index = 0;
-      opt = getopt_long (argc, argv, "hvt:C",
+      opt = getopt_long (argc, argv, "hv",
 			 long_options, &option_index);
       /* Detect the end of the options. */
       if (opt == -1)
@@ -87,18 +83,6 @@ int main (int argc, char *argv[])
 	    with_v_opt=1;
 	    break;
 	  }
-	case  't':
-	  {
-	    with_t_opt=1;
-	    terminal_configuration_file=optarg;
-	    break;
-	  }
-	case 'C':
-	  {
-	    with_C_opt=1;
-	    break;
-	  }
-
 	case '?':
 	  /* getopt_long already printed an error message. */
 	  //	  break;
@@ -142,130 +126,21 @@ int main (int argc, char *argv[])
       g_printerr("Could not build the gui interface with init_window()\n");
       return -1;
     }
-  
-  // build the gstreamer pipeline
-  if(build_gstreamer_pipeline()!=0)
-    {
-      g_printerr("Could not build the gstreamer pipeline with build_gstreamer_pipeline()\n");
-      return -1;
-    }
-  
+  // build the tracking interface
   if(tracking_interface_init(&tr)!=0)
     {
       g_printerr("Could not initiate tracking interface\n");
       return -1;
     }
-
   
+  // get the default app flow
+  main_app_flow_get_default(&app_flow);
+
+
   // wait for something to happen in the gui
   gtk_main ();
-  
 
   
-
-
-
-
-  // if -c option given, just print the comedi_interface info
-  //  if (with_c_opt==1)
-  // {
-      /*
-      // initialize the comedi_interface
-      if (comedi_interface_init(&comedi_inter)==-1)
-	{
-	  fprintf(stderr,"%s could not initialize comedi_interface\n",PACKAGE_NAME);
-	  return 1;
-	}
-      
-      // print the comedi_interface info
-      if (comedi_interface_print_info(&comedi_inter)==-1)
-	{
-	  fprintf(stderr,"%s could not print information regarding comedi interface\n",PACKAGE_NAME);
-	  return 1;
-	}
-      printf("about to delete comedi_device_print_info\n");
-      // free the memory used
-      comedi_interface_free(&comedi_inter);
-      */
-  // return 0;
-      //}
-  if(with_C_opt==1)  
-    {
-      /*  // initialize the comedi_interface */
-      /* if (firewire_camera_interface_init(&camera_inter)!=0) */
-      /* 	{ */
-      /* 	  fprintf(stderr,"%s could not initialize firewire_camera_interface\n",PACKAGE_NAME); */
-      /* 	  return 1; */
-      /* 	} */
-      
-      // print the comedi_interface info
-      
-      /* if (firewire_camera_interface_print_info(&camera_inter)==-1) */
-      /* 	{ */
-      /* 	  fprintf(stderr,"%s could not print information regarding camera interface\n",PACKAGE_NAME); */
-      /* 	  return 1; */
-      /* 	} */
-      
-      /* // free the memory used */
-      /* firewire_camera_interface_free(&camera_inter); */
-      /* return 0; */
-    }
-
-  // if option --terminal or -t, run in the terminal mode
-  if (with_t_opt==1)
-    {
-
-      /*
-      // initialize the comedi_interface
-      if (comedi_interface_init(&comedi_inter)==-1)
-	{
-	  fprintf(stderr,"%s could not initialize comedi_interface\n",PACKAGE_NAME);
-	  return 1;
-	}
-       // free the memory used
-      comedi_interface_free(&comedi_inter);
-      */
-      return 0;
-    }
-
-  // run with the gui by default
-  if (with_t_opt==0)
-    {
-       /*
-      // initialize the comedi_interface
-      if (comedi_interface_init(&comedi_inter)==-1)
-	{
-	  fprintf(stderr,"%s could not initialize comedi_interface\n",PACKAGE_NAME);
-	  return 1;
-	}
-      */
-    /*   // initialize the camera */
-    /*   if (firewire_camera_interface_init(&camera_inter)==-1) */
-    /* 	{ */
-    /* 	  fprintf(stderr,"%s could not initialize firewire_camera_interface\n",PACKAGE_NAME); */
-    /* 	  return 1; */
-    /* 	} */
-    /*   // initialize the image processing structure */
-    /*   if(tracking_interface_init(&tr,camera_inter.width, camera_inter.height)==-1) */
-    /* 	{ */
-    /* 	  fprintf(stderr,"%s could not initialize tracking_interface\n",PACKAGE_NAME); */
-    /* 	  return 1; */
-    /* 	} */
-      
-    /*   // to build the interface from the glade file */
-    /*   if(init_window()==-1) */
-    /* 	{ */
-    /* 	  fprintf(stderr,"%s could not build the visual interface\n",PACKAGE_NAME); */
-    /* 	  return 1; */
-    /* 	} */
-    /*   // wait for something to happen in the gui */
-    /*   gtk_main (); */
-    /*   // free memory */
-    /*   //comedi_interface_free(&comedi_inter); */
-     
-    /*   firewire_camera_interface_free(&camera_inter); */
-    /*   tracking_interface_free(&tr); */
-    }
   return 0;
 }
 

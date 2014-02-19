@@ -15,6 +15,7 @@ int tracking_interface_init(struct tracking_interface* tr)
   tr->number_of_pixels=tr->width*tr->height;
   tr->max_mean_luminance_for_tracking = TRACKING_INTERFACE_MAX_MEAN_LUMINANCE_FOR_TRACKING;
   tr->max_number_spots=TRACKING_INTERFACE_MAX_NUMBER_SPOTS;
+  tr->interval_between_tracking_calls_ms = INTERVAL_BETWEEN_TRACKING_CALLS_MS;
 
   if((tr->spot_positive_pixels=malloc(sizeof(int)*tr->max_number_spots))==NULL)
     {
@@ -178,34 +179,34 @@ int tracking_interface_get_buffer(struct tracking_interface* tr)
   // type of camera used
   
   
-  GdkPixbuf *tmp_pixbuf;
-  clock_gettime(CLOCK_REALTIME, &tr->start_waiting_buffer_time); // get the time we start waiting
-  // get a sample
-  sample=gst_app_sink_pull_sample((GstAppSink*)appsink); 
-  // get a buffer from sample
-  buffer=gst_sample_get_buffer(sample);
-  clock_gettime(CLOCK_REALTIME, &tr->end_waiting_buffer_time); // get the time we end waiting
-  tr->waiting_buffer_duration=diff(&tr->start_waiting_buffer_time,&tr->end_waiting_buffer_time);
+  /* GdkPixbuf *tmp_pixbuf; */
+  /* clock_gettime(CLOCK_REALTIME, &tr->start_waiting_buffer_time); // get the time we start waiting */
+  /* // get a sample */
+  /* //sample=gst_app_sink_pull_sample((GstAppSink*)appsink);  */
+  /* // get a buffer from sample */
+  /* //buffer=gst_sample_get_buffer(sample); */
+  /* clock_gettime(CLOCK_REALTIME, &tr->end_waiting_buffer_time); // get the time we end waiting */
+  /* tr->waiting_buffer_duration=diff(&tr->start_waiting_buffer_time,&tr->end_waiting_buffer_time); */
   
   
-  //get the time of buffer
-  tr->previous_buffer_time=tr->current_buffer_time;
-  GST_TIME_TO_TIMESPEC(GST_BUFFER_TIMESTAMP(buffer), tr->current_buffer_time);
-  //offset=frame number
-  tr->previous_buffer_offset=tr->current_buffer_offset;
-  tr->current_buffer_offset=GST_BUFFER_OFFSET(buffer);
-  //get a pixmap from each buffer
-  gst_buffer_map (buffer, &map, GST_MAP_READ);
-  // get a pixbuf based on the data in the map
-  tmp_pixbuf = gdk_pixbuf_new_from_data (map.data,
-					 GDK_COLORSPACE_RGB, FALSE, 8,
-					 tr->width, tr->height,
-					 GST_ROUND_UP_4 (tr->width * 3), NULL, NULL);
-  // make a physical copy of the data from tmp_pixbuf
-  tr->pixbuf=gdk_pixbuf_copy(tmp_pixbuf);
-  // free the buffer
-  gst_buffer_unmap (buffer, &map);
-  gst_buffer_unref (buffer);
+  /* //get the time of buffer */
+  /* tr->previous_buffer_time=tr->current_buffer_time; */
+  /* GST_TIME_TO_TIMESPEC(GST_BUFFER_TIMESTAMP(buffer), tr->current_buffer_time); */
+  /* //offset=frame number */
+  /* tr->previous_buffer_offset=tr->current_buffer_offset; */
+  /* tr->current_buffer_offset=GST_BUFFER_OFFSET(buffer); */
+  /* //get a pixmap from each buffer */
+  /* gst_buffer_map (buffer, &map, GST_MAP_READ); */
+  /* // get a pixbuf based on the data in the map */
+  /* tmp_pixbuf = gdk_pixbuf_new_from_data (map.data, */
+  /* 					 GDK_COLORSPACE_RGB, FALSE, 8, */
+  /* 					 tr->width, tr->height, */
+  /* 					 GST_ROUND_UP_4 (tr->width * 3), NULL, NULL); */
+  /* // make a physical copy of the data from tmp_pixbuf */
+  /* tr->pixbuf=gdk_pixbuf_copy(tmp_pixbuf); */
+  /* // free the buffer */
+  /* gst_buffer_unmap (buffer, &map); */
+  /* gst_buffer_unref (buffer); */
   
   // probably needs to unref tmp_pixbuf //
 

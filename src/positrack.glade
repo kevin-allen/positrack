@@ -261,6 +261,7 @@ You should have received a copy of the GNU General Public License along with gac
                 <property name="xalign">0</property>
                 <property name="active">True</property>
                 <property name="draw_indicator">True</property>
+                <signal name="toggled" handler="on_no_synchronizationradiobutton_toggled" after="yes" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">True</property>
@@ -343,7 +344,7 @@ You should have received a copy of the GNU General Public License along with gac
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <child>
-              <object class="GtkRadioButton" id="singlewhitespotradiobutton">
+              <object class="GtkRadioButton" id="singlewhitespot_radiobutton">
                 <property name="label" translatable="yes">Object is a single white spot</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
@@ -352,6 +353,7 @@ You should have received a copy of the GNU General Public License along with gac
                 <property name="xalign">0</property>
                 <property name="active">True</property>
                 <property name="draw_indicator">True</property>
+                <signal name="toggled" handler="on_singlewhitespot_radiobutton_toggled" after="yes" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">True</property>
@@ -360,7 +362,7 @@ You should have received a copy of the GNU General Public License along with gac
               </packing>
             </child>
             <child>
-              <object class="GtkRadioButton" id="twowhitespotsradiobutton">
+              <object class="GtkRadioButton" id="twowhitespots_radiobutton">
                 <property name="label" translatable="yes">Object between two white spots 
 (small spot on the rigth, big spot on the left)</property>
                 <property name="visible">True</property>
@@ -368,7 +370,7 @@ You should have received a copy of the GNU General Public License along with gac
                 <property name="receives_default">False</property>
                 <property name="xalign">0</property>
                 <property name="draw_indicator">True</property>
-                <property name="group">singlewhitespotradiobutton</property>
+                <property name="group">singlewhitespot_radiobutton</property>
               </object>
               <packing>
                 <property name="expand">True</property>
@@ -445,6 +447,7 @@ You should have received a copy of the GNU General Public License along with gac
             <property name="receives_default">False</property>
             <property name="xalign">0</property>
             <property name="draw_indicator">True</property>
+            <signal name="toggled" handler="on_videoplayback_checkbutton_toggled" after="yes" swapped="no"/>
           </object>
           <packing>
             <property name="expand">False</property>
@@ -504,7 +507,7 @@ You should have received a copy of the GNU General Public License along with gac
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <child>
-              <object class="GtkRadioButton" id="usbcameraradiobutton">
+              <object class="GtkRadioButton" id="usbcamera_radiobutton">
                 <property name="label" translatable="yes">USB camera via v4l2</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
@@ -512,6 +515,7 @@ You should have received a copy of the GNU General Public License along with gac
                 <property name="xalign">0</property>
                 <property name="active">True</property>
                 <property name="draw_indicator">True</property>
+                <signal name="toggled" handler="on_usbcamera_radiobutton_toggled" after="yes" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">True</property>
@@ -520,7 +524,7 @@ You should have received a copy of the GNU General Public License along with gac
               </packing>
             </child>
             <child>
-              <object class="GtkRadioButton" id="firewirecameraradiobutton">
+              <object class="GtkRadioButton" id="firewirecamera_radiobutton">
                 <property name="label" translatable="yes">Firewire camera via libdc1394</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
@@ -528,7 +532,7 @@ You should have received a copy of the GNU General Public License along with gac
                 <property name="xalign">0</property>
                 <property name="active">True</property>
                 <property name="draw_indicator">True</property>
-                <property name="group">usbcameraradiobutton</property>
+                <property name="group">usbcamera_radiobutton</property>
               </object>
               <packing>
                 <property name="expand">True</property>
