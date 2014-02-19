@@ -48,6 +48,10 @@ int init_window()
   widgets.savingdirectorydlg=GTK_WIDGET(gtk_builder_get_object (builder, "savingdirectorydlg"));
 
   widgets.videosource_dlg =GTK_WIDGET (gtk_builder_get_object (builder, "videosource_dialog"));
+  widgets.tracking_dlg =GTK_WIDGET (gtk_builder_get_object (builder, "tracking_dialog"));
+  widgets.synchronization_dlg =GTK_WIDGET (gtk_builder_get_object (builder, "synchronization_dialog"));
+  widgets.videoplayback_dlg =GTK_WIDGET (gtk_builder_get_object (builder, "videoplayback_dialog"));
+
   //  widgets.video_image=GTK_WIDGET(gtk_builder_get_object (builder, "video_image"));
   // widgets.pixbuf=gdk_pixbuf_new(GDK_COLORSPACE_RGB,FALSE,8,fw_camera_inter.width, fw_camera_inter.height);
   /*
@@ -166,6 +170,46 @@ void on_videosource_dialog_delete_event(GtkObject *object, gpointer user_data)
 {
   gtk_widget_hide(widgets.videosource_dlg);
 }
+void on_tracking_menuitem_activate(GtkObject *object, gpointer user_data)
+{
+  gtk_widget_show(widgets.tracking_dlg);
+}
+void on_okbutton_tracking_clicked(GtkObject *object, gpointer user_data)
+{
+  gtk_widget_hide(widgets.tracking_dlg);
+}
+void on_tracking_dialog_delete_event(GtkObject *object, gpointer user_data)
+{
+  gtk_widget_hide(widgets.tracking_dlg);
+}
+void on_synchronization_menuitem_activate(GtkObject *object, gpointer user_data)
+{
+  gtk_widget_show(widgets.synchronization_dlg);
+}
+void on_okbutton_synchronization_clicked(GtkObject *object, gpointer user_data)
+{
+  gtk_widget_hide(widgets.synchronization_dlg);
+}
+void on_synchronization_dialog_delete_event(GtkObject *object, gpointer user_data)
+{
+  gtk_widget_hide(widgets.synchronization_dlg);
+}
+void on_videoplayback_menuitem_activate(GtkObject *object, gpointer user_data)
+{
+  gtk_widget_show(widgets.videoplayback_dlg);
+}
+void on_okbutton_videoplayback_clicked(GtkObject *object, gpointer user_data)
+{
+  gtk_widget_hide(widgets.videoplayback_dlg);
+}
+void on_videoplayback_dialog_delete_event(GtkObject *object, gpointer user_data)
+{
+  gtk_widget_hide(widgets.videoplayback_dlg);
+}
+
+
+
+
 
 
 // callback for the main window 

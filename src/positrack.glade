@@ -207,12 +207,256 @@ You should have received a copy of the GNU General Public License along with gac
       <action-widget response="0">ok_recording_button</action-widget>
     </action-widgets>
   </object>
+  <object class="GtkDialog" id="synchronization_dialog">
+    <property name="can_focus">False</property>
+    <property name="border_width">5</property>
+    <property name="title" translatable="yes">Synchronization signal</property>
+    <property name="role">Choose a syncrhonization method</property>
+    <property name="type_hint">dialog</property>
+    <signal name="delete-event" handler="on_synchronization_dialog_delete_event" swapped="yes"/>
+    <child internal-child="vbox">
+      <object class="GtkBox" id="dialog-vbox6">
+        <property name="can_focus">False</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">2</property>
+        <child internal-child="action_area">
+          <object class="GtkButtonBox" id="dialog-action_area6">
+            <property name="can_focus">False</property>
+            <property name="layout_style">end</property>
+            <child>
+              <object class="GtkButton" id="okbutton_synchronization">
+                <property name="label" translatable="yes">Ok</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <signal name="clicked" handler="on_okbutton_synchronization_clicked" after="yes" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <placeholder/>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="pack_type">end</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkVBox" id="vbox6">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <child>
+              <object class="GtkRadioButton" id="no_synchronizationradiobutton">
+                <property name="label" translatable="yes">No synchronization signal</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">False</property>
+                <property name="xalign">0</property>
+                <property name="active">True</property>
+                <property name="draw_indicator">True</property>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkRadioButton" id="comedi_synchronizationradiobutton">
+                <property name="label" translatable="yes">Synchronization via digital output of Comedi-supported card</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">False</property>
+                <property name="xalign">0</property>
+                <property name="draw_indicator">True</property>
+                <property name="group">no_synchronizationradiobutton</property>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+    <action-widgets>
+      <action-widget response="0">okbutton_synchronization</action-widget>
+    </action-widgets>
+  </object>
+  <object class="GtkDialog" id="tracking_dialog">
+    <property name="can_focus">False</property>
+    <property name="border_width">5</property>
+    <property name="title" translatable="yes">Tracking</property>
+    <property name="role">Choose a tracking algorithm</property>
+    <property name="type_hint">dialog</property>
+    <signal name="delete-event" handler="on_tracking_dialog_delete_event" after="yes" swapped="no"/>
+    <child internal-child="vbox">
+      <object class="GtkBox" id="dialog-vbox4">
+        <property name="can_focus">False</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">2</property>
+        <child internal-child="action_area">
+          <object class="GtkButtonBox" id="dialog-action_area4">
+            <property name="can_focus">False</property>
+            <property name="layout_style">end</property>
+            <child>
+              <object class="GtkButton" id="okbutton_tracking">
+                <property name="label" translatable="yes">Ok</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <signal name="clicked" handler="on_okbutton_tracking_clicked" after="yes" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <placeholder/>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="pack_type">end</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkVBox" id="vbox5">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <child>
+              <object class="GtkRadioButton" id="singlewhitespotradiobutton">
+                <property name="label" translatable="yes">Object is a single white spot</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">False</property>
+                <property name="relief">half</property>
+                <property name="xalign">0</property>
+                <property name="active">True</property>
+                <property name="draw_indicator">True</property>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkRadioButton" id="twowhitespotsradiobutton">
+                <property name="label" translatable="yes">Object between two white spots 
+(small spot on the rigth, big spot on the left)</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">False</property>
+                <property name="xalign">0</property>
+                <property name="draw_indicator">True</property>
+                <property name="group">singlewhitespotradiobutton</property>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+    <action-widgets>
+      <action-widget response="0">okbutton_tracking</action-widget>
+    </action-widgets>
+  </object>
   <object class="GtkAdjustment" id="trial_no_adjustment">
     <property name="lower">1</property>
     <property name="upper">100</property>
     <property name="value">1</property>
     <property name="step_increment">1</property>
     <property name="page_increment">10</property>
+  </object>
+  <object class="GtkDialog" id="videoplayback_dialog">
+    <property name="can_focus">False</property>
+    <property name="border_width">5</property>
+    <property name="title" translatable="yes">Video playback</property>
+    <property name="role">Set the video playback</property>
+    <property name="type_hint">dialog</property>
+    <signal name="delete-event" handler="on_videoplayback_dialog_delete_event" after="yes" swapped="no"/>
+    <child internal-child="vbox">
+      <object class="GtkBox" id="dialog-vbox11">
+        <property name="can_focus">False</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">2</property>
+        <child internal-child="action_area">
+          <object class="GtkButtonBox" id="dialog-action_area11">
+            <property name="can_focus">False</property>
+            <property name="layout_style">end</property>
+            <child>
+              <object class="GtkButton" id="okbutton_videoplayback">
+                <property name="label" translatable="yes">Ok</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <signal name="clicked" handler="on_okbutton_videoplayback_clicked" after="yes" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <placeholder/>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="pack_type">end</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkCheckButton" id="videoplayback_checkbutton">
+            <property name="label" translatable="yes">Video playback</property>
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="receives_default">False</property>
+            <property name="xalign">0</property>
+            <property name="draw_indicator">True</property>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+    <action-widgets>
+      <action-widget response="0">okbutton_videoplayback</action-widget>
+    </action-widgets>
   </object>
   <object class="GtkDialog" id="videosource_dialog">
     <property name="can_focus">False</property>
@@ -366,19 +610,30 @@ You should have received a copy of the GNU General Public License along with gac
                       </object>
                     </child>
                     <child>
-                      <object class="GtkMenuItem" id="trackingmenuitem1">
+                      <object class="GtkMenuItem" id="tracking_menuitem">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">_Tracking</property>
                         <property name="use_underline">True</property>
+                        <signal name="activate" handler="on_tracking_menuitem_activate" after="yes" swapped="no"/>
                       </object>
                     </child>
                     <child>
-                      <object class="GtkMenuItem" id="synchronizationmenuitem">
+                      <object class="GtkMenuItem" id="synchronization_menuitem">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">_Synchronization</property>
                         <property name="use_underline">True</property>
+                        <signal name="activate" handler="on_synchronization_menuitem_activate" after="yes" swapped="no"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkMenuItem" id="videoplayback_menuitem">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Video _playback</property>
+                        <property name="use_underline">True</property>
+                        <signal name="activate" handler="on_videoplayback_menuitem_activate" swapped="no"/>
                       </object>
                     </child>
                   </object>

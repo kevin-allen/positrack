@@ -80,6 +80,9 @@ struct all_widget
   GtkWidget *trackingdrawingarea; // draw the tracking results 
   GtkAdjustment *trial_no_adjustment;
   GtkWidget *videosource_dlg;
+  GtkWidget *tracking_dlg;
+  GtkWidget *synchronization_dlg;
+  GtkWidget *videoplayback_dlg;
   GtkWidget *about_dlg; // about dialog
   GtkWidget *savingdirectorydlg; // about dialog
   GtkWidget *toolbar;
@@ -238,6 +241,18 @@ void on_quitmenuitem_activate(GtkObject *object, gpointer user_data);
 void on_videosourceitem_activate(GtkObject *object, gpointer user_data);
 void on_okbutton_source_clicked(GtkObject *object, gpointer user_data);
 void on_videosource_dialog_delete_event(GtkObject *object, gpointer user_data);
+void on_tracking_menuitem_activate(GtkObject *object, gpointer user_data);
+void on_okbutton_tracking_clicked(GtkObject *object, gpointer user_data);
+void on_tracking_dialog_delete_event(GtkObject *object, gpointer user_data);
+void on_synchronization_menuitem_activate(GtkObject *object, gpointer user_data);
+void on_okbutton_synchronization_clicked(GtkObject *object, gpointer user_data);
+void on_synchronization_dialog_delete_event(GtkObject *object, gpointer user_data);
+void on_videoplayback_menuitem_activate(GtkObject *object, gpointer user_data);
+void on_okbutton_videoplayback_clicked(GtkObject *object, gpointer user_data);
+void on_videoplayback_dialog_delete_event(GtkObject *object, gpointer user_data);
+
+
+
 
 void on_playvideomenuitem_activate(GtkObject *object, gpointer user_data);
 void on_stopvideomenuitem_activate(GtkObject *object, gpointer user_data);
