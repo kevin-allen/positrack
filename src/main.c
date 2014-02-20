@@ -133,14 +133,11 @@ int main (int argc, char *argv[])
       return -1;
     }
   
-  // get the default app flow
+  // get the default app flow from the gui interface
   main_app_flow_get_default(&app_flow);
-
 
   // wait for something to happen in the gui
   gtk_main ();
-
-  
   return 0;
 }
 
@@ -154,8 +151,8 @@ void print_version()
 void print_help()
 {
   printf("\n");
-  printf("%s %s is a program to track the position of rodents on Gnu/Linux computers and is available at %s\n\n",PACKAGE_NAME,PACKAGE_VERSION,PACKAGE_URL);
-  printf("When executed without option or argument, %s starts its graphical user interface. Use the following options to run in the terminal mode.\n\n",PACKAGE_NAME);
+  printf("%s %s is a program to track the position of objects on Gnu/Linux computers and is available at %s\n\n",PACKAGE_NAME,PACKAGE_VERSION,PACKAGE_URL);
+  printf("When executed without option or argument, %s starts its graphical user interface. The following options are available\n\n",PACKAGE_NAME);
   print_options();
   printf("\n");
   printf("report bugs: %s\n\n",PACKAGE_BUGREPORT);
@@ -167,9 +164,5 @@ void print_options()
   printf("possible options:\n");
   printf("--version or -v\t\t: print the program version\n");
   printf("--help or -h\t\t: will print this text\n");
-  printf("--comedi or -c\t\t: will print information regarding comedi interface and detected devices\n");
-  printf("--terminal or -t\t: give a configuration file and will run in terminal mode\n");
-  printf("--camera or -C\t: will print information regarding camera interface and detected devices\n");
-  printf("\t\tconfiguration file contains output_file_name, sampling_rate, rec_seconds and channel_list\n");
   return;
 }

@@ -31,14 +31,16 @@ change the source of the video feed. I might even be able to use a webcam to do 
 tracking. Who knows.
 
 17 February 2014
-I now need the new tracking system to do an experiment. I order a new firewire camera to track the animal 
+I now need the new tracking system to do an experiment. I ordered a new firewire camera to track the animal 
 with infrared leds. The visual spectrum will be removed with a filter.
 
 The plan is the following. We control the 1394 camera with the libdc library. We set the camera as we want it
 and we start the acquisition. We process each frame when it arrives. For the video play back of the data, I will
-try to use a gstreamer pipeline. This will be done using an appsrc element.
+use a gstreamer pipeline. This will be done using an appsrc element.
 
 So the next steps are
+0.0 Build the gtk pipeline according to the video source.
+0.1 
 1. Get all the information needed from the camera.
 2. Set the right sampling rate for the camera.
 3. Start the acquisition on the camera.

@@ -54,6 +54,7 @@ File with declarations of the main structures and functions used in positrack
 #define VIDEO_SOURCE_USB_HEIGHT 480
 #define VIDEO_SOURCE_USB_FRAMERATE 30
 
+
 #define TRACKING_INTERFACE_LUMINANCE_THRESHOLD 200
 #define TRACKING_INTERFACE_WIDTH 640
 #define TRACKING_INTERFACE_HEIGHT 480
@@ -233,7 +234,6 @@ struct firewire_camera_interface
   dc1394_t * d;
   dc1394camera_list_t *list;
   dc1394error_t err;
-  int * lum; // array with lum data
 };
 struct firewire_camera_interface fw_inter;
 
@@ -241,7 +241,7 @@ struct gst_interface
 {
   // all the gstreamer stuff goes here
   GstBus *bus;
-  GstElement *pipeline, *source, *filter, *sink, *videotee, *videoconvert, *videoconvert_sink, *videoconvert_appsink, *videoscale, *videoscale_sink, *videoscale_appsink, *appsink;
+  GstElement *pipeline, *source, *filter, *sink, *videotee, *videoconvert, *videoconvert_sink, *videoconvert_appsink, *videoscale, *videoscale_sink, *videoscale_appsink, *appsink, *appsrc,*conv,*videosink;
   //need to add queue elements for multithreading
   GstElement *sink_queue, *appsink_queue;
   //need to add queue pads
@@ -305,9 +305,12 @@ void on_videoplayback_checkbutton_toggled(GtkObject *object, gpointer user_data)
 
 void main_app_flow_get_default(struct main_app_flow* app_flow);
 
-int gst_interface_build_pipeline(struct gst_interface* gst_inter);
-int gst_interface_delete_pipeline(struct gst_interface* gst_inter);
-
+int gst_interface_build_v4l2_pipeline(struct gst_interface* gst_inter);
+int gst_interface_build_firewire_pipeline(struct gst_interface* gst_inter);
+int gst_interface_delete_v4l2_pipeline(struct gst_interface* gst_inter);
+int gst_interface_delete_firewire_pipeline(struct gst_interface* gst_inter);
+static gboolean bus_call (GstBus *bus, GstMessage *msg, gpointer data);
+static void cb_need_data (GstElement *appsrc,guint unused_size, gpointer user_data);
 void save_pixbuf_to_file();
 static void print_pad_capabilities (GstElement *element, gchar *pad_name);
 
@@ -340,7 +343,6 @@ int firewire_camera_interface_enqueue(struct firewire_camera_interface* cam);
 int firewire_camera_interface_start_transmission(struct firewire_camera_interface* cam);
 int firewire_camera_interface_stop_transmission(struct firewire_camera_interface* cam);
 int firewire_camera_interface_convert_to_RGB8(struct firewire_camera_interface* cam);
-int firewire_camera_interface_get_lum(struct firewire_camera_interface* cam);
 void firewire_camera_interface_print_format( uint32_t format );
 void firewire_camera_interface_print_frame_rate( uint32_t format );
 

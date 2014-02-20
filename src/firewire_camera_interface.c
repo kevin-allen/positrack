@@ -110,12 +110,6 @@ int firewire_camera_interface_init(struct firewire_camera_interface* cam)
     }
   cam->rgb_frame->color_coding=DC1394_COLOR_CODING_RGB8;
 
-  //allocate memory for lum array
-  if((cam->lum=malloc(sizeof(int)*cam->num_pixels))==NULL)
-    {
-      fprintf(stderr, "problem allocating memory for cam->lum\n");
-      return 1;
-    }
   
 #ifdef DEBUG_CAMERA
   fprintf(stderr,"firewire_camera_interface_init, leaving\n");
@@ -134,7 +128,6 @@ int firewire_camera_interface_free(struct firewire_camera_interface* cam)
   dc1394_camera_free(cam->camera);
   free(cam->rgb_frame->image);
   free(cam->rgb_frame);
-  free(cam->lum);
   return 0;
 }
 
@@ -175,6 +168,7 @@ int firewire_camera_interface_enqueue(struct firewire_camera_interface* cam)
 #endif
   return 0;
 }
+
 int firewire_camera_interface_dequeue(struct firewire_camera_interface* cam)
 {
 #ifdef DEBUG_CAMERA
@@ -202,23 +196,23 @@ int firewire_camera_interface_convert_to_RGB8(struct firewire_camera_interface* 
 #endif
   return 0;
 }
-int firewire_camera_interface_get_lum(struct firewire_camera_interface* cam)
-{
-  /*function to get lum array from cam-rgb_frame
-    lum is a int array
-  */
-#ifdef DEBUG_CAMERA
-  fprintf(stderr,"firewire_camera_interface_get_lum\n");
-#endif
-  int i,index_rgb;
-  index_rgb=0;
-  for(i=0;i<cam->num_pixels;i++)
-    {
-      cam->lum[i]=(int)cam->rgb_frame->image[index_rgb]+cam->rgb_frame->image[index_rgb+1]+cam->rgb_frame->image[index_rgb+2];
-      index_rgb=index_rgb+3;
-    }
-  return 0;
-}
+/* int firewire_camera_interface_get_lum(struct firewire_camera_interface* cam) */
+/* { */
+/*   /\*function to get lum array from cam-rgb_frame */
+/*     lum is a int array */
+/*   *\/ */
+/* #ifdef DEBUG_CAMERA */
+/*   fprintf(stderr,"firewire_camera_interface_get_lum\n"); */
+/* #endif */
+/*   int i,index_rgb; */
+/*   index_rgb=0; */
+/*   for(i=0;i<cam->num_pixels;i++) */
+/*     { */
+/*       cam->lum[i]=(int)cam->rgb_frame->image[index_rgb]+cam->rgb_frame->image[index_rgb+1]+cam->rgb_frame->image[index_rgb+2]; */
+/*       index_rgb=index_rgb+3; */
+/*     } */
+/*   return 0; */
+/* } */
 int firewire_camera_interface_save_rgb8_buffer_to_file(struct firewire_camera_interface* cam, char* file_name)
 {
 #ifdef DEBUG_CAMERA
