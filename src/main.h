@@ -337,7 +337,7 @@ int firewire_camera_interface_init(struct firewire_camera_interface* cam);
 int firewire_camera_interface_free(struct firewire_camera_interface* cam);
 int firewire_camera_interface_print_info(struct firewire_camera_interface* cam);
 int firewire_camera_interface_save_buffer_to_file(struct firewire_camera_interface* cam, char* file_name);
-int firewire_camera_interface_save_rgb8_buffer_to_file(struct firewire_camera_interface* cam, char* file_name);
+//int firewire_camera_interface_save_rgb8_buffer_to_file(struct firewire_camera_interface* cam, char* file_name);
 int firewire_camera_interface_dequeue(struct firewire_camera_interface* cam);
 int firewire_camera_interface_enqueue(struct firewire_camera_interface* cam);
 int firewire_camera_interface_start_transmission(struct firewire_camera_interface* cam);

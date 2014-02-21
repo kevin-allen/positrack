@@ -190,10 +190,19 @@ int firewire_camera_interface_convert_to_RGB8(struct firewire_camera_interface* 
   #ifdef DEBUG_CAMERA
   fprintf(stderr,"firewire_camera_interface_convert_to_RGB8\n");
 #endif
-  dc1394_convert_frames(cam->frame, cam->rgb_frame);
+
+  cam->err=dc1394_convert_frames(cam->frame, cam->rgb_frame);
+  DC1394_ERR_CLN_RTN(cam->err,firewire_camera_interface_free(cam),"Could not convert frame");
+
 #ifdef DEBUG_CAMERA
   fprintf(stderr,"leaving firewire_camera_interface_convert_to_RGB8\n");
 #endif
+
+  fprintf(stderr,"image[0]: %d\n",(int)cam->rgb_frame->image[0]);
+  if(cam->rgb_frame->image==NULL)
+    {
+      fprintf(stderr,"cam->rgb_frame->image==NULL in firewire_camera_interface_convert_to_RGB8\n");
+    }
   return 0;
 }
 /* int firewire_camera_interface_get_lum(struct firewire_camera_interface* cam) */
@@ -213,22 +222,23 @@ int firewire_camera_interface_convert_to_RGB8(struct firewire_camera_interface* 
 /*     } */
 /*   return 0; */
 /* } */
-int firewire_camera_interface_save_rgb8_buffer_to_file(struct firewire_camera_interface* cam, char* file_name)
-{
-#ifdef DEBUG_CAMERA
-  fprintf(stderr,"firewire_camera_interface_save_buffer_to_file: %s\n",file_name);
-#endif
-  FILE* imagefile;
-  imagefile=fopen(file_name, "wb");
-  if( imagefile == NULL) {
-    fprintf(stderr, "Can't create %s\n",file_name);
-    firewire_camera_interface_free(cam);
-  }
-  fprintf(imagefile,"P6\n%u %u\n255\n", cam->width, cam->height);
-  fwrite((const char *)cam->rgb_frame->image,1,cam->height*cam->width*3, imagefile);
-  fclose(imagefile);
-  return 0;
-}
+
+/* int firewire_camera_interface_save_rgb8_buffer_to_file(struct firewire_camera_interface* cam, char* file_name) */
+/* { */
+/* #ifdef DEBUG_CAMERA */
+/*   fprintf(stderr,"firewire_camera_interface_save_buffer_to_file: %s\n",file_name); */
+/* #endif */
+/*   FILE* imagefile; */
+/*   imagefile=fopen(file_name, "wb"); */
+/*   if( imagefile == NULL) { */
+/*     fprintf(stderr, "Can't create %s\n",file_name); */
+/*     firewire_camera_interface_free(cam); */
+/*   } */
+/*   fprintf(imagefile,"P6\n%u %u\n255\n", cam->width, cam->height); */
+/*   fwrite((const char *)cam->rgb_frame->image,1,cam->height*cam->width*3, imagefile); */
+/*   fclose(imagefile); */
+/*   return 0; */
+/* } */
 
 int firewire_camera_interface_print_info(struct firewire_camera_interface* cam)
 {

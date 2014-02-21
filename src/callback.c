@@ -15,8 +15,6 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with positrack.  If not, see <http://www.gnu.org/licenses/>.
-
-
 */
 
 #include "main.h"
@@ -232,7 +230,7 @@ void on_playvideomenuitem_activate(GtkObject *object, gpointer user_data)
 	  firewire_camera_interface_init(&fw_inter);
 	  firewire_camera_interface_print_info(&fw_inter);
 	  firewire_camera_interface_start_transmission(&fw_inter);
-	  // let the pipeline ask for new data via a signal call
+	  // let the pipeline ask for new data via a signal to cb_need_data function
 	}
 
       gst_inter.loop = g_main_loop_new (NULL, FALSE); // gstreamer loop
