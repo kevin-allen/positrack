@@ -32,7 +32,6 @@ int init_window()
       fprintf(stderr,"An error occurred reading positrack.glade\n" );
       return -1;
     }
-  
   // get a reference for the widget we need to play with
   widgets.window = GTK_WIDGET (gtk_builder_get_object (builder, "window"));
   widgets.videodrawingarea =  GTK_WIDGET(gtk_builder_get_object (builder, "videodrawingarea"));
@@ -63,7 +62,6 @@ int init_window()
   widgets.usbcamera_radiobutton=GTK_WIDGET (gtk_builder_get_object (builder, "usbcamera_radiobutton"));  
   widgets.firewirecamera_radiobutton=GTK_WIDGET (gtk_builder_get_object (builder, "firewirecamera_radiobutton"));  
   widgets.videoplayback_checkbutton=GTK_WIDGET (gtk_builder_get_object (builder, "videoplayback_checkbutton"));  
-  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widgets.videoplayback_checkbutton), TRUE);
   
   gtk_builder_connect_signals (builder, NULL); // connect all signals
   g_object_unref (G_OBJECT (builder));
@@ -87,16 +85,15 @@ int init_window()
 void on_quitmenuitem_activate(GtkObject *object, gpointer user_data)
 {
   g_printerr("on_quitmenuitem_activate\n");
-
-  // need to stop the tracking here
-  
-  /* if(widgets.video_running==1) */
-  /*   { */
-  /*     g_main_loop_quit (loop); */
-  /*     gst_element_set_state (pipeline, GST_STATE_PAUSED); */
-  /*   } */
-  /* widgets.video_running=0; */
-  /* delete_gstreamer_pipeline(); */
+  gst_interface_delete_v4l2_pipeline(&gst_inter);
+  gst_interface_delete_firewire_pipeline(&gst_inter);
+  firewire_camera_interface_free(&fw_inter);
+  if(gst_inter.loop!=NULL)
+    {
+      g_main_loop_quit(gst_inter.loop);
+    }
+  tracking_interface_free(&tr);
+  gtk_main_quit();
   tracking_interface_free(&tr);
   gtk_main_quit();
 }
@@ -149,144 +146,145 @@ void on_videoplayback_dialog_delete_event(GtkObject *object, gpointer user_data)
   gtk_widget_hide(widgets.videoplayback_dlg);
 }
 
-
 // callback for the main window 
 void on_window_destroy (GtkObject *object, gpointer user_data)
 {
-  // if the tracking is running
-  widgets.tracking_running==0;
-  // if video is running
-  //  if(widgets.video_running==1)
-  // {
-  //  g_main_loop_quit (loop);
-      //gst_element_set_state (pipeline, GST_STATE_PAUSED);
-  // }
-  // widgets.video_running=0;
-  // delete_gstreamer_pipeline();
+  fprintf(stderr,"on_window_destroy()\n");
+  gst_interface_delete_v4l2_pipeline(&gst_inter);
+  gst_interface_delete_firewire_pipeline(&gst_inter);
+  firewire_camera_interface_free(&fw_inter);
+  fprintf(stderr,"about g_main_loop_quit\n");
+  if(gst_inter.loop!=NULL)
+    {
+      g_main_loop_quit(gst_inter.loop);
+    }
+  fprintf(stderr,"g_main_loop_quit done\n");
   tracking_interface_free(&tr);
+  fprintf(stderr,"about gtk main quit\n");
   gtk_main_quit();
 } 
 
-/* // function to listen to message comming from the gstreamer pipeline */
-/* static gboolean bus_call (GstBus *bus, GstMessage *msg, gpointer data) */
-/*  { */
-/*    GMainLoop *loop = (GMainLoop *) data; */
-/*    switch (GST_MESSAGE_TYPE (msg))  */
-/*      { */
-/*      case GST_MESSAGE_EOS: */
-/*        g_print ("End of stream\n"); */
-/*        g_main_loop_quit (loop); */
-/*        break; */
-/*      case GST_MESSAGE_ERROR:  */
-/*        { */
-/* 	 gchar *debug; */
-/* 	 GError *error; */
-/* 	 gst_message_parse_error (msg, &error, &debug); */
-/* 	 g_free (debug); */
-/* 	 g_printerr ("Error: %s\n", error->message); */
-/* 	 g_error_free (error); */
-/* 	 g_main_loop_quit (loop); */
-/* 	 break; */
-/*        } */
-/*      default: break; */
-/*      } */
-/*    return TRUE; */
-/*  } */
-
-static void print_pad_capabilities (GstElement *element, gchar *pad_name)
-{
-  /* /\* Retrieve pad *\/ */
-  /* pad = gst_element_get_static_pad(element, pad_name); */
-  /* if (!pad) { */
-  /*   g_printerr ("Could not retrieve pad '%s'\n", pad_name); */
-  /*   return; */
-  /* } */
-  /* /\* Retrieve negotiated caps (or acceptable caps if negotiation is not finished yet) *\/ */
-  /* pad_caps = gst_pad_get_negotiated_caps (pad); */
-  /* if (!pad_caps) */
-  /*   pad_caps = gst_pad_get_caps_reffed (pad); */
-  /* /\* Print and free *\/ */
-  /* g_print ("Caps for the %s pad:\n", pad_name); */
-  /* print_caps (pad_caps, "      "); */
-  /* gst_caps_unref (pad_caps); */
-  /* gst_object_unref (pad); */
-}
-
 void on_playvideomenuitem_activate(GtkObject *object, gpointer user_data)
 {
-// start the video capture and show it in the gui  
+#ifdef DEBUG_CALLBACK
+  fprintf(stderr,"on_playvideomenuitem_activate()\n");
+#endif
+  start_video();
+}
+void start_video()
+{
+#ifdef DEBUG_CALLBACK
+  fprintf(stderr,"start_video()\n");
+#endif
+
+  // start the video capture and show it in the gui  
   if(widgets.video_running==0) // flag to know if already runs */
     {
       widgets.video_running=1;
       if(app_flow.video_source==USB_V4L2)
 	{
-	  // build the v4l2 pipeline
-	  gst_interface_build_v4l2_pipeline(&gst_inter);
-	}
+	  if(gst_inter.usb_v4l2_pipeline_built!=1)
+	    {
+#ifdef DEBUG_CALLBACK
+	      fprintf(stderr,"call to gst_interface_build_v4l2_pipeline()\n");
+#endif
 
+	      gst_interface_build_v4l2_pipeline(&gst_inter);
+#ifdef DEBUG_CALLBACK
+	      fprintf(stderr,"gst_interface_build_v4l2_pipeline returned()\n");
+#endif
+
+	    }
+	}
       if(app_flow.video_source==FIREWIRE)
 	{
-	  gst_interface_build_firewire_pipeline(&gst_inter);
-	  firewire_camera_interface_init(&fw_inter);
-	  firewire_camera_interface_print_info(&fw_inter);
+	  if(gst_inter.firewire_pipeline_built!=1)
+	    {
+	      gst_interface_build_firewire_pipeline(&gst_inter);
+	    }
+	  if(fw_inter.is_initialized!=1)
+	    {
+	      firewire_camera_interface_init(&fw_inter);
+	      firewire_camera_interface_print_info(&fw_inter);
+	    }
 	  firewire_camera_interface_start_transmission(&fw_inter);
 	  // let the pipeline ask for new data via a signal to cb_need_data function
 	}
+      if(gst_inter.loop==NULL)
+	{
+#ifdef DEBUG_CALLBACK
+	  fprintf(stderr,"get a new g_main_loop\n");
+#endif
+	  gst_inter.loop = g_main_loop_new (NULL, FALSE); // gstreamer loop
+#ifdef DEBUG_CALLBACK
+	  fprintf(stderr,"set play state\n");
+#endif
 
-      gst_inter.loop = g_main_loop_new (NULL, FALSE); // gstreamer loop
-      gst_element_set_state (gst_inter.pipeline, GST_STATE_PLAYING);
-      g_main_loop_run (gst_inter.loop); // flow will stay here until the loop is quit
+	  gst_element_set_state (gst_inter.pipeline, GST_STATE_PLAYING);
+#ifdef DEBUG_CALLBACK
+	  fprintf(stderr,"run g_main_loop\n");
+#endif
+	  g_main_loop_run(gst_inter.loop); // flow will stay here until the loop is quit
+	}
+      else
+	{
+	  gst_element_set_state (gst_inter.pipeline, GST_STATE_PLAYING);
+	}
     }
-
 }
 void on_stopvideomenuitem_activate(GtkObject *object, gpointer user_data)
 {
+  stop_video();
+} 
+void stop_video()
+{
+#ifdef DEBUG_CALLBACK
+  fprintf(stderr,"stop_video()\n");
+#endif
   if(widgets.video_running==1)
     {
       gst_element_set_state(gst_inter.pipeline, GST_STATE_PAUSED);
-      g_main_loop_quit(gst_inter.loop);
-      if(app_flow.video_source==USB_V4L2)
-	{
-	  gst_interface_delete_v4l2_pipeline(&gst_inter);
-	}
-      
       if(app_flow.video_source==FIREWIRE)
 	{
-	  gst_interface_delete_firewire_pipeline(&gst_inter);
 	  firewire_camera_interface_stop_transmission(&fw_inter);
-	  firewire_camera_interface_free(&fw_inter);
 	}
     }
   widgets.video_running=0;
-} 
+#ifdef DEBUG_CALLBACK
+  fprintf(stderr,"stop_video() done\n");
+#endif
+}
+
+
 void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
 {
-  /* if(widgets.video_running==0) // need to start video first, could we emit a signal to trigger it? */
-  /*   { */
-  /*     g_printerr("You need to start video to do tracking, from on_playtrackingmenuitem_activate()\n"); */
-  /*     return; */
-  /*   } */
-  /* if(widgets.tracking_running==1) */
-  /*   { */
-  /*     g_printerr("Tracking already underway, from on_playtrackingmenuitem_activate()\n"); */
-  /*     return; */
-  /*   } */
+#ifdef DEBUG_CALLBACK
+  fprintf(stderr,"on_playtrackingmenuitem activate()\n");
+#endif
+  if(widgets.tracking_running==1)
+    {
+      g_printerr("Tracking already underway, from on_playtrackingmenuitem_activate()\n");
+      return;
+    }
+  tr.number_frames_tracked=0;
+  widgets.tracking_running=1;
+  g_timeout_add(tr.interval_between_tracking_calls_ms,tracking,user_data); // timer to trigger a tracking event
   
-  /* tr.number_frames_tracked=0; */
-  /* widgets.tracking_running=1; */
-  /* g_timeout_add(tr.interval_between_tracking_calls_ms,tracking,user_data); // timer to trigger a tracking event */
-  /* //g_printerr("leaving playtrackingmenuitem_activate, tracking_running: %d\n",widgets.tracking_running); */
+#ifdef DEBUG_CALLBACK
+  g_printerr("leaving playtrackingmenuitem_activate, tracking_running: %d\n",widgets.tracking_running);
+#endif
+  
 }
+
 void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
 {
-  /* int index; */
-  /* widgets.tracking_running=0; // this will stop timer by making tracking function to return FALSE */
-  
-  /* // increament the file index */
-  /* index=gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widgets.trialnospinbutton)); */
-  /* index++; */
-  /* gtk_spin_button_set_value(GTK_SPIN_BUTTON(widgets.trialnospinbutton),(gdouble)index); */
-  /* //g_printerr("tracking_running: %d\n",widgets.tracking_running); */
+  int index;
+  widgets.tracking_running=0; // making tracking function to return FALSE */
+  // increament the file index
+  stop_video();
+  index=gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widgets.trialnospinbutton));
+  index++; 
+  gtk_spin_button_set_value(GTK_SPIN_BUTTON(widgets.trialnospinbutton),(gdouble)index);
 }
 
 
@@ -341,10 +339,17 @@ void on_usbcamera_radiobutton_toggled(GtkObject *object, gpointer user_data)
     {
       app_flow.video_source=USB_V4L2;
       g_printerr ("USB_V4L2.\n"); 
+
+      // if the pipeline is not built, build it
+
+
     }
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.firewirecamera_radiobutton))==TRUE)
     {
       app_flow.video_source=FIREWIRE;
+      
+      // if the pipeline is not built, build it
+
       g_printerr ("FIREWIRE.\n"); 
     }
 }
@@ -363,7 +368,174 @@ void on_videoplayback_checkbutton_toggled(GtkObject *object, gpointer user_data)
     }
 }
 
-void main_app_flow_get_default(struct main_app_flow* app_flow)
+int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
+{
+  /***********************************************
+  get the default setting from a configuration file 
+  located in the home directory of the user
+
+  the values in the configuration file should be based on the main_app_flow struct
+  defined in main.h
+
+  one line per enum of the main_app_flow structure
+  the order is the following:
+  videosource
+  tracking_mode
+  sychronization_mode
+  videoplayback_mode
+  
+
+  example of file:
+  FIREWIRE
+  ONE_WHITE_SPOT
+  NONE
+  OFF
+
+  ***********************************************/
+  // check if config file is in the directory
+  gchar* config_directory_name;
+  gchar* config_file_name="positrack.config";
+
+  // the home directory as the default directory
+  struct passwd *p;
+  char *username=getenv("USER");
+  p=getpwnam(username);
+  config_directory_name=strcat(p->pw_dir,"/");
+  config_file_name=g_strconcat(config_directory_name,config_file_name,NULL);
+
+  FILE* fp;
+  size_t len = 0;
+  ssize_t read;
+  char data_file_name[255];
+  char videosource[255];
+  char tracking_mode[255];
+  char synchronization_mode[255];
+  char videoplayback_mode[255];
+  int i,ret;
+
+  // read variables from file
+  fp = fopen(config_file_name, "r");
+  if (fp == NULL)
+    {
+      fprintf(stderr,"problem opening %s in read_configuration_file\n",config_file_name);
+      return -1;
+    }
+  if(fscanf(fp,"%s",&videosource)!=1)
+    {
+      fprintf(stderr,"problem reading videosource from %s\n",config_file_name);
+      return -1;
+    }
+  if(fscanf(fp,"%s",&tracking_mode)!=1)
+    {
+      fprintf(stderr,"problem reading tracking_mode from %s\n",config_file_name);
+      return -1;
+    }
+  if(fscanf(fp,"%s",&synchronization_mode)!=1)
+    {
+      fprintf(stderr,"problem reading synchronization_mode from %s\n",config_file_name);
+      return -1;
+    }
+  if(fscanf(fp,"%s",&videoplayback_mode)!=1)
+    {
+      fprintf(stderr,"problem reading videoplayback_mode from %s\n",config_file_name);
+      return -1;
+    }
+  fclose(fp); 
+  
+  // set the main_app_flow structure
+  if (strcmp(videosource, "FIREWIRE") == 0) 
+    {
+      app_flow->video_source=FIREWIRE;
+      printf("value source: %s\n",videosource);
+    }
+  else if (strcmp(videosource, "USB_V4L2") == 0) 
+    {
+      app_flow->video_source=USB_V4L2;
+      printf("value source: %s\n",videosource);
+    }
+  else
+    {
+      fprintf(stderr,"value of videosource is not recognized: %s\n",videosource);
+      return -1;
+    }
+  if (strcmp(tracking_mode, "ONE_WHITE_SPOT") == 0) 
+    {
+      app_flow->trk_mode=ONE_WHITE_SPOT;
+      printf("tracking mode: %s\n",tracking_mode);
+    }
+  else if (strcmp(tracking_mode, "TWO_WHITE_SPOTS") == 0) 
+    {
+      app_flow->trk_mode=TWO_WHITE_SPOTS;
+      printf("tracking mode: %s\n",tracking_mode);
+    }
+  else
+    {
+      fprintf(stderr,"value of tracking_mode is not recognized: %s\n",tracking_mode);
+      return -1;
+    }
+  if (strcmp(synchronization_mode, "NONE") == 0) 
+    {
+      app_flow->synch_mode=NONE;
+      printf("synchronization mode: %s\n",synchronization_mode);
+    }
+  else if (strcmp(synchronization_mode, "COMEDI") == 0) 
+    {
+      app_flow->synch_mode=COMEDI;
+      printf("synchronization mode: %s\n",synchronization_mode);
+    }
+  else
+    {
+      fprintf(stderr,"value of synchronization_mode is not recognized: %s\n",synchronization_mode);
+      return -1;
+    }
+  if (strcmp(videoplayback_mode, "ON") == 0) 
+    {
+      app_flow->playback_mode=ON;
+      printf("playback mode: %s\n",videoplayback_mode);
+    }
+  else if (strcmp(videoplayback_mode, "OFF") == 0) 
+    {
+      app_flow->synch_mode=OFF;
+      printf("playback mode: %s\n",videoplayback_mode);
+    }
+  else
+    {
+      fprintf(stderr,"value of videoplayback_mode is not recognized: %s\n",videoplayback_mode);
+      return -1;
+    }
+  return 0;
+}
+
+void main_app_flow_set_gui(struct main_app_flow* app_flow)
+{
+  /*****************************************************
+  will set the gui buttons base on app_flow structure
+  *****************************************************/
+  //videosource
+  if(app_flow->video_source==FIREWIRE)
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widgets.firewirecamera_radiobutton),TRUE);
+  if(app_flow->video_source==USB_V4L2)
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widgets.usbcamera_radiobutton),TRUE);
+  //tracking_mode
+  if(app_flow->trk_mode==ONE_WHITE_SPOT)
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widgets.singlewhitespot_radiobutton),TRUE);
+  if(app_flow->trk_mode==TWO_WHITE_SPOTS)
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widgets.twowhitespots_radiobutton),TRUE);
+  //sychronization_mode
+  if(app_flow->synch_mode==NONE)
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widgets.no_synchronization_radiobutton),TRUE);
+  if(app_flow->synch_mode==COMEDI)
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widgets.comedi_synchronization_radiobutton),TRUE);
+  //videoplayback_mode
+  if(app_flow->playback_mode==ON)
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widgets.videoplayback_checkbutton), TRUE);
+  if(app_flow->playback_mode==OFF)
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widgets.videoplayback_checkbutton), FALSE);
+}
+
+
+
+void main_app_flow_get_setting_from_gui(struct main_app_flow* app_flow)
 {
   g_printerr ("main app flow get default.\n"); 
   
@@ -408,8 +580,8 @@ void main_app_flow_get_default(struct main_app_flow* app_flow)
       app_flow->playback_mode=OFF;
       g_printerr ("playback off.\n"); 
     }
-
 }
+
 
 void on_directorytoolbutton_clicked(GtkObject *object, gpointer user_data)
 {

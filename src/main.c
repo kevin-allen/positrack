@@ -134,7 +134,13 @@ int main (int argc, char *argv[])
     }
   
   // get the default app flow from the gui interface
-  main_app_flow_get_default(&app_flow);
+  if(main_app_set_default_from_config_file(&app_flow)!=0)
+    {
+      g_printerr("Could not read configuration file\n");
+      return -1;
+    }
+  main_app_flow_set_gui(&app_flow);
+  
 
   // wait for something to happen in the gui
   gtk_main ();

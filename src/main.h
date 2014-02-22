@@ -64,10 +64,10 @@ File with declarations of the main structures and functions used in positrack
 #define TRACKED_OBJECT_BUFFER_LENGTH 432000 // 432000 should give 240 minutes at 30Hz.
 
 //#define DEBUG_ACQ // to turn on debugging output for the comedi card
-#define DEBUG_CAMERA // to turn on debugging for the camera
+//#define DEBUG_CAMERA // to turn on debugging for the camera
 #define DEBUG_TRACKING // to turn on debugging for the tracking
-#define DEBUG_IMAGE // to turn on debugging for the image processing
-
+//#define DEBUG_IMAGE // to turn on debugging for the image processing
+#define DEBUG_CALLBACK
 //#define CAPS "video/x-raw, format=RGB, framerate=30/1 width=160, pixel-aspect-ratio=1/1"
 
 
@@ -141,6 +141,7 @@ struct tracking_interface
   // the tracking interface job is to find the spots or
   // whatever is in the image frame that is used to 
   // find location of tracked object and update tracked_object structure
+  int is_initialized;
   int interval_between_tracking_calls_ms;
   gint width;
   gint height;
@@ -219,6 +220,7 @@ struct tracked_object tob;
 struct firewire_camera_interface
 {
   int is_acquiring;
+  int is_initialized;
   int number_dms_buffers;
   dc1394camera_t *camera;
   dc1394featureset_t features;
@@ -258,6 +260,8 @@ struct gst_interface
   GstBuffer *buffer;
   GstCaps *caps, *pad_caps;
   GstStructure *s;
+  int firewire_pipeline_built;
+  int usb_v4l2_pipeline_built;
 };
 
 struct gst_interface gst_inter;
@@ -266,6 +270,8 @@ struct gst_interface gst_inter;
 GtkBuilder *builder; // to build the interface from glade
 gchar* trk_file_name; // directory + file name from gui
 gchar* saving_directory_name; // 
+gchar* config_directory_name;
+gchar* config_file_name;
 
 
 
@@ -292,6 +298,8 @@ void on_videoplayback_dialog_delete_event(GtkObject *object, gpointer user_data)
 
 void on_playvideomenuitem_activate(GtkObject *object, gpointer user_data);
 void on_stopvideomenuitem_activate(GtkObject *object, gpointer user_data);
+void start_video();
+void stop_video();
 void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data);
 void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data);
 void on_aboutmenuitem_activate(GtkObject *object, gpointer user_data);
@@ -303,7 +311,10 @@ void on_usbcamera_radiobutton_toggled(GtkObject *object, gpointer user_data);
 void on_videoplayback_checkbutton_toggled(GtkObject *object, gpointer user_data);
 
 
-void main_app_flow_get_default(struct main_app_flow* app_flow);
+void main_app_flow_get_setting_from_gui(struct main_app_flow* app_flow);
+int main_app_set_default_from_config_file(struct main_app_flow* app_flow);
+void main_app_flow_set_gui(struct main_app_flow* app_flow);
+
 
 int gst_interface_build_v4l2_pipeline(struct gst_interface* gst_inter);
 int gst_interface_build_firewire_pipeline(struct gst_interface* gst_inter);
@@ -353,6 +364,8 @@ to do the tracking
 int tracking_interface_init(struct tracking_interface* tr);
 int tracking_interface_free(struct tracking_interface* tr);
 int tracking_interface_get_buffer(struct tracking_interface* tr);
+int tracking_interface_usb_v4l2_get_buffer(struct tracking_interface* tr);
+int tracking_interface_firewire_get_buffer(struct tracking_interface* tr);
 int tracking_interface_free_buffer(struct tracking_interface* tr);
 int tracking_interface_valid_buffer(struct tracking_interface* tr);
 int tracking_interface_get_luminance(struct tracking_interface* tr);

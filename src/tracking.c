@@ -80,13 +80,15 @@ int tracking_interface_init(struct tracking_interface* tr)
       fprintf(stderr, "problem allocating memory for tr->positive_pixel_y\n");
       return -1;
     }
-
-
-
+  tr->is_initialized=1;
   return 0;
 }
 int tracking_interface_free(struct tracking_interface* tr)
 {
+  if(tr->is_initialized!=1)
+    { // nothing to do
+      return 0;
+    }
   free(tr->lum);
   free(tr->spot);
   free(tr->spot_positive_pixels);
@@ -106,112 +108,161 @@ gboolean tracking()
 {
   /*
     function that is called by a timer to do the tracking
-    */
-  if(widgets.tracking_running==1)
-    {// the tracking is on
-      
-      if(tr.skip_next_tick==1) // do nothing this time
-	{
-	  tr.skip_next_tick=0;
-	  return TRUE;
-	}
-      if(tracking_interface_get_buffer(&tr)!=0)
-	{
-	  g_printerr("tracking(), tracking_interface_get_buffer() did not return 0\n");
-	  tr.number_frames_tracked=0;
-	  return FALSE;
-	}
-      
-      if(microsecond_from_timespec(&tr.waiting_buffer_duration)/1000>INTERVAL_BETWEEN_TRACKING_CALLS_MS/2)
-	{ // we are waiting a long time for frames, will ignore the next buffer
-	  // to give time for buffer to arrive without having the thread 
-	  // beinng stuck waiting
-	  tr.skip_next_tick=1;
-	}
-
-      // check if the buffer contain a valid buffer
-      clock_gettime(CLOCK_REALTIME, &tr.start_tracking_time); // get the time we start tracking
-      if(tracking_interface_valid_buffer(&tr)!=0)
-	{
-	  g_printerr("tracking(), tracking_interface_valid_buffer() did not return 0\n");
-	  tr.number_frames_tracked=0;
-	  return FALSE;
-	}
-
-      // depending on tracking type 
-      if(tracking_interface_tracking_one_bright_spot(&tr)!=0)
-	{
-	  g_printerr("tracking(), tracking_interface_tracking_one_bright_spot() did not return 0\n");
-	  tr.number_frames_tracked=0;
-	  return FALSE;
-	}
-
-
-      tracking_interface_free_buffer(&tr);
-            
-
-      clock_gettime(CLOCK_REALTIME, &tr.end_tracking_time); // get the time we start tracking
-      tr.tracking_time_duration=diff(&tr.start_tracking_time,&tr.end_tracking_time);
-     
-      g_printerr("offset: %d, lum: %lf, waiting time: %d ms, processing time: %d ms, current sampling rate: %.2lf Hz\n",tr.current_buffer_offset,tr.mean_luminance,microsecond_from_timespec(&tr.waiting_buffer_duration)/1000, microsecond_from_timespec(&tr.tracking_time_duration)/1000,tr.current_sampling_rate);
-
-      // update the tracked_object (with long term memory of its position, direction of movement, head direction, distanced travelled, average speed, etc)
-
-
-
-
-      // draw the object on the tracking screen
-
-      // save position data into a data file
-
-      // synchronization pulse goes down here
-      tr.number_frames_tracked++;
+  */
+  if(widgets.tracking_running!=1)
+    {
+      tr.number_frames_tracked=0;
+      return FALSE; // returning false will stop the loop
+    }
+  if(tr.skip_next_tick==1) // do nothing this time
+    {
+      tr.skip_next_tick=0;
       return TRUE;
     }
-  else
-    tr.number_frames_tracked=0;
-    return FALSE; // returning false will stop the loop
+  if(tracking_interface_get_buffer(&tr)!=0)
+    {
+      g_printerr("tracking(), tracking_interface_get_buffer() did not return 0\n");
+      tr.number_frames_tracked=0;
+      return FALSE;
+    }
+  if(microsecond_from_timespec(&tr.waiting_buffer_duration)/1000>INTERVAL_BETWEEN_TRACKING_CALLS_MS/2) 
+    { // we are waiting a long time for frames, will ignore the next buffer
+      // to give time for buffer to arrive without having the thread
+      // beinng stuck waiting, usefull with usb cameras that changes sampling
+      // rate on their own!
+      tr.skip_next_tick=1;
+    }
+
+  // check if the buffer contain a valid buffer
+  clock_gettime(CLOCK_REALTIME, &tr.start_tracking_time); // get the time we start tracking
+  if(tracking_interface_valid_buffer(&tr)!=0)
+    {
+      g_printerr("tracking(), tracking_interface_valid_buffer() did not return 0\n");
+      tr.number_frames_tracked=0;
+      return FALSE;
+    }
+  
+  // depending on tracking type
+  if(tracking_interface_tracking_one_bright_spot(&tr)!=0)
+    {
+      g_printerr("tracking(), tracking_interface_tracking_one_bright_spot() did not return 0\n");
+      tr.number_frames_tracked=0;
+      return FALSE;
+    }
+
+  tracking_interface_free_buffer(&tr);
+            
+  clock_gettime(CLOCK_REALTIME, &tr.end_tracking_time); // get the time we start tracking
+  tr.tracking_time_duration=diff(&tr.start_tracking_time,&tr.end_tracking_time);
+     
+  g_printerr("offset: %d, lum: %lf, waiting time: %d ms, processing time: %d ms, current sampling rate: %.2lf Hz\n",tr.current_buffer_offset,tr.mean_luminance,microsecond_from_timespec(&tr.waiting_buffer_duration)/1000, microsecond_from_timespec(&tr.tracking_time_duration)/1000,tr.current_sampling_rate);
+
+      /* // update the tracked_object (with long term memory of its position, direction of movement, head direction, distanced travelled, average speed, etc) */
+
+      /* // draw the object on the tracking screen */
+
+      /* // save position data into a data file */
+
+      /* // synchronization pulse goes down here */
+      /* tr.number_frames_tracked++; */
+  return TRUE;
 }
 
 int tracking_interface_get_buffer(struct tracking_interface* tr)
 {
-  // ideally this code should be independent of the 
-  // type of camera used
+
+  if(app_flow.video_source==USB_V4L2)
+    {
+      tracking_interface_usb_v4l2_get_buffer(tr);
+    }
+  if(app_flow.video_source==FIREWIRE)
+    {
+      tracking_interface_firewire_get_buffer(tr);
+    }
+  return 0;
+}
+
+int tracking_interface_usb_v4l2_get_buffer(struct tracking_interface* tr)
+{
+#ifdef DEBUG_TRACKING
+  fprintf(stderr,"tracking_interface_usb_v4l2_get_buffer()\n");
+#endif
   
+  GdkPixbuf *tmp_pixbuf;
+  clock_gettime(CLOCK_REALTIME, &tr->start_waiting_buffer_time); // get the time we start waiting
+  // get a sample
+  gst_inter.sample=gst_app_sink_pull_sample((GstAppSink*)gst_inter.appsink);
+  // get a buffer from sample
+  gst_inter.buffer=gst_sample_get_buffer(gst_inter.sample);
+  clock_gettime(CLOCK_REALTIME, &tr->end_waiting_buffer_time); // get the time we end waiting
+  tr->waiting_buffer_duration=diff(&tr->start_waiting_buffer_time,&tr->end_waiting_buffer_time);
   
-  /* GdkPixbuf *tmp_pixbuf; */
-  /* clock_gettime(CLOCK_REALTIME, &tr->start_waiting_buffer_time); // get the time we start waiting */
-  /* // get a sample */
-  /* //sample=gst_app_sink_pull_sample((GstAppSink*)appsink);  */
-  /* // get a buffer from sample */
-  /* //buffer=gst_sample_get_buffer(sample); */
-  /* clock_gettime(CLOCK_REALTIME, &tr->end_waiting_buffer_time); // get the time we end waiting */
-  /* tr->waiting_buffer_duration=diff(&tr->start_waiting_buffer_time,&tr->end_waiting_buffer_time); */
+  //get the time of buffer
+  tr->previous_buffer_time=tr->current_buffer_time;
+  GST_TIME_TO_TIMESPEC(GST_BUFFER_TIMESTAMP(gst_inter.buffer), tr->current_buffer_time);
+  //offset=frame number
+  tr->previous_buffer_offset=tr->current_buffer_offset;
+  tr->current_buffer_offset=GST_BUFFER_OFFSET(gst_inter.buffer);
+  //get a pixmap from each buffer
+  gst_buffer_map (gst_inter.buffer, &gst_inter.map, GST_MAP_READ);
+  // get a pixbuf based on the data in the map
+  tmp_pixbuf = gdk_pixbuf_new_from_data (gst_inter.map.data,
+      					 GDK_COLORSPACE_RGB, FALSE, 8,
+      					 tr->width, tr->height,
+      					 GST_ROUND_UP_4 (tr->width * 3), NULL, NULL);
+  // make a physical copy of the data from tmp_pixbuf
+  tr->pixbuf=gdk_pixbuf_copy(tmp_pixbuf);
+  // free the buffer
+  gst_buffer_unmap (gst_inter.buffer, &gst_inter.map);
+  gst_buffer_unref (gst_inter.buffer);
   
-  
-  /* //get the time of buffer */
-  /* tr->previous_buffer_time=tr->current_buffer_time; */
-  /* GST_TIME_TO_TIMESPEC(GST_BUFFER_TIMESTAMP(buffer), tr->current_buffer_time); */
-  /* //offset=frame number */
-  /* tr->previous_buffer_offset=tr->current_buffer_offset; */
-  /* tr->current_buffer_offset=GST_BUFFER_OFFSET(buffer); */
-  /* //get a pixmap from each buffer */
-  /* gst_buffer_map (buffer, &map, GST_MAP_READ); */
-  /* // get a pixbuf based on the data in the map */
-  /* tmp_pixbuf = gdk_pixbuf_new_from_data (map.data, */
-  /* 					 GDK_COLORSPACE_RGB, FALSE, 8, */
-  /* 					 tr->width, tr->height, */
-  /* 					 GST_ROUND_UP_4 (tr->width * 3), NULL, NULL); */
-  /* // make a physical copy of the data from tmp_pixbuf */
-  /* tr->pixbuf=gdk_pixbuf_copy(tmp_pixbuf); */
-  /* // free the buffer */
-  /* gst_buffer_unmap (buffer, &map); */
-  /* gst_buffer_unref (buffer); */
-  
-  // probably needs to unref tmp_pixbuf //
+  //  probably needs to unref tmp_pixbuf //
+#ifdef DEBUG_TRACKING
+  fprintf(stderr,"tracking_interface_usb_v4l2_get_buffer() done\n");
+#endif
 
   return 0;
 }
+int tracking_interface_firewire_get_buffer(struct tracking_interface* tr)
+{
+#ifdef DEBUG_TRACKING
+  fprintf(stderr,"tracking_interface_firewire_get_buffer()\n");
+#endif
+
+  
+  GdkPixbuf *tmp_pixbuf;
+  clock_gettime(CLOCK_REALTIME, &tr->start_waiting_buffer_time); // get the time we start
+  firewire_camera_interface_dequeue(&fw_inter);
+  clock_gettime(CLOCK_REALTIME, &tr->end_waiting_buffer_time); // get the time we end waiting
+  tr->waiting_buffer_duration=diff(&tr->start_waiting_buffer_time,&tr->end_waiting_buffer_time);
+  firewire_camera_interface_convert_to_RGB8(&fw_inter);
+  
+  //get the time of buffer
+  tr->previous_buffer_time=tr->current_buffer_time;
+  tr->current_buffer_time.tv_nsec=fw_inter.frame->timestamp;
+  fprintf(stderr,"buff time:%.2ld \n",tr->current_buffer_time.tv_nsec/1000);
+  
+  //offset=frame number
+  tr->previous_buffer_offset=tr->current_buffer_offset;
+  tr->current_buffer_offset=fw_inter.frame->frames_behind;
+
+
+  // Put that into GdkPixbuf
+  tmp_pixbuf = gdk_pixbuf_new_from_data (fw_inter.rgb_frame->image,
+    GDK_COLORSPACE_RGB, FALSE, 8,
+    tr->width, tr->height,
+    GST_ROUND_UP_4 (tr->width * 3), NULL, NULL);
+
+  // make a physical copy of the data from tmp_pixbuf
+  tr->pixbuf=gdk_pixbuf_copy(tmp_pixbuf);
+#ifdef DEBUG_TRACKING
+  fprintf(stderr,"tracking_interface_firewire_get_buffer() done\n");
+#endif
+ 
+  return 0;
+}
+
+
 int tracking_interface_free_buffer(struct tracking_interface* tr)
 {
   g_object_unref(tr->pixbuf);

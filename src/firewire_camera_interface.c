@@ -110,10 +110,11 @@ int firewire_camera_interface_init(struct firewire_camera_interface* cam)
     }
   cam->rgb_frame->color_coding=DC1394_COLOR_CODING_RGB8;
 
-  
+  cam->is_initialized=1;
 #ifdef DEBUG_CAMERA
   fprintf(stderr,"firewire_camera_interface_init, leaving\n");
 #endif
+
   return 0;
 }
 
@@ -123,11 +124,15 @@ int firewire_camera_interface_free(struct firewire_camera_interface* cam)
 #ifdef DEBUG_CAMERA
   fprintf(stderr,"firewire_camera_interface_free\n");
 #endif
-  dc1394_video_set_transmission(cam->camera, DC1394_OFF);
-  dc1394_capture_stop(cam->camera);
-  dc1394_camera_free(cam->camera);
-  free(cam->rgb_frame->image);
-  free(cam->rgb_frame);
+  if(cam->is_initialized==1)
+    {
+      dc1394_video_set_transmission(cam->camera, DC1394_OFF);
+      dc1394_capture_stop(cam->camera);
+      dc1394_camera_free(cam->camera);
+      free(cam->rgb_frame->image);
+      free(cam->rgb_frame);
+      cam->is_initialized=0;
+    }
   return 0;
 }
 
@@ -198,7 +203,6 @@ int firewire_camera_interface_convert_to_RGB8(struct firewire_camera_interface* 
   fprintf(stderr,"leaving firewire_camera_interface_convert_to_RGB8\n");
 #endif
 
-  fprintf(stderr,"image[0]: %d\n",(int)cam->rgb_frame->image[0]);
   if(cam->rgb_frame->image==NULL)
     {
       fprintf(stderr,"cam->rgb_frame->image==NULL in firewire_camera_interface_convert_to_RGB8\n");
