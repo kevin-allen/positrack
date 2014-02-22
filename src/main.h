@@ -44,7 +44,7 @@ File with declarations of the main structures and functions used in positrack
 #define _FILE_OFFSET_BITS 64 // to have files larger than 2GB
 #define NSEC_PER_SEC (1000000000) // The number of nsecs per sec
 
-#define INTERVAL_BETWEEN_TRACKING_CALLS_MS 15 //
+#define INTERVAL_BETWEEN_TRACKING_CALLS_MS 33 //
 #define COMEDI_INTERFACE_MAX_DEVICES 2
 #define TIMEOUT_FOR_CAPTURE_MS 20 // time before the timeout try to get a new frame
 #define FIREWIRE_CAMERA_INTERFACE_NUMBER_OF_FRAMES_IN_RING_BUFFER 10

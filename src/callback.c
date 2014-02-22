@@ -53,7 +53,6 @@ int init_window()
   widgets.about_dlg= GTK_WIDGET (gtk_builder_get_object (builder, "about_dialog"));
 
 
-
   // radio buttons
   widgets.no_synchronization_radiobutton= GTK_WIDGET (gtk_builder_get_object (builder, "no_synchronizationradiobutton"));  
   widgets.comedi_synchronization_radiobutton= GTK_WIDGET (gtk_builder_get_object (builder, "comedi_synchronizationradiobutton"));  
@@ -85,6 +84,8 @@ int init_window()
 void on_quitmenuitem_activate(GtkObject *object, gpointer user_data)
 {
   g_printerr("on_quitmenuitem_activate\n");
+  widgets.video_running=0;
+  widgets.tracking_running=0;
   gst_interface_delete_v4l2_pipeline(&gst_inter);
   gst_interface_delete_firewire_pipeline(&gst_inter);
   firewire_camera_interface_free(&fw_inter);
@@ -149,6 +150,8 @@ void on_videoplayback_dialog_delete_event(GtkObject *object, gpointer user_data)
 // callback for the main window 
 void on_window_destroy (GtkObject *object, gpointer user_data)
 {
+  widgets.video_running=0;
+  widgets.tracking_running=0;
   fprintf(stderr,"on_window_destroy()\n");
   gst_interface_delete_v4l2_pipeline(&gst_inter);
   gst_interface_delete_firewire_pipeline(&gst_inter);

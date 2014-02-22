@@ -240,8 +240,7 @@ int tracking_interface_firewire_get_buffer(struct tracking_interface* tr)
   //get the time of buffer
   tr->previous_buffer_time=tr->current_buffer_time;
   tr->current_buffer_time.tv_nsec=fw_inter.frame->timestamp;
-  fprintf(stderr,"buff time:%.2ld \n",tr->current_buffer_time.tv_nsec/1000);
-  
+    
   //offset=frame number
   tr->previous_buffer_offset=tr->current_buffer_offset;
   tr->current_buffer_offset=fw_inter.frame->frames_behind;
@@ -258,7 +257,6 @@ int tracking_interface_firewire_get_buffer(struct tracking_interface* tr)
 #ifdef DEBUG_TRACKING
   fprintf(stderr,"tracking_interface_firewire_get_buffer() done\n");
 #endif
- 
   return 0;
 }
 
@@ -355,9 +353,12 @@ int tracking_interface_tracking_one_bright_spot(struct tracking_interface* tr)
   
   if(tr->mean_luminance>tr->max_mean_luminance_for_tracking)
     {
-      g_printerr("mean_luminance is too high for tracking\n");
-      return -1;
+      g_printerr("mean_luminance (%lf) is too high for tracking\n",tr->mean_luminance);
+      tr->number_spots=0;
+      tr->number_positive_pixels=0;
+      return 0;
     }
+  
   
   // find all the spots recursively, get the summary data for each spot
   if(tracking_interface_find_spots_recursive(tr)!=0)
@@ -365,83 +366,6 @@ int tracking_interface_tracking_one_bright_spot(struct tracking_interface* tr)
       g_printerr("tracking_interface_find_spots_recursive() did not return 0\n");
       return -1;
     }
-  
-  /* // 4. Find the largest spot out of the list of spots we have in this frame */
-  
-  /* double Score = 0; */
-  /* double MaxScore = 0; */
-  /* int SpotIndex = -1;  // to access the arrays with the data (Peakx[] etc..) */
-  
-  /* // the largest spot is the one with the more pixels, */
-  /* // it needs to be more than 10 pixels */
-  /* MaxScore = -1; */
-  /* for (int i = 0; i < NumberCallsHux; i++) */
-  /*   { */
-  /*     if ((MeanRed[i] != -1) && (MeanRed[i] != -2)) */
-  /* 	{ */
-  /* 	  Score = NumberPixels[i]; */
-  /* 	  if ((Score > MaxScore) && (NumberPixels[i] > 10)) */
-  /* 	    { */
-  /* 	      MaxScore = Score; */
-  /* 	      SpotIndex = i; */
-  /* 	    } */
-  /* 	} */
-  /*   } */
-  
-  /* // 5. Now save the x and y coordinates and the number of positive pixels for the */
-  /* //    spot */
-  /* if (SpotIndex != -1) */
-  /*   { */
-  /*     mpTrackingData[1] = (int)mMath.mRoundDouble(Meanx[SpotIndex],0); */
-  /*     mpTrackingData[2] = (int)mMath.mRoundDouble(Meany[SpotIndex],0); */
-  /*     mpTrackingData[3] = (int)mMath.mRoundDouble(NumberPixels[SpotIndex],0); */
-  /*     MeanPositive.SetPoint(mRectFrame.left + mpTrackingData[1],mRectFrame.top + mpTrackingData[2]); */
-  /*     dc.SelectObject(&mRedThickPen); */
-  /*     dc.Rectangle(MeanPositive.x - 1,MeanPositive.y - 1, MeanPositive.x + 1, MeanPositive.y +1); */
-  /*   } */
-  /* else */
-  /*   { */
-  /*     mpTrackingData[1] = -1; */
-  /*     mpTrackingData[2] = -1; */
-  /*     mpTrackingData[3] = 0; */
-  /*   } */
-  
-  /* // set the green and blue spots to -1 */
-  /* mpTrackingData[4] = -1; */
-  /* mpTrackingData[5] = -1; */
-  /* mpTrackingData[6] = 0; */
-  /* mpTrackingData[7] = -1; */
-  /* mpTrackingData[8] = -1; */
-  /* mpTrackingData[9] = 0; */
-  
-  
-  /* // 6 Write on the window when there is no positive pixel of any colour */
-  /* if(mpTrackingData[3] == 0) // if no red pixel in the tracking zone */
-  /*   { */
-  /*     mNoRedPixelCount++; */
-  /*     s.Format("Red Problems:%d", mNoRedPixelCount); */
-  /*     dc.TextOut(mRectFrame.left+5,mRectFrame.top+5,s); */
-  /*   } */
-  
-  /* mpTrackingData[10] = -1;  */
-  
-  /* // */
-  /* // 7 get head position, set to spot location */
-  /* mpTrackingData[11]=mpTrackingData[1]; */
-  /* mpTrackingData[12]=mpTrackingData[2]; */
-  
-  
-  /* // 8 draw on screen */
-  /* MeanPositive.SetPoint(mRectFrame.left + (int)mpTrackingData[11],mRectFrame.top + (int)mpTrackingData[12]); */
-  /* dc.SelectObject(&mBlackThickPen); */
-  /* dc.Rectangle(MeanPositive.x - 1,MeanPositive.y - 1, MeanPositive.x + 1, MeanPositive.y +1); */
-  
-  /* ///////////////////////////////////////////////////////////////////////////////////////////////////// */
-  /* //////////////////////////////////////////write to dat file/////////////////////////////////////////// */
-  /* ////////////////////////////////////////////////////////////////////////////////////////////////////// */
-  
-  
-
   return 0;
 }
 
