@@ -95,8 +95,6 @@ void on_quitmenuitem_activate(GtkObject *object, gpointer user_data)
     }
   tracking_interface_free(&tr);
   gtk_main_quit();
-  tracking_interface_free(&tr);
-  gtk_main_quit();
 }
 void on_videosourceitem_activate(GtkObject *object, gpointer user_data)
 {

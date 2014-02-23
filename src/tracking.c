@@ -115,7 +115,8 @@ gboolean tracking()
       return FALSE; // returning false will stop the loop
     }
   if(tr.skip_next_tick==1) // do nothing this time
-    {
+    { // usefull with camera that changes their sampling rate
+      // without asking us
       tr.skip_next_tick=0;
       return TRUE;
     }
@@ -126,10 +127,10 @@ gboolean tracking()
       return FALSE;
     }
   if(microsecond_from_timespec(&tr.waiting_buffer_duration)/1000>INTERVAL_BETWEEN_TRACKING_CALLS_MS/2) 
-    { // we are waiting a long time for frames, will ignore the next buffer
+    { // we are waiting a long time for frames, will ignore the next tick
       // to give time for buffer to arrive without having the thread
-      // beinng stuck waiting, usefull with usb cameras that changes sampling
-      // rate on their own!
+      // beinng stuck waiting and slowing down the gui
+      // usefull with usb cameras that changes sampling without letting us know
       tr.skip_next_tick=1;
     }
 
@@ -149,13 +150,15 @@ gboolean tracking()
       tr.number_frames_tracked=0;
       return FALSE;
     }
-
+  
   tracking_interface_free_buffer(&tr);
             
   clock_gettime(CLOCK_REALTIME, &tr.end_tracking_time); // get the time we start tracking
   tr.tracking_time_duration=diff(&tr.start_tracking_time,&tr.end_tracking_time);
-     
-  g_printerr("offset: %d, lum: %lf, waiting time: %d ms, processing time: %d ms, current sampling rate: %.2lf Hz\n",tr.current_buffer_offset,tr.mean_luminance,microsecond_from_timespec(&tr.waiting_buffer_duration)/1000, microsecond_from_timespec(&tr.tracking_time_duration)/1000,tr.current_sampling_rate);
+
+#ifdef DEBUG_TRACKING
+    g_printerr("offset: %d, buffer_duration: %ld, lum: %lf, waiting time: %d ms, processing time: %d ms, current sampling rate: %.2lf Hz\n",tr.current_buffer_offset,microsecond_from_timespec(&tr.inter_buffer_duration),tr.mean_luminance,microsecond_from_timespec(&tr.waiting_buffer_duration)/1000, microsecond_from_timespec(&tr.tracking_time_duration)/1000,tr.current_sampling_rate);
+#endif
 
       /* // update the tracked_object (with long term memory of its position, direction of movement, head direction, distanced travelled, average speed, etc) */
 
@@ -170,7 +173,7 @@ gboolean tracking()
 
 int tracking_interface_get_buffer(struct tracking_interface* tr)
 {
-
+  // choose where the buffer is coming from
   if(app_flow.video_source==USB_V4L2)
     {
       tracking_interface_usb_v4l2_get_buffer(tr);
@@ -239,7 +242,7 @@ int tracking_interface_firewire_get_buffer(struct tracking_interface* tr)
   
   //get the time of buffer
   tr->previous_buffer_time=tr->current_buffer_time;
-  tr->current_buffer_time.tv_nsec=fw_inter.frame->timestamp;
+  tr->current_buffer_time.tv_nsec=fw_inter.frame->timestamp*1000; // dc1394video_frame_t-> timestamp is in ms
     
   //offset=frame number
   tr->previous_buffer_offset=tr->current_buffer_offset;
@@ -277,7 +280,6 @@ int tracking_interface_valid_buffer(struct tracking_interface* tr)
       g_printerr("tr->n_channels shoudl be 3 but is %d\n",tr->n_channels);
       return -1;
     }
-  
   bits_per_sample=gdk_pixbuf_get_bits_per_sample(tr->pixbuf);
   if(bits_per_sample!=8)
     {
@@ -316,7 +318,7 @@ int tracking_interface_valid_buffer(struct tracking_interface* tr)
 	  return -1;
 	}
       tr->current_sampling_rate=1000.0/(microsecond_from_timespec(&tr->inter_buffer_duration)/1000.0);
-    
+      
       if(tr->current_buffer_offset>tr->previous_buffer_offset+1)
 	{
 	  g_printerr("we are dropping frames\n");
