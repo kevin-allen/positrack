@@ -342,8 +342,6 @@ void on_usbcamera_radiobutton_toggled(GtkObject *object, gpointer user_data)
       g_printerr ("USB_V4L2.\n"); 
 
       // if the pipeline is not built, build it
-
-
     }
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.firewirecamera_radiobutton))==TRUE)
     {
@@ -384,14 +382,17 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
   tracking_mode
   sychronization_mode
   videoplayback_mode
-  
+  drawspot_mode
+  drawobject_mode
 
   example of file:
   FIREWIRE
   ONE_WHITE_SPOT
   NONE
-  OFF
-
+  ON
+  ONLY_USED_SPOTS
+  ONE_BLACK_DOT
+  
   ***********************************************/
   // check if config file is in the directory
   gchar* config_directory_name;
@@ -412,6 +413,8 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
   char tracking_mode[255];
   char synchronization_mode[255];
   char videoplayback_mode[255];
+  char drawspots_mode[255];
+  char drawobject_mode[255];
   int i,ret;
 
   // read variables from file
@@ -439,6 +442,16 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
   if(fscanf(fp,"%s",&videoplayback_mode)!=1)
     {
       fprintf(stderr,"problem reading videoplayback_mode from %s\n",config_file_name);
+      return -1;
+    }
+  if(fscanf(fp,"%s",&drawspots_mode)!=1)
+    {
+      fprintf(stderr,"problem reading draw_spots_mode from %s\n",config_file_name);
+      return -1;
+    }
+  if(fscanf(fp,"%s",&drawobject_mode)!=1)
+    {
+      fprintf(stderr,"problem reading draw_object_mode from %s\n",config_file_name);
       return -1;
     }
   fclose(fp); 
@@ -504,6 +517,42 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
       fprintf(stderr,"value of videoplayback_mode is not recognized: %s\n",videoplayback_mode);
       return -1;
     }
+  if (strcmp(drawspots_mode, "NO") == 0) 
+    {
+      app_flow->draws_mode=OFF;
+      printf("draw spots mode: %s\n",drawspots_mode);
+    }
+  else if (strcmp(drawspots_mode, "ALL") == 0) 
+    {
+      app_flow->draws_mode=ALL;
+      printf("draw spots mode: %s\n",drawspots_mode);
+    }
+  else if (strcmp(drawspots_mode, "ONLY_USED_SPOTS") == 0) 
+    {
+      app_flow->draws_mode=ONLY_USED_SPOTS;
+      printf("draw spots mode: %s\n",drawspots_mode);
+    }
+  else
+    {
+      fprintf(stderr,"value of drawspots_mode is not recognized: %s\n",drawspots_mode);
+      return -1;
+    }
+  if (strcmp(drawobject_mode, "ONE_BLACK_DOT") == 0) 
+    {
+      app_flow->drawo_mode=OFF;
+      printf("draw object mode: %s\n",drawobject_mode);
+    }
+  else
+    {
+      fprintf(stderr,"value of drawobject_mode is not recognized: %s\n",drawobject_mode);
+      return -1;
+    }
+
+
+
+
+
+
   return 0;
 }
 

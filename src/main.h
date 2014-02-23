@@ -58,7 +58,7 @@ File with declarations of the main structures and functions used in positrack
 #define TRACKING_INTERFACE_LUMINANCE_THRESHOLD 200
 #define TRACKING_INTERFACE_WIDTH 640
 #define TRACKING_INTERFACE_HEIGHT 480
-#define TRACKING_INTERFACE_MAX_NUMBER_SPOTS 5 
+#define TRACKING_INTERFACE_MAX_NUMBER_SPOTS 4 
 #define TRACKING_INTERFACE_MAX_MEAN_LUMINANCE_FOR_TRACKING 130
 
 #define TRACKED_OBJECT_BUFFER_LENGTH 432000 // 432000 should give 240 minutes at 30Hz.
@@ -90,6 +90,14 @@ enum videoplayback_mode {
   ON = 1,
   OFF = 2
 };
+enum drawspots_mode {
+  NO = 1,
+  ALL =2,
+  ONLY_USED_SPOTS = 3
+};
+enum drawobject_mode {
+  ONE_BLACK_DOT = 2
+};
 
 
 struct main_app_flow
@@ -99,6 +107,8 @@ struct main_app_flow
   enum tracking_mode trk_mode;
   enum synchronization_mode synch_mode;
   enum videoplayback_mode playback_mode;
+  enum drawspots_mode draws_mode;
+  enum drawobject_mode drawo_mode;
 };
 struct main_app_flow app_flow;
 
@@ -189,6 +199,7 @@ struct tracking_interface
   double* spot_mean_red;
   double* spot_mean_green;
   double* spot_mean_blue;  
+  int index_largest_spot;
 };
 struct tracking_interface tr;
 
@@ -198,10 +209,11 @@ struct tracked_object
   // the tracked object is the subject being tracked
   // the structure keep track of the position in time
   // do the drawing of the object in tracking area of gui
+  int is_initialized;
   double* x; // given by traking_interface
   double* y; // given by tracking interface
   double* head_direction; // given by tracking interface
-  double* movment_heading;
+  double* movement_heading;
   double* speed;
   int position_invalid;
   int head_direction_invalid;
@@ -210,8 +222,8 @@ struct tracked_object
   double percentage_position_invalid_last_100;
   double travelled_distance;
   double samples_per_seconds;
-  int buffer_length; // can't be bother to roll the buffer, just make it big enough to contain an recording file.
-                     // after the limit is reached, it will start at the beginning and overwrite old data
+  int buffer_length; 
+  double pixels_per_cm;
 };
 struct tracked_object tob;
 
@@ -374,6 +386,9 @@ int tracking_interface_tracking_one_bright_spot(struct tracking_interface* tr);
 int tracking_interface_find_spots_recursive(struct tracking_interface* tr);
 int tracking_interface_spot_summary(struct tracking_interface* tr);
 int tracking_interface_draw_spot(struct tracking_interface* tr);
+int tracking_interface_draw_one_spot_xy(struct tracking_interface* tr,int spot_index);
+int tracking_interface_draw_all_spots_xy(struct tracking_interface* tr);
+
 int tracking_interface_clear_drawingarea(struct tracking_interface* tr);
 int tracking_interface_print_luminance_array(struct tracking_interface* tr);
 int tracking_interface_print_spot_array(struct tracking_interface* tr);
@@ -382,10 +397,14 @@ int tracking_interface_print_spot_array(struct tracking_interface* tr);
 /********************************
 defined in tracked_object.c
 ********************************/
-int update_tracked_object_position(double x, double y, double head_direction);
+int tracked_object_init(struct tracked_object* tob);
+int tracked_object_free(struct tracked_object* tob);
+int tracked_object_update_position(struct tracked_object* tob,double x, double y, double head_direction, int frame_duration_ms);
+
 
 		
-int find_max_index(int num_data,double* data);		   
+int find_max_index(int num_data,double* data);	
+int find_max_index_int(int num_data,int* data);	   
 double mean(int num_data, double* data, double invalid);
 double mean_int(int num_data, int* data, double invalid);
 void set_array_to_value (int* array, int array_size, double value);
