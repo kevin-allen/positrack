@@ -248,6 +248,7 @@ void stop_video()
       if(app_flow.video_source==FIREWIRE)
 	{
 	  firewire_camera_interface_stop_transmission(&fw_inter);
+	  //firewire_camera_interface_empty_buffer(&fw_inter);
 	}
     }
   widgets.video_running=0;
@@ -267,10 +268,10 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
       g_printerr("Tracking already underway, from on_playtrackingmenuitem_activate()\n");
       return;
     }
+  tracked_object_init(&tob);
   tr.number_frames_tracked=0;
   widgets.tracking_running=1;
   g_timeout_add(tr.interval_between_tracking_calls_ms,tracking,user_data); // timer to trigger a tracking event
-  
 #ifdef DEBUG_CALLBACK
   g_printerr("leaving playtrackingmenuitem_activate, tracking_running: %d\n",widgets.tracking_running);
 #endif
@@ -281,11 +282,12 @@ void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
 {
   int index;
   widgets.tracking_running=0; // making tracking function to return FALSE */
-  // increament the file index
-  stop_video();
+  tracked_object_free(&tob);
   index=gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widgets.trialnospinbutton));
   index++; 
   gtk_spin_button_set_value(GTK_SPIN_BUTTON(widgets.trialnospinbutton),(gdouble)index);
+  usleep(100000);
+  stop_video();
 }
 
 

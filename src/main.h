@@ -55,11 +55,12 @@ File with declarations of the main structures and functions used in positrack
 #define VIDEO_SOURCE_USB_FRAMERATE 30
 
 
-#define TRACKING_INTERFACE_LUMINANCE_THRESHOLD 200
+#define TRACKING_INTERFACE_LUMINANCE_THRESHOLD 50
 #define TRACKING_INTERFACE_WIDTH 640
 #define TRACKING_INTERFACE_HEIGHT 480
 #define TRACKING_INTERFACE_MAX_NUMBER_SPOTS 4 
 #define TRACKING_INTERFACE_MAX_MEAN_LUMINANCE_FOR_TRACKING 130
+#define TRACKING_INTERFACE_MAX_SPOT_SIZE 40000
 
 #define TRACKED_OBJECT_BUFFER_LENGTH 432000 // 432000 should give 240 minutes at 30Hz.
 
@@ -67,7 +68,8 @@ File with declarations of the main structures and functions used in positrack
 //#define DEBUG_CAMERA // to turn on debugging for the camera
 #define DEBUG_TRACKING // to turn on debugging for the tracking
 //#define DEBUG_IMAGE // to turn on debugging for the image processing
-#define DEBUG_CALLBACK
+//#define DEBUG_CALLBACK 
+#define DEBUG_TRACKED_OBJECT
 //#define CAPS "video/x-raw, format=RGB, framerate=30/1 width=160, pixel-aspect-ratio=1/1"
 
 
@@ -217,10 +219,11 @@ struct tracked_object
   double* speed;
   int position_invalid;
   int head_direction_invalid;
-  int num_samples;
+  int n;
   double percentage_position_invalid_total;
   double percentage_position_invalid_last_100;
   double travelled_distance;
+  double sample_distance;
   double samples_per_seconds;
   int buffer_length; 
   double pixels_per_cm;
@@ -238,6 +241,7 @@ struct firewire_camera_interface
   dc1394featureset_t features;
   dc1394framerates_t framerates;
   dc1394video_modes_t video_modes;
+  dc1394speed_t iso_speed;
   dc1394framerate_t framerate;
   dc1394video_mode_t video_mode;
   dc1394color_coding_t coding;
@@ -368,7 +372,7 @@ int firewire_camera_interface_stop_transmission(struct firewire_camera_interface
 int firewire_camera_interface_convert_to_RGB8(struct firewire_camera_interface* cam);
 void firewire_camera_interface_print_format( uint32_t format );
 void firewire_camera_interface_print_frame_rate( uint32_t format );
-
+int firewire_camera_interface_empty_buffer(struct firewire_camera_interface* cam);
 /********************************
 defined in tracking_interface.c
 to do the tracking
@@ -424,3 +428,4 @@ int find_an_adjacent_positive_pixel(double* lum,
 				    int* positive_y, 
 				    int* num_positive_pixels, // single int
 				    double threshold);
+double distance(double x1, double y1, double x2, double y2);

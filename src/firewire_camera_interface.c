@@ -155,6 +155,10 @@ int firewire_camera_interface_stop_transmission(struct firewire_camera_interface
 #endif
   cam->err=dc1394_video_set_transmission(cam->camera, DC1394_OFF);
   DC1394_ERR_CLN_RTN(cam->err,firewire_camera_interface_free(cam),"Could not start camera transmission");
+
+  // flush the video buffer 
+
+
 #ifdef DEBUG_CAMERA
   fprintf(stderr,"firewire_camera_interface_stop_transmission, leaving\n");
 #endif
@@ -186,6 +190,32 @@ int firewire_camera_interface_dequeue(struct firewire_camera_interface* cam)
 #ifdef DEBUG_CAMERA
   fprintf(stderr,"firewire_camera_interface_capture, leaving\n");
 #endif
+  return 0;
+}
+
+int firewire_camera_interface_empty_buffer(struct firewire_camera_interface* cam)
+{ 
+#ifdef DEBUG_CAMERA
+  fprintf(stderr,"firewire_camera_interface_empty_buffer\n");
+#endif
+  int i = 0;
+  // best to stop transmission to do that
+  firewire_camera_interface_stop_transmission(cam);
+  usleep(50000); // sleep 50 ms, so that all frames left have arrived in buffer
+  while(cam->frame!=NULL)
+    {
+      cam->err=dc1394_capture_dequeue(cam->camera, DC1394_CAPTURE_POLICY_POLL, &cam->frame);
+      if(cam->frame!=NULL)
+	{
+	  cam->err=dc1394_capture_enqueue(cam->camera, cam->frame);
+	  i++;
+	}
+    }
+#ifdef DEBUG_CAMERA
+  fprintf(stderr,"firewire_camera_interface_empty_buffer, got rid of %d frame\n",i);
+#endif
+
+
   return 0;
 }
 
