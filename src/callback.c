@@ -424,6 +424,22 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
   if (fp == NULL)
     {
       fprintf(stderr,"problem opening %s in read_configuration_file\n",config_file_name);
+ fprintf(stderr,"\nChoose one option per line for:\n\nvideosource\ntracking_mode\nsynchronization_mode\nvideoplayback_mode\ndrawspot_mode\ndrawobject_mode\n\n");
+      fprintf(stderr,"\nYour options on each line are\n\n");
+      fprintf(stderr,"USB_V4L2 FIREWIRE\n");
+      fprintf(stderr,"ONE_WHITE_SPOT TWO_WHITE_SPOTS\n");
+      fprintf(stderr,"NONE COMEDI\n");
+      fprintf(stderr,"ON OFF\n");
+      fprintf(stderr,"NO ALL ONLY_USED_SPOTS\n");
+      fprintf(stderr,"ONE_BLACK_DOT\n");
+      fprintf(stderr,"\nAn example is\n\n");
+      fprintf(stderr,"FIREWIRE\n");
+      fprintf(stderr,"ONE_WHITE_SPOT\n");
+      fprintf(stderr,"COMEDI\n");
+      fprintf(stderr,"ON\n");
+      fprintf(stderr,"ONLY_USED_SPOTS\n");
+      fprintf(stderr,"ONE_BLACK_DOT\n");
+
       return -1;
     }
   if(fscanf(fp,"%s",&videosource)!=1)
