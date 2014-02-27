@@ -38,7 +38,9 @@ File with declarations of the main structures and functions used in positrack
 #include <gst/gst.h> // to use gstreamer
 #include <gdk/gdkx.h>  // for GDK_WINDOW_XID
 #include <gst/video/videooverlay.h>
-#include <gst/app/gstappsink.h> //added 28.11
+#include <gst/app/gstappsink.h>
+#include <comedi.h> // for the driver
+#include <comedilib.h> // for the driver API
 
 #include <glib.h>
 #define _FILE_OFFSET_BITS 64 // to have files larger than 2GB
@@ -64,12 +66,22 @@ File with declarations of the main structures and functions used in positrack
 
 #define TRACKED_OBJECT_BUFFER_LENGTH 432000 // 432000 should give 240 minutes at 30Hz.
 
+
+#define COMEDI_INTERFACE_MAX_DEVICES 2
+#define MAX_BUFFER_LENGTH 100000 // buffer length for each comedi_dev
+#define DEFAULT_SAMPLING_RATE 20000
+#define MAX_SAMPLING_RATE 48000
+#define COMEDI_DEVICE_MAX_CHANNELS 32
+#define COMEDI_INTERFACE_TO_DEVICE_BUFFER_SIZE_RATIO 8 // size of comedi interface buffer, set according to device buffer size
+#define COMEDI_INTERFACE_ACQUISITION_SLEEP_TIME_MS 1 // if too long could lead to buffer overflow, we make it short to be up to data often
+
 //#define DEBUG_ACQ // to turn on debugging output for the comedi card
 //#define DEBUG_CAMERA // to turn on debugging for the camera
 #define DEBUG_TRACKING // to turn on debugging for the tracking
 //#define DEBUG_IMAGE // to turn on debugging for the image processing
 //#define DEBUG_CALLBACK 
 #define DEBUG_TRACKED_OBJECT
+//#define DEBUG_ACQ
 //#define CAPS "video/x-raw, format=RGB, framerate=30/1 width=160, pixel-aspect-ratio=1/1"
 
 
@@ -279,8 +291,45 @@ struct gst_interface
   int firewire_pipeline_built;
   int usb_v4l2_pipeline_built;
 };
-
 struct gst_interface gst_inter;
+
+struct comedi_dev
+{
+  comedi_t *comedi_dev; // device itself
+  char *file_name; // file name for access to device
+  const char *name; // name of the card
+  const char *driver; // name of the comedi driver
+  int number_of_subdevices;
+  int subdevice_analog_input; // id of analog input subdev
+  int subdevice_analog_output; // id of analog output subdev
+  int number_channels_analog_input;
+  int number_channels_analog_output;
+  int maxdata_input;
+  int maxdata_output;
+  int range_set_input; // index of the selected range
+  int number_ranges_input;
+  comedi_range ** range_input_array; // pointer to all the possible ranges on the card
+  int range_set_output;
+  int number_ranges_output;
+  comedi_range ** range_output_array;
+  double voltage_max_input;
+  double voltage_max_output;
+  int aref;
+  int buffer_size;
+  sampl_t buffer_data[MAX_BUFFER_LENGTH];
+  sampl_t* pointer_buffer_data; // to accomodate for incomplete read sample
+  int read_bytes;
+  int samples_read;
+  int data_point_out_of_samples; // because read operation returns incomplete samples
+  long int cumulative_samples_read;
+  comedi_cmd command; 
+  unsigned int channel_list[COMEDI_DEVICE_MAX_CHANNELS]; // channel number for the comedi side
+  int number_sampled_channels; // variable to be able to sample twice same channel on each sampling
+  int is_acquiring;
+};
+struct comedi_dev comedi_device;
+
+
 
 
 GtkBuilder *builder; // to build the interface from glade
