@@ -25,7 +25,11 @@ Delays in detecting a flashing LED
        Tracking software send set output pulse to 5 V if LED detected, to 0 V if no detection.
        Detect the difference in 0-5 V transition for LED and tracking during a 1 hour recording.
        Results: 
-       
+       There is a delay between 38 to 70 ms (one inter frame interval (33 ms) + tracking time (5 ms))
+
+CONCLUSION:  Real-time analysis will be delayed by approximately 1000/sampling_rate ms.
+	     When this is an important factor, use high sampling rate to minimize the delay.
+	     For off-line analysis, we will take into account this delay and eliminate it.
        
 
 
