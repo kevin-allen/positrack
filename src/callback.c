@@ -65,7 +65,7 @@ int init_window()
 
   // show a nice icon
   char* icon_file_name;
-  file_name = "compass.png";
+  file_name = "radar-icon.png";
   icon_file_name=g_strdup_printf("%s/%s",DATADIR,file_name);
   gtk_window_set_icon(GTK_WINDOW(widgets.window), create_pixbuf(icon_file_name));
 
