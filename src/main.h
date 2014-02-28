@@ -21,7 +21,7 @@ File with declarations of the main structures and functions used in positrack
 #include <stdio.h>
 #include <fcntl.h> // for file operations
 #include <string.h>
-#include <unistd.h>o
+#include <unistd.h>
 #include <time.h>
 #include <sys/time.h> // for the nanosleep
 #include <gtk/gtk.h> // for the widgets
@@ -381,6 +381,7 @@ void on_no_synchronizationradiobutton_toggled(GtkObject *object, gpointer user_d
 void on_singlewhitespot_radiobutton_toggled(GtkObject *object, gpointer user_data);
 void on_usbcamera_radiobutton_toggled(GtkObject *object, gpointer user_data);
 void on_videoplayback_checkbutton_toggled(GtkObject *object, gpointer user_data);
+GdkPixbuf *create_pixbuf(const gchar * filename);
 
 
 void main_app_flow_get_setting_from_gui(struct main_app_flow* app_flow);

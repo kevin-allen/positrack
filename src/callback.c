@@ -26,7 +26,8 @@ int init_window()
 
   char* glade_file_name;
   char* file_name = "positrack_sed.glade"; // positrack_sed.glade
-  glade_file_name=file_name;// g_strdup_printf("%s/%s",DATADIR,file_name);
+  glade_file_name=g_strdup_printf("%s/%s",DATADIR,file_name);
+
   if(gtk_builder_add_from_file (builder, glade_file_name, NULL)==0)
     {
       fprintf(stderr,"An error occurred reading positrack.glade\n" );
@@ -61,6 +62,13 @@ int init_window()
   widgets.usbcamera_radiobutton=GTK_WIDGET (gtk_builder_get_object (builder, "usbcamera_radiobutton"));  
   widgets.firewirecamera_radiobutton=GTK_WIDGET (gtk_builder_get_object (builder, "firewirecamera_radiobutton"));  
   widgets.videoplayback_checkbutton=GTK_WIDGET (gtk_builder_get_object (builder, "videoplayback_checkbutton"));  
+
+  // show a nice icon
+  char* icon_file_name;
+  file_name = "compass.png";
+  icon_file_name=g_strdup_printf("%s/%s",DATADIR,file_name);
+  gtk_window_set_icon(GTK_WINDOW(widgets.window), create_pixbuf(icon_file_name));
+
   
   gtk_builder_connect_signals (builder, NULL); // connect all signals
   g_object_unref (G_OBJECT (builder));
@@ -755,4 +763,14 @@ int microsecond_from_timespec(struct timespec* duration)
   ms=duration->tv_nsec/1000;
   return ms;
 }
-
+GdkPixbuf *create_pixbuf(const gchar * filename)
+{
+   GdkPixbuf *pixbuf;
+   GError *error = NULL;
+   pixbuf = gdk_pixbuf_new_from_file(filename, &error);
+   if(!pixbuf) {
+      fprintf(stderr, "%s\n", error->message);
+      g_error_free(error);
+   }
+   return pixbuf;
+}
