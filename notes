@@ -13,21 +13,23 @@ Features:
 7) Eventually, the tracking software will be able to interact with other computers via comedi (e.g., for stimulation based on mouse position).
 8) infra-red could be done with a monochrome firewire camera from imagesource.
 9) Use gstreamer for video playback and to get the video from usb webcam.
+10) Save tracking data to a text file (anyone can read a text file).
 
 
-Example of capture code in c: http://tldp.org/HOWTO/html_single/libdc1394-HOWTO/#example
 
-17 February 2014
-I now need the new tracking system to do an experiment. I ordered a new firewire camera to track the animal 
-with infrared leds. The visual spectrum will be removed with a filter.
+TESTING
+Delays in detecting a flashing LED
+       Arduino to flash an LED (1000ms on / 1002ms off) in the field of view of the camera.
+       The 5V pulse powering the LED is splitted and fed into kacq, sampling rate 20 kHz.
+       Tracking at 30 Hz with firewire camera.
+       Tracking software send set output pulse to 5 V if LED detected, to 0 V if no detection.
+       Detect the difference in 0-5 V transition for LED and tracking during a 1 hour recording.
+       Results: 
+       
+       
 
-So the next steps are...
 
-1) Write the update function for tracked_object, initialize when tracking starts and destroy when tracking ends.
 
-2) Test whether the tracking is not processing everything late. To do: use comedi ttl pulse sent to kacq on each frame and a different one when an object is detected, use an arduino with flashing a led that send a ttl pulse to kacq when led is on. There should be less than 33 ms delay between the time the led is switched on and the time the object is detected.
-
-3) Save tracking data to a text file (anyone can read a text file).
 
 
 

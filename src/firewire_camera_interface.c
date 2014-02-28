@@ -141,6 +141,7 @@ int firewire_camera_interface_start_transmission(struct firewire_camera_interfac
 #ifdef DEBUG_CAMERA
   fprintf(stderr,"firewire_camera_interface_start_transmission\n");
 #endif
+  firewire_camera_interface_empty_buffer(cam); // to make sure we don't work with old buffers
   cam->err=dc1394_video_set_transmission(cam->camera, DC1394_ON);
   DC1394_ERR_CLN_RTN(cam->err,firewire_camera_interface_free(cam),"Could not start camera transmission");
 #ifdef DEBUG_CAMERA

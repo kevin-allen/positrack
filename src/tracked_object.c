@@ -79,7 +79,14 @@ int tracked_object_update_position(struct tracked_object* tob,double x, double y
   tob->y[tob->n]=y;
   tob->head_direction[tob->n]=head_direction;
   if(x==-1.0||y==-1.0)
-    tob->position_invalid++;
+    {
+      tob->position_invalid++;
+      tob->last_valid=0;
+    }
+  else
+    {
+      tob->last_valid=1;
+    }
   if(head_direction==-1.0)
     tob->head_direction_invalid++;
   if(tob->n>0)
@@ -96,8 +103,6 @@ int tracked_object_update_position(struct tracked_object* tob,double x, double y
 	  tob->y[tob->n]);
 #endif
   tob->n++;
-
-
 
 
   // buffer is unfortunately full

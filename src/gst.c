@@ -340,4 +340,5 @@ static void cb_need_data (GstElement *appsrc,
       g_printerr("something wrong, stop pushing buffers\n"); 
       g_main_loop_quit (gst_inter.loop);
     }
-  }
+  gst_buffer_unref(buffer);
+}

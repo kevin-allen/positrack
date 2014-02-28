@@ -188,6 +188,24 @@ int comedi_dev_init(struct comedi_dev *dev, char* file_name)
 	  return 1;
 	}
     }
+
+        
+  // get the value for the laser intensity and pulse
+  dev->comedi_baseline=comedi_from_phys(COMEDI_DEVICE_BASELINE_VOLT,
+					dev->range_output_array[dev->range_set_output],
+					dev->maxdata_output);
+  dev->comedi_ttl=comedi_from_phys(COMEDI_DEVICE_TTL_VOLT,
+				   dev->range_output_array[dev->range_set_output],
+				   dev->maxdata_output);
+  
+  // set the pulse channel to baseline
+  comedi_data_write(dev->comedi_dev,
+		    dev->subdevice_analog_output,
+		    COMEDI_DEVICE_SYNCH_ANALOG_OUTPUT,
+		    dev->range_set_output,
+		    dev->aref,
+		    dev->comedi_baseline);
+
   return 0;
 }
 int comedi_dev_free(struct comedi_dev *dev)
@@ -195,6 +213,14 @@ int comedi_dev_free(struct comedi_dev *dev)
 #ifdef DEBUG_ACQ
   fprintf(stderr,"comedi_dev_free\n");
 #endif
+
+  // set the pulse channel to baseline
+  comedi_data_write(dev->comedi_dev,
+		    dev->subdevice_analog_output,
+		    COMEDI_DEVICE_SYNCH_ANALOG_OUTPUT,
+		    dev->range_set_output,
+		    dev->aref,
+		    dev->comedi_baseline);
   // close the device
   if((comedi_close(dev->comedi_dev))==-1)
     {
@@ -204,42 +230,6 @@ int comedi_dev_free(struct comedi_dev *dev)
   // free memory
   free(dev->range_input_array);
   free(dev->range_output_array);
-  return 0;
-}
-int comedi_dev_read_data(struct comedi_dev *dev)
-{
-  // function move data from driver's buffer into the device buffer.
-#ifdef DEBUG_ACQ
-  fprintf(stderr,"comedi_dev_read_data\n");
-#endif
-
-  int i;
-  // move back incomplete sample data and complete samples not used to the beginning of the buffer
-  for (i=0;i<dev->data_point_out_of_samples;i++)
-    {
-      dev->buffer_data[i]=dev->buffer_data[dev->samples_read * dev->number_sampled_channels +i];
-    }
-  
-  // move the pointer to avoid overwritting the incomplete sample data
-  dev->pointer_buffer_data=dev->buffer_data+dev->data_point_out_of_samples;
-
-  // read new data from device
-  dev->read_bytes=read(comedi_fileno(dev->comedi_dev),dev->pointer_buffer_data,sizeof(dev->buffer_data)-(sizeof(sampl_t)*dev->data_point_out_of_samples));
-  
-  // check if read was successful
-  if (dev->read_bytes<0)// reading failed
-    {
-      fprintf(stderr, "error reading from comedi device %s in comdedi_dev_read_data()\n",dev->file_name);
-      fprintf(stderr, "check for buffer overflow\n");
-      return 1;
-    }
-  else // read was ok
-    {
-      // get number of samples read
-      dev->samples_read=(dev->read_bytes + (dev->data_point_out_of_samples*sizeof(sampl_t))) / (sizeof(sampl_t)*dev->number_sampled_channels);
-      dev->cumulative_samples_read+=dev->samples_read;
-      dev->data_point_out_of_samples=(dev->read_bytes/sizeof(sampl_t) + dev->data_point_out_of_samples) % dev->number_sampled_channels;
-    }
   return 0;
 }
 

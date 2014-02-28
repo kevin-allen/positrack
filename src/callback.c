@@ -270,7 +270,17 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
     }
   tracked_object_init(&tob);
   tr.number_frames_tracked=0;
+  
+  if(app_flow.synch_mode==COMEDI||app_flow.pulse_valid_position==ON)
+    {
+      if(comedi_dev_init(&comedi_device, "/dev/comedi0")!=0)
+	{
+	  g_printerr("Problem creating the comedi device\n\n");
+	  return;
+	}
+    }
   widgets.tracking_running=1;
+  //tracking();
   g_timeout_add(tr.interval_between_tracking_calls_ms,tracking,user_data); // timer to trigger a tracking event
 #ifdef DEBUG_CALLBACK
   g_printerr("leaving playtrackingmenuitem_activate, tracking_running: %d\n",widgets.tracking_running);
@@ -283,6 +293,8 @@ void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
   int index;
   widgets.tracking_running=0; // making tracking function to return FALSE */
   tracked_object_free(&tob);
+  if(app_flow.synch_mode==COMEDI)
+    comedi_dev_free(&comedi_device);
   index=gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widgets.trialnospinbutton));
   index++; 
   gtk_spin_button_set_value(GTK_SPIN_BUTTON(widgets.trialnospinbutton),(gdouble)index);
@@ -369,6 +381,26 @@ void on_videoplayback_checkbutton_toggled(GtkObject *object, gpointer user_data)
     }
 }
 
+void main_app_print_example_config_file(struct main_app_flow* app_flow)
+{
+  fprintf(stderr,"\nChoose one option per line for:\n\nvideosource\ntracking_mode\nsynchronization_mode\nvideoplayback_mode\ndrawspot_mode\ndrawobject_mode\npulse_valid_position\n\n");
+  fprintf(stderr,"\nYour options on each line are\n\n");
+  fprintf(stderr,"USB_V4L2 FIREWIRE\n");
+  fprintf(stderr,"ONE_WHITE_SPOT TWO_WHITE_SPOTS\n");
+  fprintf(stderr,"NONE COMEDI\n");
+  fprintf(stderr,"ON OFF\n");
+  fprintf(stderr,"NO ALL ONLY_USED_SPOTS\n");
+  fprintf(stderr,"ONE_BLACK_DOT\n");
+  fprintf(stderr,"ON_OFF\n");
+  fprintf(stderr,"\nAn example is\n\n");
+  fprintf(stderr,"FIREWIRE\n");
+  fprintf(stderr,"ONE_WHITE_SPOT\n");
+  fprintf(stderr,"COMEDI\n");
+  fprintf(stderr,"ON\n");
+  fprintf(stderr,"ONLY_USED_SPOTS\n");
+  fprintf(stderr,"ONE_BLACK_DOT\n");
+  fprintf(stderr,"ON\n");
+}
 int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
 {
   /***********************************************
@@ -386,6 +418,7 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
   videoplayback_mode
   drawspot_mode
   drawobject_mode
+  pulse_valid_position
 
   example of file:
   FIREWIRE
@@ -394,7 +427,8 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
   ON
   ONLY_USED_SPOTS
   ONE_BLACK_DOT
-  
+  ON
+
   ***********************************************/
   // check if config file is in the directory
   gchar* config_directory_name;
@@ -417,6 +451,7 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
   char videoplayback_mode[255];
   char drawspots_mode[255];
   char drawobject_mode[255];
+  char plusevalid_position[255];
   int i,ret;
 
   // read variables from file
@@ -424,54 +459,52 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
   if (fp == NULL)
     {
       fprintf(stderr,"problem opening %s in read_configuration_file\n",config_file_name);
- fprintf(stderr,"\nChoose one option per line for:\n\nvideosource\ntracking_mode\nsynchronization_mode\nvideoplayback_mode\ndrawspot_mode\ndrawobject_mode\n\n");
-      fprintf(stderr,"\nYour options on each line are\n\n");
-      fprintf(stderr,"USB_V4L2 FIREWIRE\n");
-      fprintf(stderr,"ONE_WHITE_SPOT TWO_WHITE_SPOTS\n");
-      fprintf(stderr,"NONE COMEDI\n");
-      fprintf(stderr,"ON OFF\n");
-      fprintf(stderr,"NO ALL ONLY_USED_SPOTS\n");
-      fprintf(stderr,"ONE_BLACK_DOT\n");
-      fprintf(stderr,"\nAn example is\n\n");
-      fprintf(stderr,"FIREWIRE\n");
-      fprintf(stderr,"ONE_WHITE_SPOT\n");
-      fprintf(stderr,"COMEDI\n");
-      fprintf(stderr,"ON\n");
-      fprintf(stderr,"ONLY_USED_SPOTS\n");
-      fprintf(stderr,"ONE_BLACK_DOT\n");
-
+      main_app_print_example_config_file(app_flow);
       return -1;
     }
   if(fscanf(fp,"%s",&videosource)!=1)
     {
       fprintf(stderr,"problem reading videosource from %s\n",config_file_name);
+      main_app_print_example_config_file(app_flow);
       return -1;
     }
   if(fscanf(fp,"%s",&tracking_mode)!=1)
     {
       fprintf(stderr,"problem reading tracking_mode from %s\n",config_file_name);
+      main_app_print_example_config_file(app_flow);
       return -1;
     }
   if(fscanf(fp,"%s",&synchronization_mode)!=1)
     {
       fprintf(stderr,"problem reading synchronization_mode from %s\n",config_file_name);
+      main_app_print_example_config_file(app_flow);
       return -1;
     }
   if(fscanf(fp,"%s",&videoplayback_mode)!=1)
     {
       fprintf(stderr,"problem reading videoplayback_mode from %s\n",config_file_name);
+      main_app_print_example_config_file(app_flow);
       return -1;
     }
   if(fscanf(fp,"%s",&drawspots_mode)!=1)
     {
       fprintf(stderr,"problem reading draw_spots_mode from %s\n",config_file_name);
+      main_app_print_example_config_file(app_flow);
       return -1;
     }
   if(fscanf(fp,"%s",&drawobject_mode)!=1)
     {
       fprintf(stderr,"problem reading draw_object_mode from %s\n",config_file_name);
+      main_app_print_example_config_file(app_flow);
       return -1;
     }
+  if(fscanf(fp,"%s",&plusevalid_position)!=1)
+    {
+      fprintf(stderr,"problem reading pulsevalid_position from %s\n",config_file_name);
+      main_app_print_example_config_file(app_flow);
+      return -1;
+    }
+
   fclose(fp); 
   
   // set the main_app_flow structure
@@ -488,6 +521,7 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
   else
     {
       fprintf(stderr,"value of videosource is not recognized: %s\n",videosource);
+      main_app_print_example_config_file(app_flow);
       return -1;
     }
   if (strcmp(tracking_mode, "ONE_WHITE_SPOT") == 0) 
@@ -503,6 +537,7 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
   else
     {
       fprintf(stderr,"value of tracking_mode is not recognized: %s\n",tracking_mode);
+      main_app_print_example_config_file(app_flow);
       return -1;
     }
   if (strcmp(synchronization_mode, "NONE") == 0) 
@@ -518,6 +553,7 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
   else
     {
       fprintf(stderr,"value of synchronization_mode is not recognized: %s\n",synchronization_mode);
+      main_app_print_example_config_file(app_flow);
       return -1;
     }
   if (strcmp(videoplayback_mode, "ON") == 0) 
@@ -533,6 +569,7 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
   else
     {
       fprintf(stderr,"value of videoplayback_mode is not recognized: %s\n",videoplayback_mode);
+      main_app_print_example_config_file(app_flow);
       return -1;
     }
   if (strcmp(drawspots_mode, "NO") == 0) 
@@ -553,6 +590,7 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
   else
     {
       fprintf(stderr,"value of drawspots_mode is not recognized: %s\n",drawspots_mode);
+      main_app_print_example_config_file(app_flow);
       return -1;
     }
   if (strcmp(drawobject_mode, "ONE_BLACK_DOT") == 0) 
@@ -563,14 +601,25 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
   else
     {
       fprintf(stderr,"value of drawobject_mode is not recognized: %s\n",drawobject_mode);
+      main_app_print_example_config_file(app_flow);
       return -1;
     }
-
-
-
-
-
-
+  if (strcmp(plusevalid_position, "ON") == 0) 
+    {
+      app_flow->pulse_valid_position=ON;
+      printf("playback mode: %s\n",plusevalid_position);
+    }
+  else if (strcmp(plusevalid_position, "OFF") == 0) 
+    {
+      app_flow->pulse_valid_position=OFF;
+      printf("playback mode: %s\n",plusevalid_position);
+    }
+  else
+    {
+      fprintf(stderr,"value of plusevalid_position is not recognized: %s\n",plusevalid_position);
+      main_app_print_example_config_file(app_flow);
+      return -1;
+    }
   return 0;
 }
 

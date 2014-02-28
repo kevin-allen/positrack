@@ -114,7 +114,6 @@ gboolean tracking()
   g_printerr("tracking(), tr.number_frames_tracked: %d\n",tr.number_frames_tracked);
 #endif
 
-
   if(widgets.tracking_running!=1)
     {
       tr.number_frames_tracked=0;
@@ -140,6 +139,16 @@ gboolean tracking()
       tr.skip_next_tick=1;
     }
 
+    if(app_flow.synch_mode==COMEDI)
+    {
+      comedi_data_write(comedi_device.comedi_dev,
+			comedi_device.subdevice_analog_output,
+			COMEDI_DEVICE_SYNCH_ANALOG_OUTPUT,
+			comedi_device.range_set_output,
+			comedi_device.aref,
+			comedi_device.comedi_ttl);
+    }
+    
   // check if the buffer contain a valid buffer
   clock_gettime(CLOCK_REALTIME, &tr.start_tracking_time); // get the time we start tracking
   if(tracking_interface_valid_buffer(&tr)!=0)
@@ -157,7 +166,31 @@ gboolean tracking()
       return FALSE;
     }
   
-  //  tracking_interface_free_buffer(&tr);
+
+  if(app_flow.pulse_valid_position==ON)
+    {
+      if(tob.last_valid==1)
+	comedi_data_write(comedi_device.comedi_dev,
+			  comedi_device.subdevice_analog_output,
+			  COMEDI_DEVICE_VALID_POSITION_ANALOG_OUTPUT,
+			  comedi_device.range_set_output,
+			  comedi_device.aref,
+			  comedi_device.comedi_ttl);
+      else
+	comedi_data_write(comedi_device.comedi_dev,
+			  comedi_device.subdevice_analog_output,
+			  COMEDI_DEVICE_VALID_POSITION_ANALOG_OUTPUT,
+			  comedi_device.range_set_output,
+			  comedi_device.aref,
+			  comedi_device.comedi_baseline);
+    }
+
+  if(app_flow.video_source==USB_V4L2)
+    {
+      tracking_interface_free_buffer(&tr);
+    }
+
+
   
 /*   clock_gettime(CLOCK_REALTIME, &tr.end_tracking_time); // get the time we start tracking */
 /*   tr.tracking_time_duration=diff(&tr.start_tracking_time,&tr.end_tracking_time); */
@@ -170,6 +203,16 @@ gboolean tracking()
     /* // save position data into a data file */
     
     /* // synchronization pulse goes down here */
+  if(app_flow.synch_mode==COMEDI)
+    {
+      comedi_data_write(comedi_device.comedi_dev,
+			comedi_device.subdevice_analog_output,
+			COMEDI_DEVICE_SYNCH_ANALOG_OUTPUT,
+			comedi_device.range_set_output,
+			comedi_device.aref,
+			comedi_device.comedi_baseline);
+    }
+
     tr.number_frames_tracked++;
   return TRUE;
 }

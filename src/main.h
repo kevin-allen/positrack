@@ -21,7 +21,7 @@ File with declarations of the main structures and functions used in positrack
 #include <stdio.h>
 #include <fcntl.h> // for file operations
 #include <string.h>
-#include <unistd.h>
+#include <unistd.h>o
 #include <time.h>
 #include <sys/time.h> // for the nanosleep
 #include <gtk/gtk.h> // for the widgets
@@ -46,7 +46,8 @@ File with declarations of the main structures and functions used in positrack
 #define _FILE_OFFSET_BITS 64 // to have files larger than 2GB
 #define NSEC_PER_SEC (1000000000) // The number of nsecs per sec
 
-#define INTERVAL_BETWEEN_TRACKING_CALLS_MS 33 //
+#define INTERVAL_BETWEEN_TRACKING_CALLS_MS 20  // if this is too close to frame rate, then larger 
+                                               // jitter in inter frame intervals
 #define COMEDI_INTERFACE_MAX_DEVICES 2
 #define TIMEOUT_FOR_CAPTURE_MS 20 // time before the timeout try to get a new frame
 #define FIREWIRE_CAMERA_INTERFACE_NUMBER_OF_FRAMES_IN_RING_BUFFER 10
@@ -67,20 +68,21 @@ File with declarations of the main structures and functions used in positrack
 #define TRACKED_OBJECT_BUFFER_LENGTH 432000 // 432000 should give 240 minutes at 30Hz.
 
 
-#define COMEDI_INTERFACE_MAX_DEVICES 2
 #define MAX_BUFFER_LENGTH 100000 // buffer length for each comedi_dev
 #define DEFAULT_SAMPLING_RATE 20000
 #define MAX_SAMPLING_RATE 48000
 #define COMEDI_DEVICE_MAX_CHANNELS 32
-#define COMEDI_INTERFACE_TO_DEVICE_BUFFER_SIZE_RATIO 8 // size of comedi interface buffer, set according to device buffer size
-#define COMEDI_INTERFACE_ACQUISITION_SLEEP_TIME_MS 1 // if too long could lead to buffer overflow, we make it short to be up to data often
+#define COMEDI_DEVICE_SYNCH_ANALOG_OUTPUT 0
+#define COMEDI_DEVICE_VALID_POSITION_ANALOG_OUTPUT 1
+#define COMEDI_DEVICE_BASELINE_VOLT 0.0
+#define COMEDI_DEVICE_TTL_VOLT 3.0
 
 //#define DEBUG_ACQ // to turn on debugging output for the comedi card
 //#define DEBUG_CAMERA // to turn on debugging for the camera
-#define DEBUG_TRACKING // to turn on debugging for the tracking
+//#define DEBUG_TRACKING // to turn on debugging for the tracking
 //#define DEBUG_IMAGE // to turn on debugging for the image processing
-//#define DEBUG_CALLBACK 
-#define DEBUG_TRACKED_OBJECT
+#define DEBUG_CALLBACK 
+//#define DEBUG_TRACKED_OBJECT
 //#define DEBUG_ACQ
 //#define CAPS "video/x-raw, format=RGB, framerate=30/1 width=160, pixel-aspect-ratio=1/1"
 
@@ -100,7 +102,7 @@ enum synchronization_mode {
   NONE = 1,
   COMEDI = 2
 };
-enum videoplayback_mode {
+enum on_off {
   ON = 1,
   OFF = 2
 };
@@ -120,9 +122,10 @@ struct main_app_flow
   enum videosource video_source;
   enum tracking_mode trk_mode;
   enum synchronization_mode synch_mode;
-  enum videoplayback_mode playback_mode;
+  enum on_off playback_mode;
   enum drawspots_mode draws_mode;
   enum drawobject_mode drawo_mode;
+  enum on_off pulse_valid_position;
 };
 struct main_app_flow app_flow;
 
@@ -239,6 +242,7 @@ struct tracked_object
   double samples_per_seconds;
   int buffer_length; 
   double pixels_per_cm;
+  int last_valid;
 };
 struct tracked_object tob;
 
@@ -326,6 +330,9 @@ struct comedi_dev
   unsigned int channel_list[COMEDI_DEVICE_MAX_CHANNELS]; // channel number for the comedi side
   int number_sampled_channels; // variable to be able to sample twice same channel on each sampling
   int is_acquiring;
+  lsampl_t comedi_baseline;
+  lsampl_t comedi_ttl;
+
 };
 struct comedi_dev comedi_device;
 
@@ -378,6 +385,7 @@ void on_videoplayback_checkbutton_toggled(GtkObject *object, gpointer user_data)
 
 void main_app_flow_get_setting_from_gui(struct main_app_flow* app_flow);
 int main_app_set_default_from_config_file(struct main_app_flow* app_flow);
+void main_app_print_example_config_file(struct main_app_flow* app_flow);
 void main_app_flow_set_gui(struct main_app_flow* app_flow);
 
 
