@@ -206,12 +206,14 @@ void start_video()
 
 	    }
 	}
-      if(app_flow.video_source==FIREWIRE_BLACK_WHITE || app_flow.video_source==FIREWIRE_COLOR)
+      if(app_flow.video_source==FIREWIRE_COLOR || app_flow.video_source==FIREWIRE_BLACK_WHITE)
 	{
+	  fprintf(stderr,"gst_interface_build_firewire_pipeline() done\n");
 	  if(gst_inter.firewire_pipeline_built!=1)
 	    {
 	      gst_interface_build_firewire_pipeline(&gst_inter);
 	    }
+	  fprintf(stderr,"gst_interface_build_firewire_pipeline() done\n");
 	  if(fw_inter.is_initialized!=1)
 	    {
 	      firewire_camera_interface_init(&fw_inter);
@@ -220,6 +222,9 @@ void start_video()
 	  firewire_camera_interface_start_transmission(&fw_inter);
 	  // let the pipeline ask for new data via a signal to cb_need_data function
 	}
+      
+      
+      
       if(gst_inter.loop==NULL)
 	{
 #ifdef DEBUG_CALLBACK
