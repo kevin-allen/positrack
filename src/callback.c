@@ -30,7 +30,7 @@ int init_window()
 
   if(gtk_builder_add_from_file (builder, glade_file_name, NULL)==0)
     {
-      fprintf(stderr,"An error occurred reading positrack.glade\n" );
+      fprintf(stderr,"An error occurred reading %s\n",glade_file_name);
       return -1;
     }
   // get a reference for the widget we need to play with
@@ -60,7 +60,8 @@ int init_window()
   widgets.singlewhitespot_radiobutton= GTK_WIDGET (gtk_builder_get_object (builder, "singlewhitespot_radiobutton"));  
   widgets.twowhitespots_radiobutton=GTK_WIDGET (gtk_builder_get_object (builder, "twowhitespots_radiobutton"));  
   widgets.usbcamera_radiobutton=GTK_WIDGET (gtk_builder_get_object (builder, "usbcamera_radiobutton"));  
-  widgets.firewirecamera_radiobutton=GTK_WIDGET (gtk_builder_get_object (builder, "firewirecamera_radiobutton"));  
+  widgets.firewirecamerablackwhite_radiobutton=GTK_WIDGET (gtk_builder_get_object (builder, "firewirecamerablackwhite_radiobutton"));  
+  widgets.firewirecameracolor_radiobutton=GTK_WIDGET (gtk_builder_get_object (builder, "firewirecameracolor_radiobutton"));  
   widgets.videoplayback_checkbutton=GTK_WIDGET (gtk_builder_get_object (builder, "videoplayback_checkbutton"));  
 
   // show a nice icon
@@ -205,7 +206,7 @@ void start_video()
 
 	    }
 	}
-      if(app_flow.video_source==FIREWIRE)
+      if(app_flow.video_source==FIREWIRE_BLACK_WHITE || app_flow.video_source==FIREWIRE_COLOR)
 	{
 	  if(gst_inter.firewire_pipeline_built!=1)
 	    {
@@ -253,7 +254,7 @@ void stop_video()
   if(widgets.video_running==1)
     {
       gst_element_set_state(gst_inter.pipeline, GST_STATE_PAUSED);
-      if(app_flow.video_source==FIREWIRE)
+      if(app_flow.video_source==FIREWIRE_BLACK_WHITE || app_flow.video_source==FIREWIRE_COLOR)
 	{
 	  firewire_camera_interface_stop_transmission(&fw_inter);
 	  //firewire_camera_interface_empty_buffer(&fw_inter);
@@ -365,13 +366,19 @@ void on_usbcamera_radiobutton_toggled(GtkObject *object, gpointer user_data)
 
       // if the pipeline is not built, build it
     }
-  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.firewirecamera_radiobutton))==TRUE)
+  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.firewirecamerablackwhite_radiobutton))==TRUE)
     {
-      app_flow.video_source=FIREWIRE;
-      
+      app_flow.video_source=FIREWIRE_BLACK_WHITE;
       // if the pipeline is not built, build it
 
-      g_printerr ("FIREWIRE.\n"); 
+      g_printerr ("FIREWIRE BLACK WHITE.\n"); 
+    }
+  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.firewirecameracolor_radiobutton))==TRUE)
+    {
+      app_flow.video_source=FIREWIRE_COLOR;
+      // if the pipeline is not built, build it
+
+      g_printerr ("FIREWIRE COLOR.\n"); 
     }
 }
 void on_videoplayback_checkbutton_toggled(GtkObject *object, gpointer user_data)
@@ -393,7 +400,7 @@ void main_app_print_example_config_file(struct main_app_flow* app_flow)
 {
   fprintf(stderr,"\nChoose one option per line for:\n\nvideosource\ntracking_mode\nsynchronization_mode\nvideoplayback_mode\ndrawspot_mode\ndrawobject_mode\npulse_valid_position\n\n");
   fprintf(stderr,"\nYour options on each line are\n\n");
-  fprintf(stderr,"USB_V4L2 FIREWIRE\n");
+  fprintf(stderr,"USB_V4L2 FIREWIRE_BLACK_WHITE FIREWIRE_COLOR\n");
   fprintf(stderr,"ONE_WHITE_SPOT TWO_WHITE_SPOTS\n");
   fprintf(stderr,"NONE COMEDI\n");
   fprintf(stderr,"ON OFF\n");
@@ -429,7 +436,7 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
   pulse_valid_position
 
   example of file:
-  FIREWIRE
+  FIREWIRE_COLOR
   ONE_WHITE_SPOT
   NONE
   ON
@@ -516,9 +523,14 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
   fclose(fp); 
   
   // set the main_app_flow structure
-  if (strcmp(videosource, "FIREWIRE") == 0) 
+  if (strcmp(videosource, "FIREWIRE_BLACK_WHITE") == 0) 
     {
-      app_flow->video_source=FIREWIRE;
+      app_flow->video_source=FIREWIRE_BLACK_WHITE;
+      printf("value source: %s\n",videosource);
+    }
+  else if (strcmp(videosource, "FIREWIRE_COLOR") == 0) 
+    {
+      app_flow->video_source=FIREWIRE_COLOR;
       printf("value source: %s\n",videosource);
     }
   else if (strcmp(videosource, "USB_V4L2") == 0) 
@@ -528,7 +540,7 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
     }
   else
     {
-      fprintf(stderr,"value of videosource is not recognized: %s\n",videosource);
+      fprintf(stderr,"value of videosource in %s is not recognized: %s\n",config_file_name,videosource);
       main_app_print_example_config_file(app_flow);
       return -1;
     }
@@ -544,7 +556,7 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
     }
   else
     {
-      fprintf(stderr,"value of tracking_mode is not recognized: %s\n",tracking_mode);
+      fprintf(stderr,"value of tracking_mode %s is not recognized: %s\n",config_file_name,tracking_mode);
       main_app_print_example_config_file(app_flow);
       return -1;
     }
@@ -560,7 +572,7 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
     }
   else
     {
-      fprintf(stderr,"value of synchronization_mode is not recognized: %s\n",synchronization_mode);
+      fprintf(stderr,"value of synchronization_mode in %s is not recognized: %s\n",config_file_name,synchronization_mode);
       main_app_print_example_config_file(app_flow);
       return -1;
     }
@@ -576,7 +588,7 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
     }
   else
     {
-      fprintf(stderr,"value of videoplayback_mode is not recognized: %s\n",videoplayback_mode);
+      fprintf(stderr,"value of videoplayback_mode in %s is not recognized: %s\n",config_file_name,videoplayback_mode);
       main_app_print_example_config_file(app_flow);
       return -1;
     }
@@ -597,7 +609,7 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
     }
   else
     {
-      fprintf(stderr,"value of drawspots_mode is not recognized: %s\n",drawspots_mode);
+      fprintf(stderr,"value of drawspots_mode in %s is not recognized: %s\n",config_file_name, drawspots_mode);
       main_app_print_example_config_file(app_flow);
       return -1;
     }
@@ -608,7 +620,7 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
     }
   else
     {
-      fprintf(stderr,"value of drawobject_mode is not recognized: %s\n",drawobject_mode);
+      fprintf(stderr,"value of drawobject_mode in %s is not recognized: %s\n",config_file_name,drawobject_mode);
       main_app_print_example_config_file(app_flow);
       return -1;
     }
@@ -624,7 +636,7 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
     }
   else
     {
-      fprintf(stderr,"value of plusevalid_position is not recognized: %s\n",plusevalid_position);
+      fprintf(stderr,"value of plusevalid_position in %s is not recognized: %s\n",config_file_name,plusevalid_position);
       main_app_print_example_config_file(app_flow);
       return -1;
     }
@@ -637,8 +649,10 @@ void main_app_flow_set_gui(struct main_app_flow* app_flow)
   will set the gui buttons base on app_flow structure
   *****************************************************/
   //videosource
-  if(app_flow->video_source==FIREWIRE)
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widgets.firewirecamera_radiobutton),TRUE);
+  if(app_flow->video_source==FIREWIRE_BLACK_WHITE)
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widgets.firewirecamerablackwhite_radiobutton),TRUE);
+  if(app_flow->video_source==FIREWIRE_COLOR)
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widgets.firewirecameracolor_radiobutton),TRUE);
   if(app_flow->video_source==USB_V4L2)
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widgets.usbcamera_radiobutton),TRUE);
   //tracking_mode
@@ -670,10 +684,15 @@ void main_app_flow_get_setting_from_gui(struct main_app_flow* app_flow)
       app_flow->video_source=USB_V4L2;
       g_printerr ("USB_V4L2.\n"); 
     }
-  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.firewirecamera_radiobutton))==TRUE)
+  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.firewirecamerablackwhite_radiobutton))==TRUE)
     {
-      app_flow->video_source=FIREWIRE;
-      g_printerr ("FIREWIRE.\n"); 
+      app_flow->video_source=FIREWIRE_BLACK_WHITE;
+      g_printerr ("FIREWIRE_BLACK_WHITE.\n"); 
+    }
+  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.firewirecameracolor_radiobutton))==TRUE)
+    {
+      app_flow->video_source=FIREWIRE_COLOR;
+      g_printerr ("FIREWIRE_COLOR.\n"); 
     }
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.singlewhitespot_radiobutton))==TRUE)
     {

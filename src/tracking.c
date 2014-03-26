@@ -224,7 +224,7 @@ int tracking_interface_get_buffer(struct tracking_interface* tr)
     {
       tracking_interface_usb_v4l2_get_buffer(tr);
     }
-  if(app_flow.video_source==FIREWIRE)
+  if(app_flow.video_source==FIREWIRE_COLOR)
     {
       tracking_interface_firewire_get_buffer(tr);
     }

@@ -92,7 +92,8 @@ File with declarations of the main structures and functions used in positrack
 ***********************************************************************************/
 enum videosource {
   USB_V4L2 = 1,
-  FIREWIRE = 2
+  FIREWIRE_BLACK_WHITE = 2,
+  FIREWIRE_COLOR = 3
 };
 enum tracking_mode {
   ONE_WHITE_SPOT = 1,
@@ -153,7 +154,8 @@ struct all_widget
   GtkWidget *singlewhitespot_radiobutton;
   GtkWidget *twowhitespots_radiobutton;
   GtkWidget *usbcamera_radiobutton;
-  GtkWidget *firewirecamera_radiobutton;
+  GtkWidget *firewirecamerablackwhite_radiobutton;
+  GtkWidget *firewirecameracolor_radiobutton;
   GtkWidget *videoplayback_checkbutton;
 
   int video_running;
