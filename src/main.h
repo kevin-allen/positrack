@@ -46,24 +46,25 @@ File with declarations of the main structures and functions used in positrack
 #define _FILE_OFFSET_BITS 64 // to have files larger than 2GB
 #define NSEC_PER_SEC (1000000000) // The number of nsecs per sec
 
-#define INTERVAL_BETWEEN_TRACKING_CALLS_MS 20  // if this is too close to frame rate, then larger 
+#define INTERVAL_BETWEEN_TRACKING_CALLS_MS  17 //  20  // if this is too close to frame rate, then larger 
                                                // jitter in inter frame intervals
 #define COMEDI_INTERFACE_MAX_DEVICES 2
 #define TIMEOUT_FOR_CAPTURE_MS 20 // time before the timeout try to get a new frame
 #define FIREWIRE_CAMERA_INTERFACE_NUMBER_OF_FRAMES_IN_RING_BUFFER 10
 
-
-#define VIDEO_SOURCE_USB_WIDTH 640
-#define VIDEO_SOURCE_USB_HEIGHT 480
-#define VIDEO_SOURCE_USB_FRAMERATE 30
-
+#define VIDEO_SOURCE_USB_WIDTH 800 
+#define VIDEO_SOURCE_USB_HEIGHT 800
+#define VIDEO_SOURCE_USB_FRAMERATE 30 //30
+#define VIDEO_SOURCE_SCALABLE_LEFT_POSITION 300
+#define VIDEO_SOURCE_SCALABLE_TOP_POSITION 200
 
 #define TRACKING_INTERFACE_LUMINANCE_THRESHOLD 50
-#define TRACKING_INTERFACE_WIDTH 640
-#define TRACKING_INTERFACE_HEIGHT 480
-#define TRACKING_INTERFACE_MAX_NUMBER_SPOTS 4 
+#define TRACKING_INTERFACE_WIDTH 800
+#define TRACKING_INTERFACE_HEIGHT 800
+#define TRACKING_INTERFACE_MAX_NUMBER_SPOTS 4
 #define TRACKING_INTERFACE_MAX_MEAN_LUMINANCE_FOR_TRACKING 130
 #define TRACKING_INTERFACE_MAX_SPOT_SIZE 40000
+#define TRACKING_INTERFACE_MIN_SPOT_SIZE 10
 
 #define TRACKED_OBJECT_BUFFER_LENGTH 432000 // 432000 should give 240 minutes at 30Hz.
 
@@ -78,11 +79,11 @@ File with declarations of the main structures and functions used in positrack
 #define COMEDI_DEVICE_TTL_VOLT 3.0
 
 //#define DEBUG_ACQ // to turn on debugging output for the comedi card
-#define DEBUG_CAMERA // to turn on debugging for the camera
-//#define DEBUG_TRACKING // to turn on debugging for the tracking
+//#define DEBUG_CAMERA // to turn on debugging for the camera
+#define DEBUG_TRACKING // to turn on debugging for the tracking
 //#define DEBUG_IMAGE // to turn on debugging for the image processing
 #define DEBUG_CALLBACK 
-//#define DEBUG_TRACKED_OBJECT
+#define DEBUG_TRACKED_OBJECT
 //#define DEBUG_ACQ
 //#define CAPS "video/x-raw, format=RGB, framerate=30/1 width=160, pixel-aspect-ratio=1/1"
 
@@ -178,6 +179,8 @@ struct tracking_interface
   int n_channels;
   int rowstride;
   int max_number_spots;
+  int number_spot_calls;
+  int min_spot_size;
   int number_spots;
   struct timespec current_buffer_time;
   struct timespec previous_buffer_time;
@@ -202,6 +205,7 @@ struct tracking_interface
   double mean_blue;
   double mean_green;
   double* lum; // pointer to the array containing the luminance of image, use double so that we can filter in place
+  double* lum_tmp; // before smoothing
   int* spot; // pointer to an array used in the detection of spots, to flag the pixels
   int* positive_pixels_x;
   int* positive_pixels_y;
@@ -217,7 +221,7 @@ struct tracking_interface
   double* spot_mean_y;
   double* spot_mean_red;
   double* spot_mean_green;
-  double* spot_mean_blue;  
+  double* spot_mean_blue;
   int index_largest_spot;
 };
 struct tracking_interface tr;
@@ -489,3 +493,5 @@ int find_an_adjacent_positive_pixel(double* lum,
 				    int* num_positive_pixels, // single int
 				    double threshold);
 double distance(double x1, double y1, double x2, double y2);
+void smooth_double_gaussian(double* array,double* out, int x_size,int y_size, double smooth, double invalid);
+void gaussian_kernel(double* kernel,int x_size,int y_size, double standard_deviation);

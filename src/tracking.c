@@ -16,6 +16,7 @@ int tracking_interface_init(struct tracking_interface* tr)
   tr->number_of_pixels=tr->width*tr->height;
   tr->max_mean_luminance_for_tracking = TRACKING_INTERFACE_MAX_MEAN_LUMINANCE_FOR_TRACKING;
   tr->max_number_spots=TRACKING_INTERFACE_MAX_NUMBER_SPOTS;
+  tr->min_spot_size=TRACKING_INTERFACE_MIN_SPOT_SIZE;
   tr->interval_between_tracking_calls_ms = INTERVAL_BETWEEN_TRACKING_CALLS_MS;
 
   if((tr->spot_positive_pixels=malloc(sizeof(int)*tr->max_number_spots))==NULL)
@@ -66,6 +67,13 @@ int tracking_interface_init(struct tracking_interface* tr)
       fprintf(stderr, "problem allocating memory for tr->lum\n");
       return -1;
     }
+
+  if((tr->lum_tmp=malloc(sizeof(double)*tr->width*tr->height))==NULL)
+    {
+      fprintf(stderr, "problem allocating memory for tr->lum_tmp\n");
+      return -1;
+    }
+
   if((tr->spot=malloc(sizeof(int)*tr->width*tr->height))==NULL)
     {
       fprintf(stderr, "problem allocating memory for tr->spot\n");
@@ -91,6 +99,7 @@ int tracking_interface_free(struct tracking_interface* tr)
       return 0;
     }
   free(tr->lum);
+  free(tr->lum_tmp);
   free(tr->spot);
   free(tr->spot_positive_pixels);
   free(tr->spot_peak_x);
@@ -110,7 +119,7 @@ gboolean tracking()
   /*
     function that is called by a timer to do the tracking
   */
-  #ifdef DEBUG_TRACKING
+#ifdef DEBUG_TRACKING
   g_printerr("tracking(), tr.number_frames_tracked: %d\n",tr.number_frames_tracked);
 #endif
 
@@ -138,8 +147,8 @@ gboolean tracking()
       // usefull with usb cameras that changes sampling without letting us know
       tr.skip_next_tick=1;
     }
-
-    if(app_flow.synch_mode==COMEDI)
+  
+  if(app_flow.synch_mode==COMEDI)
     {
       comedi_data_write(comedi_device.comedi_dev,
 			comedi_device.subdevice_analog_output,
@@ -166,7 +175,7 @@ gboolean tracking()
       return FALSE;
     }
   
-
+  
   if(app_flow.pulse_valid_position==ON)
     {
       if(tob.last_valid==1)
@@ -190,15 +199,13 @@ gboolean tracking()
       tracking_interface_free_buffer(&tr);
     }
 
-
+  clock_gettime(CLOCK_REALTIME, &tr.end_tracking_time); // get the time we start tracking
+  tr.tracking_time_duration=diff(&tr.start_tracking_time,&tr.end_tracking_time);
   
-/*   clock_gettime(CLOCK_REALTIME, &tr.end_tracking_time); // get the time we start tracking */
-/*   tr.tracking_time_duration=diff(&tr.start_tracking_time,&tr.end_tracking_time); */
 
-
-/* #ifdef DEBUG_TRACKING */
-/*     g_printerr("offset: %d, buffer_duration: %ld, lum: %lf, waiting time: %d ms, processing time: %d ms, current sampling rate: %.2lf Hz\n",tr.current_buffer_offset,microsecond_from_timespec(&tr.inter_buffer_duration),tr.mean_luminance,microsecond_from_timespec(&tr.waiting_buffer_duration)/1000, microsecond_from_timespec(&tr.tracking_time_duration)/1000,tr.current_sampling_rate); */
-/* #endif */
+#ifdef DEBUG_TRACKING 
+  g_printerr("offset: %d, buffer_duration: %ld, lum: %lf, waiting time: %d us, processing time: %d ms, current sampling rate: %.2lf Hz, interframe duration: %.2f ms\n",tr.current_buffer_offset,microsecond_from_timespec(&tr.inter_buffer_duration),tr.mean_luminance,microsecond_from_timespec(&tr.waiting_buffer_duration), microsecond_from_timespec(&tr.tracking_time_duration)/1000,tr.current_sampling_rate, (microsecond_from_timespec(&tr.inter_buffer_duration)/1000.0));
+ #endif
 
     /* // save position data into a data file */
     
@@ -224,7 +231,7 @@ int tracking_interface_get_buffer(struct tracking_interface* tr)
     {
       tracking_interface_usb_v4l2_get_buffer(tr);
     }
-  if(app_flow.video_source==FIREWIRE_COLOR)
+  if(app_flow.video_source==FIREWIRE_COLOR || app_flow.video_source==FIREWIRE_BLACK_WHITE)
     {
       tracking_interface_firewire_get_buffer(tr);
     }
@@ -287,17 +294,15 @@ int tracking_interface_firewire_get_buffer(struct tracking_interface* tr)
   
   //get the time of buffer
   tr->previous_buffer_time=tr->current_buffer_time;
+  clock_gettime(CLOCK_REALTIME, &tr->current_buffer_time); // get the time we got the frame
   // tr->current_buffer_time.tv_nsec=fw_inter.frame->timestamp*1000; // dc1394video_frame_t-> timestamp is in ms this does not work
-  tr->current_buffer_time.tv_nsec=0;
+  //tr->current_buffer_time.tv_nsec=0;
   if(tr->number_frames_tracked==0)
-    // we want to set previous buffer time to current buffer time
-    tr->previous_buffer_time=tr->current_buffer_time;
+    tr->previous_buffer_time=tr->current_buffer_time;// we want to set previous buffer time to current buffer time
 #ifdef DEBUG_TRACKING
   fprintf(stderr,"previous buffer time: %d\n",microsecond_from_timespec(&tr->previous_buffer_time));
   fprintf(stderr,"current buffer time: %d\n",microsecond_from_timespec(&tr->current_buffer_time));
 #endif
-
-
     
   //offset=frame number
   tr->previous_buffer_offset=tr->current_buffer_offset;
@@ -306,18 +311,13 @@ int tracking_interface_firewire_get_buffer(struct tracking_interface* tr)
   // Put that into GdkPixbuf
   if(tr->pixbuf!=NULL)
     g_object_unref(tr->pixbuf);
-  tr->pixbuf=gdk_pixbuf_new_from_data (fw_inter.rgb_frame->image,
-    GDK_COLORSPACE_RGB, FALSE, 8,
-    tr->width, tr->height,
-    GST_ROUND_UP_4 (tr->width * 3), NULL, NULL);
   
-  /* tmp_pixbuf = gdk_pixbuf_new_from_data (fw_inter.rgb_frame->image, */
-  /*   GDK_COLORSPACE_RGB, FALSE, 8, */
-  /*   tr->width, tr->height, */
-  /*   GST_ROUND_UP_4 (tr->width * 3), NULL, NULL); */
 
-  /* // make a physical copy of the data from tmp_pixbuf */
-  /* tr->pixbuf=gdk_pixbuf_copy(tmp_pixbuf); */
+  tr->pixbuf=gdk_pixbuf_new_from_data (fw_inter.rgb_frame->image,
+				       GDK_COLORSPACE_RGB, FALSE, 8,
+				       tr->width, tr->height,
+				       GST_ROUND_UP_4 (tr->width * 3), NULL, NULL);
+  
 #ifdef DEBUG_TRACKING
   fprintf(stderr,"tracking_interface_firewire_get_buffer() done\n");
 #endif
@@ -438,8 +438,10 @@ int tracking_interface_tracking_one_bright_spot(struct tracking_interface* tr)
     }
 
   // find the biggest spots
-  if(tr->number_spots>0) // only if there was at least one spot
+  if(tr->number_spots>0) // only if there was at least one valid spot
     tr->index_largest_spot=find_max_index_int(tr->number_spots,tr->spot_positive_pixels);
+  
+
 #ifdef DEBUG_TRACKING
   fprintf(stderr,"number of spots: %d, index largest spot: %d\n",tr->number_spots,tr->index_largest_spot);
 #endif
@@ -563,11 +565,18 @@ int tracking_interface_get_luminosity(struct tracking_interface* tr)
     { 
       tr->p = tr->pixels+i*tr->n_channels; // 3 chars per sample
       tr->lum[i]=(tr->p[0]+tr->p[1]+tr->p[2])/3.0;
+      
+      // this line below is to get rid of burn out pixels on the firewire camera with if filter
+      if(tr->lum[i]==255)tr->lum[i]=0;
     }
-  #ifdef DEBUG_TRACKING
+
+  //smooth_double_gaussian(tr->lum_tmp,tr->lum, tr->width, tr->height,0.3,-1); // sadly, this is too slow
+  // might be worth trying out how a 2d fourier transform would be ???
+
+
+#ifdef DEBUG_TRACKING
   g_printerr("tracking_interface_get_luminosity() done\n");
 #endif
-
   return 0;
 }
 
@@ -592,12 +601,14 @@ int tracking_interface_find_spots_recursive(struct tracking_interface* tr)
 #endif
 
   tr->number_spots=0;
+  tr->number_spot_calls=0;
   tr->number_positive_pixels=0;
+  
   //tracking_interface_clear_drawingarea(tr);
   // set the spot array to 0
   set_array_to_value (tr->spot,tr->number_of_pixels,0); // set spot array to 0  
 
-  while(tr->number_spots<tr->max_number_spots &&
+  while(tr->number_spot_calls<tr->max_number_spots &&
 	find_max_positive_luminance_pixel(tr->lum,
 					  tr->width,
 					  tr->height,
@@ -621,21 +632,24 @@ int tracking_interface_find_spots_recursive(struct tracking_interface* tr)
 #ifdef DEBUG_TRACKING
       g_printerr("find_an_adjacent_positive_pixel() all done\n");
 #endif
-
       
       // get the summary of the spot, from the positive_pixels
       tracking_interface_spot_summary(tr);
 #ifdef DEBUG_TRACKING
       fprintf(stderr,"spot: %d, num_pix: %d, peakx: %d, peaky: %d, peak_mean_x: %lf, peak_mean_y: %lf\n",
 	      tr->number_spots,
-	      tr->number_positive_pixels,
+	      tr->spot_positive_pixels[tr->number_spots],
 	      tr->spot_peak_x[tr->number_spots],
 	      tr->spot_peak_y[tr->number_spots],
 	      tr->spot_mean_x[tr->number_spots],
 	      tr->spot_mean_y[tr->number_spots]);
 #endif
       //tracking_interface_draw_spot(tr);
-      tr->number_spots++;
+      
+      // this is only a valid spot if larger than min spot size
+      if(tr->number_positive_pixels>=tr->min_spot_size)
+	tr->number_spots++;
+      tr->number_spot_calls++;
       tr->number_positive_pixels=0; // reset the count for next spot
     }
 #ifdef DEBUG_TRACKING
@@ -938,5 +952,132 @@ void set_array_to_value (int* array, int array_size, double value)
   for (i = 0; i < array_size; i++)
     {
       array[i]=value;
+    }
+}
+
+void smooth_double_gaussian(double* array, double* out, int x_size,int y_size, double smooth, double invalid)
+{
+  /* Smooth a 2d array of size "x_size*y_size" using a Gaussian kernal
+     Arguments:
+        double *array         pointer to data to be smoothed (memory must be pre-allocated)
+        int x_size              number of x bins in original array
+        int y_size              number of y bins in original array
+        int smooth            standard deviation of the kernel
+        int invalid           invalid data value to be excluded from smoothing
+
+	the gaussian kernel has a size of 3 standard deviation on both side of the middle
+  */
+  if(x_size<=0 || y_size<=0)
+    {
+      fprintf(stderr,"smooth_double gaussian size <= 0\n");
+      return;
+    }
+  if(smooth==0)
+    {
+      return; // do nothing 
+    }
+  if(smooth<=0)
+    {
+      fprintf(stderr,"standard deviation of kernel is negative\n");
+      return;
+    }
+
+  int num_standard_deviations_in_kernel=2;
+
+  int kernel_size_x=((int)(smooth*num_standard_deviations_in_kernel*2))+1; // for both side
+  int kernel_size_y=((int)(smooth*num_standard_deviations_in_kernel*2))+1; // for both side
+  if (kernel_size_x%2!=1) // should be an odd number
+    { kernel_size_x++; }
+  if (kernel_size_y%2!=1) // should be an odd number
+    { kernel_size_y++; }
+  int kernel_size=kernel_size_x*kernel_size_y;
+  double* kernel; // for the gaussian kernel
+  double* results; // to store the temporary results 
+  double sum_weight;
+  double sum_value;
+  int x_index_value_for_kernel;
+  int y_index_value_for_kernel;
+  int x,y,xx,yy,i;
+  // make a gaussian kernel
+  if((kernel=malloc(sizeof(double)*kernel_size))==NULL)
+    {
+      fprintf(stderr, "problem allocating memory for kernel\n");
+      return;
+    }
+  gaussian_kernel(kernel, kernel_size_x, kernel_size_y, smooth);// standard deviation in kernel
+
+  // for each x bin
+  for(x = 0; x < x_size; x++)
+    {
+      // for each y bin
+      for (y = 0; y < y_size; y++)
+	{
+	  sum_weight=0;
+	  sum_value=0;
+	  // loop for all the bins in the kernel
+	  for (xx = 0; xx < kernel_size_x; xx++)
+	    {
+	      for (yy = 0; yy < kernel_size_y; yy++)
+		{                       
+		  // find the bin in the data that correspond for that bin in the kernel
+		  x_index_value_for_kernel=x-((kernel_size_x-1)/2)+xx;
+		  y_index_value_for_kernel=y-((kernel_size_y-1)/2)+yy;
+		  // check if that bin is within the original map
+		  if (x_index_value_for_kernel>=0 && x_index_value_for_kernel<x_size &&
+		      y_index_value_for_kernel>=0 && y_index_value_for_kernel<y_size)
+		    {
+		      if(array[x_index_value_for_kernel*y_size+y_index_value_for_kernel]!=invalid)
+			{
+			  sum_weight=sum_weight+kernel[(xx*kernel_size_y)+yy]; //total weigth from kernel that was used
+			  sum_value=sum_value+(array[x_index_value_for_kernel*y_size+y_index_value_for_kernel] *
+					       kernel[xx*kernel_size_y+yy]); // sum of weigthed value
+			}
+		    }
+		}
+	    }
+	  // we have looped for the entire kernel, now save the value in out array
+	  out[x*y_size+y]=sum_value/sum_weight;
+	}
+    }
+  free(kernel);
+}
+void gaussian_kernel(double* kernel,
+		     int x_size,
+		     int y_size,
+		     double standard_deviation)
+{
+  /*function to make a 2d gaussian kernel*/
+  if (x_size%2==0)
+    {
+      fprintf(stderr,"gaussian_kernel, x_size should be odd number to get a 0 bin\n");
+      return;
+    }
+  if (y_size%2==0)
+    {
+      fprintf(stderr,"gaussian_kernel, y_size should be odd number to get a 0 bin\n");
+      return;
+    }
+  if (standard_deviation<=0)
+    {
+      fprintf(stderr,"gaussian_kernel, standard deviation is <= 0\n");
+      return;
+    }
+  int x,y,i,j;
+  double part_1;
+  double part_2;
+  double num_part_2;
+  double den_part_2;
+  part_1=1.0/(2*M_PI*pow(standard_deviation,2)); // should there be 2 pow?
+  for (i = 0; i < x_size; i++)
+    {
+      for (j = 0; j < y_size; j++)
+	{
+	  x=i-(x_size-1)/2; // distance from middle point x
+	  y=j-(y_size-1)/2; // distance from middle point y
+	  num_part_2=pow(x,2)+pow(y,2);
+	  den_part_2=2*pow(standard_deviation,2);
+	  part_2= exp(-(num_part_2/den_part_2));
+	  kernel[i*y_size+j]=part_1*part_2;
+	}
     }
 }

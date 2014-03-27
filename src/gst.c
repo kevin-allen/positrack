@@ -254,26 +254,13 @@ int gst_interface_build_firewire_pipeline(struct gst_interface* gst_inter)
   guintptr window_handle = GDK_WINDOW_XID(window);
   gst_video_overlay_set_window_handle(GST_VIDEO_OVERLAY(gst_inter->videosink), window_handle);
 
-  if(app_flow.video_source==FIREWIRE_COLOR) 
-    {
-      g_object_set (G_OBJECT (gst_inter->appsrc), "caps",
-		    gst_caps_new_simple ("video/x-raw",
-					 "format", G_TYPE_STRING, "RGB",// 24 bpp, fit RGB8 in firewire world
-					 "width", G_TYPE_INT, VIDEO_SOURCE_USB_WIDTH,
-					 "height", G_TYPE_INT, VIDEO_SOURCE_USB_HEIGHT,
-					 "framerate", GST_TYPE_FRACTION, VIDEO_SOURCE_USB_FRAMERATE, 1,
-					 NULL), NULL);
-    }
-  if(app_flow.video_source==FIREWIRE_BLACK_WHITE) 
-    {
-      g_object_set (G_OBJECT (gst_inter->appsrc), "caps",
-		    gst_caps_new_simple ("video/x-raw",
-					 "format", G_TYPE_STRING, "GRAY8",// fit Mono 8bpp in firewire world
-					 "width", G_TYPE_INT, VIDEO_SOURCE_USB_WIDTH,
-					 "height", G_TYPE_INT, VIDEO_SOURCE_USB_HEIGHT,
-					 "framerate", GST_TYPE_FRACTION, VIDEO_SOURCE_USB_FRAMERATE, 1,
-					 NULL), NULL);
-    }
+  g_object_set (G_OBJECT (gst_inter->appsrc), "caps",
+		gst_caps_new_simple ("video/x-raw",
+				     "format", G_TYPE_STRING, "RGB",// 24 bpp, fit RGB8 in firewire world
+				     "width", G_TYPE_INT, VIDEO_SOURCE_USB_WIDTH,
+				     "height", G_TYPE_INT, VIDEO_SOURCE_USB_HEIGHT,
+				     "framerate", GST_TYPE_FRACTION, VIDEO_SOURCE_USB_FRAMERATE, 1,
+				     NULL), NULL);
   gst_bin_add_many(GST_BIN (gst_inter->pipeline), 
 		   gst_inter->appsrc, 
 		   gst_inter->conv, 
@@ -329,19 +316,20 @@ static void cb_need_data (GstElement *appsrc,
   static gboolean white = FALSE;
   static GstClockTime timestamp = 0;
   GstBuffer *buffer;
-  guint size =fw_inter.rgb_frame->image_bytes;
+  guint size;
   GstFlowReturn ret;
-  buffer = gst_buffer_new_allocate(NULL, size, NULL);
 
   if(widgets.tracking_running==0)
     { // tracking not running, help yoursel and capture a frame
       // if it is running, just takes whatever is in the buffer
       firewire_camera_interface_dequeue(&fw_inter);
-      
       firewire_camera_interface_convert_to_RGB8(&fw_inter);
     }
 
+  size =fw_inter.rgb_frame->image_bytes;
+  buffer = gst_buffer_new_allocate(NULL, size, NULL);
   gst_buffer_fill(buffer,0,fw_inter.rgb_frame->image,size);
+
   GST_BUFFER_PTS (buffer) = timestamp;
   GST_BUFFER_DURATION (buffer) = gst_util_uint64_scale_int (1, GST_SECOND, 30);
   timestamp += GST_BUFFER_DURATION (buffer);

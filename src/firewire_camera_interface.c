@@ -101,18 +101,11 @@ int firewire_camera_interface_init(struct firewire_camera_interface* cam)
       cam->err=dc1394_capture_setup(cam->camera,cam->number_dms_buffers, DC1394_CAPTURE_FLAGS_DEFAULT);
       DC1394_ERR_CLN_RTN(cam->err,firewire_camera_interface_free(cam),"Could not setup camera-\nmake sure that the video mode and framerate are\nsupported by your camera");
       
-  // get the width and height of frame
+      // get the width and height of frame
       dc1394_get_image_size_from_video_mode(cam->camera, cam->video_mode, &cam->width, &cam->height);
       cam->num_pixels=cam->width*cam->height;
       
-      // allocate memory for the rgb frame
-      if((cam->rgb_frame=calloc(1,sizeof(dc1394video_frame_t)) )==NULL)
-	{
-	  fprintf(stderr, "problem allocating memory for cam->rgb_frame\n");
-	  return 1;
-	}
-      cam->rgb_frame->color_coding=DC1394_COLOR_CODING_RGB8;
-      
+     
     }
   
   if(app_flow.video_source==FIREWIRE_BLACK_WHITE) 
@@ -149,19 +142,58 @@ int firewire_camera_interface_init(struct firewire_camera_interface* cam)
       dc1394_format7_set_roi(cam->camera,
 			     cam->video_mode,
 			     cam->coding,
-			     cam->num_pixels*cam->framerate,
-			     0,
-			     0,
+			     3200, // why can't we change the packet size?
+			     VIDEO_SOURCE_SCALABLE_LEFT_POSITION,
+			     VIDEO_SOURCE_SCALABLE_TOP_POSITION,
 			     cam->width,
 			     cam->height);
       DC1394_ERR_CLN_RTN(cam->err,firewire_camera_interface_free(cam),"Could not set video mode, color coding, frame rate, left, top, width, height for camera");
+      
+
+      int x,y;
+      float z;
+      long int xx;
+      dc1394_format7_get_image_size(cam->camera,cam->video_mode,&x,&y);
+      printf("get image size, x: %d, y: %d\n",x,y);
+      dc1394_format7_get_image_position(cam->camera,cam->video_mode,&x,&y);
+      printf("get image position, x: %d, y: %d\n",x,y);
+      dc1394_format7_get_packet_parameters(cam->camera,cam->video_mode,&x,&y);
+      printf("get packet parameters, min: %d, max: %d\n",x,y);
+      dc1394_format7_get_packet_size(cam->camera,cam->video_mode,&x);
+      printf("packet size: %d bytes\n",x);
+      dc1394_format7_get_recommended_packet_size(cam->camera,cam->video_mode,&x);
+      printf("recommended packet size: %d bytes\n",x);
+      dc1394_format7_get_packets_per_frame(cam->camera,cam->video_mode,&x);
+      printf("packets per frame: %d bytes\n",x);
+      dc1394_format7_get_data_depth(cam->camera,cam->video_mode,&x);
+      printf("depth of pixels: %d bits\n",x);
+      dc1394_format7_get_frame_interval(cam->camera,cam->video_mode,&z);
+      printf("time interval between frames: %f ms\n",z);
+      dc1394_format7_get_total_bytes(cam->camera,cam->video_mode,&xx);
+      printf("bytes per frame: %ld\n",xx);
+
+
+
+	    
+
+
+      
+      
       
       
       cam->err=dc1394_capture_setup(cam->camera,cam->number_dms_buffers, DC1394_CAPTURE_FLAGS_DEFAULT);
       DC1394_ERR_CLN_RTN(cam->err,firewire_camera_interface_free(cam),"Could not setup camera-\nmake sure that the video mode and framerate are\nsupported by your camera");
     }
   
+  // allocate memory for the rgb frame
+  if((cam->rgb_frame=calloc(1,sizeof(dc1394video_frame_t)) )==NULL)
+    {
+      fprintf(stderr, "problem allocating memory for cam->rgb_frame\n");
+      return 1;
+    }
+  cam->rgb_frame->color_coding=DC1394_COLOR_CODING_RGB8;
   cam->is_initialized=1;
+  
 #ifdef DEBUG_CAMERA
   fprintf(stderr,"firewire_camera_interface_init, leaving\n");
 #endif
@@ -180,8 +212,11 @@ int firewire_camera_interface_free(struct firewire_camera_interface* cam)
       dc1394_video_set_transmission(cam->camera, DC1394_OFF);
       dc1394_capture_stop(cam->camera);
       dc1394_camera_free(cam->camera);
-      free(cam->rgb_frame->image);
-      free(cam->rgb_frame);
+      if(app_flow.video_source==FIREWIRE_COLOR) 
+	{
+	  free(cam->rgb_frame->image);
+	  free(cam->rgb_frame);
+	}
       cam->is_initialized=0;
     }
   return 0;
@@ -265,8 +300,6 @@ int firewire_camera_interface_empty_buffer(struct firewire_camera_interface* cam
 #ifdef DEBUG_CAMERA
   fprintf(stderr,"firewire_camera_interface_empty_buffer, got rid of %d frame\n",i);
 #endif
-
-
   return 0;
 }
 
