@@ -27,11 +27,21 @@ Delays in detecting a flashing LED
        Results: 
        There is a delay between 38 to 70 ms (one inter frame interval (33 ms) + tracking time (5 ms))
 
-CONCLUSION:  Real-time analysis will be delayed by approximately 1000/sampling_rate ms.
-	     When this is an important factor, use high sampling rate to minimize the delay.
-	     For off-line analysis, we will take into account this delay and eliminate it.
+       With new bw camera firewire 800 running at 51 Hz + tracking time 5 ms,
+       The delay is between 28 to 52 ms (most between 28 and 48 ms), 
+       Offline, we remove 20 ms for one frame and 6 for processing, we get a delay between 0 to 26 ms.
        
 
+CONCLUSION:  Real-time analysis will be delayed by approximately one frame + processing time.
+	     When this is an important factor, use high sampling rate to minimize the delay.
+	     For off-line analysis, the delay is between 0 and 26 ms.
+	     To do better than that, we would need the exact timestamp of capture from the camera.
+       	     The disparition of LED takes longer. I suspect that the pixels have a memory of being bright.
+	     
+
+LIMITATION: The anticipatory firing activity of cells in the ADTN is 23 ms. We won't be able to see it with this setup.
+	    That could work if we select a very short field of view and go to approximately 90 Hz. The prediced delay would 
+	    be between 0 and 16 ms.
 
 
 
