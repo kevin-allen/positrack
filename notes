@@ -17,8 +17,8 @@ Features:
 
 
 
-TESTING
-Delays in detecting a flashing LED
+TESTING SYNCHRONIZATION
+       Delays in detecting a flashing LED
        Arduino to flash an LED (1000ms on / 1002ms off) in the field of view of the camera.
        The 5V pulse powering the LED is splitted and fed into kacq, sampling rate 20 kHz.
        Tracking at 30 Hz with firewire camera.
@@ -32,18 +32,35 @@ Delays in detecting a flashing LED
        Offline, we remove 20 ms for one frame and 6 for processing, we get a delay between 0 to 26 ms.
        
 
-CONCLUSION:  Real-time analysis will be delayed by approximately one frame + processing time.
+conclusion:  Real-time analysis will be delayed by approximately one frame + processing time.
 	     When this is an important factor, use high sampling rate to minimize the delay.
 	     For off-line analysis, the delay is between 0 and 26 ms.
 	     To do better than that, we would need the exact timestamp of capture from the camera.
        	     The disparition of LED takes longer. I suspect that the pixels have a memory of being bright.
 	     
 
-LIMITATION: The anticipatory firing activity of cells in the ADTN is 23 ms. We won't be able to see it with this setup.
+limitation: The anticipatory firing activity of cells in the ADTN is 23 ms. We won't be able to see it with this setup.
 	    That could work if we select a very short field of view and go to approximately 90 Hz. The prediced delay would 
 	    be between 0 and 16 ms.
 
 
-
-
-
+TESTING HEAD DIRECTION DETECTION WITH 2 WHITE SPOTS
+	Arduino with two arrays of ir LEDs 
+            x1
+         x2 
+      x3    y9
+   x4          y8  
+ x5               y7
+   x6                y6
+      x7                y5
+	 x8          y4
+	   x9	  y3
+               y2
+            y1
+	    
+	The idea is to simulate a 180 degree turns by powering output lines 1 to 9 on the arduino.
+	A positive pulse will be sent from the arduino for the duration of the rotation 
+	We can rotate within 200 ms and see if the tracking program also get 180 deg in 200 ms.
+	Tested with bw firewire 800 camera running at 51 Hz.
+	Expect to get a delay of 0 to 26 ms to complete the rotation.
+	
