@@ -16,8 +16,10 @@ int tracking_interface_init(struct tracking_interface* tr)
   tr->number_of_pixels=tr->width*tr->height;
   tr->max_mean_luminance_for_tracking = TRACKING_INTERFACE_MAX_MEAN_LUMINANCE_FOR_TRACKING;
   tr->max_number_spots=TRACKING_INTERFACE_MAX_NUMBER_SPOTS;
+  tr->max_number_spot_calls=TRACKING_INTERFACE_MAX_NUMBER_SPOTS_CALLS;
   tr->min_spot_size=TRACKING_INTERFACE_MIN_SPOT_SIZE;
   tr->interval_between_tracking_calls_ms = INTERVAL_BETWEEN_TRACKING_CALLS_MS;
+  tr->max_distance_two_spots = TRACKING_INTERFACE_MIN_DISTANCE_TWO_SPOTS;
 
   if((tr->spot_positive_pixels=malloc(sizeof(int)*tr->max_number_spots))==NULL)
     {
@@ -168,14 +170,25 @@ gboolean tracking()
     }
   
   // depending on tracking type //
-  if(tracking_interface_tracking_one_bright_spot(&tr)!=0)
-    { // find spots, choose one, update tracking object
-      g_printerr("tracking(), tracking_interface_tracking_one_bright_spot() did not return 0\n");
-      tr.number_frames_tracked=0;
-      return FALSE;
+  if(app_flow.trk_mode==ONE_WHITE_SPOT)
+    {
+      if(tracking_interface_tracking_one_bright_spot(&tr)!=0)
+	{ // find spots, choose one, update tracking object
+	  g_printerr("tracking(), tracking_interface_tracking_one_bright_spot() did not return 0\n");
+	  tr.number_frames_tracked=0;
+	  return FALSE;
+	}
     }
-  
-  
+  if(app_flow.trk_mode==TWO_WHITE_SPOTS)
+    {
+      if(tracking_interface_tracking_two_bright_spots(&tr)!=0)
+	{
+	  g_printerr("tracking(), tracking_interface_tracking_two_bright_spots() did not return 0\n");
+	  tr.number_frames_tracked=0;
+	  return FALSE;
+	}
+    }
+
   if(app_flow.pulse_valid_position==ON)
     {
       if(tob.last_valid==1)
@@ -453,9 +466,9 @@ int tracking_interface_tracking_one_bright_spot(struct tracking_interface* tr)
     }
   if(app_flow.draws_mode==ONLY_USED_SPOTS)
     {
-      tracking_interface_draw_one_spot_xy(tr,tr->index_largest_spot);
+      tracking_interface_draw_one_spot_xy(tr,tr->index_largest_spot,1.0,0.1,1,2);
     }
-  // update object position
+  // update object position, which is th position of the largest spot
   if(tr->number_spots>0)
     {
       tracked_object_update_position(&tob,
@@ -478,8 +491,144 @@ int tracking_interface_tracking_one_bright_spot(struct tracking_interface* tr)
 #endif
   return 0;
 }
- int tracking_interface_draw_one_spot_xy(struct tracking_interface* tr,int spot_index)
+
+int tracking_interface_tracking_two_bright_spots(struct tracking_interface* tr)
 {
+#ifdef DEBUG_TRACKING
+  g_printerr("tracking_interface_tracking_two_bright_spots()\n");
+#endif
+
+  //tracking_interface_clear_drawingarea(tr);
+  tracking_interface_get_luminosity(tr);
+  tracking_interface_get_mean_luminance(tr);
+  if(tr->mean_luminance>tr->max_mean_luminance_for_tracking)
+    {
+      g_printerr("mean_luminance (%lf) is too high for tracking\n",tr->mean_luminance);
+      tr->number_spots=0;
+      tr->number_positive_pixels=0;
+      return 0;
+    }
+  
+  // find all the spots recursively, get the summary data for each spot
+  if(tracking_interface_find_spots_recursive(tr)!=0)
+    {
+      g_printerr("tracking_interface_find_spots_recursive() did not return 0\n");
+      return -1;
+    }
+  
+  // sort according to number of positive pixels
+  tracking_interface_sort_spots(tr);
+  
+  // draw some spots if requrired
+  if(app_flow.draws_mode==ALL)
+    {
+      tracking_interface_draw_all_spots_xy(tr);
+    }
+
+  // stop here if not at least 2 spots
+  if(tr->number_spots<2)
+    {
+      tracked_object_update_position(&tob,
+				     -1.0,
+				     -1.0,
+				     -1.0,
+				     microsecond_from_timespec(&tr->inter_buffer_duration));
+      // save data to the file
+      fprintf(rec_file_data.fp,"%.2lf %.2lf %.2lf %d %.2lf %.2lf %d %.2lf %.2lf\n",-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0);
+      return 0;
+    }
+  // check if the two spots are within reasonable distance
+  if(distance(tr->spot_mean_x[0],tr->spot_mean_y[0],tr->spot_mean_x[1],tr->spot_mean_y[1])>tr->max_distance_two_spots)
+    {
+      tracked_object_update_position(&tob,
+				     -1.0,
+				     -1.0,
+				     -1.0,
+				     microsecond_from_timespec(&tr->inter_buffer_duration));
+      // save data to the file
+      fprintf(rec_file_data.fp,"%.2lf %.2lf %.2lf %d %.2lf %.2lf %d %.2lf %.2lf\n",-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0);
+      return 0;
+    }
+  if(app_flow.draws_mode==ALL)
+    {
+      tracking_interface_draw_all_spots_xy(tr);
+    }
+  if(app_flow.draws_mode==ONLY_USED_SPOTS)
+    {
+      tracking_interface_draw_one_spot_xy(tr,0,0.2,0.2,1,3);
+      tracking_interface_draw_one_spot_xy(tr,1,0.2,0.7,0.2,1);
+    }
+#ifdef DEBUG_TRACKING
+  g_printerr("x1: %.2lf, y1: %.2lf, x2: %.2lf, y2: %.2lf\n",tr->spot_mean_x[0],tr->spot_mean_y[0],tr->spot_mean_x[1],tr->spot_mean_y[1]);
+#endif
+  tracked_object_update_position(&tob,
+				 (tr->spot_mean_x[0]+tr->spot_mean_x[1])/2, // x
+				 (tr->spot_mean_y[0]+tr->spot_mean_y[1])/2, // y 
+				 heading(tr->spot_mean_x[1]-tr->spot_mean_x[0],tr->spot_mean_y[1]-tr->spot_mean_y[0]), // heading
+				 microsecond_from_timespec(&tr->inter_buffer_duration));
+  
+  // save data to the file
+  fprintf(rec_file_data.fp,"%.2lf %.2lf %.2lf %d %.2lf %.2lf %d %.2lf %.2lf\n",
+	  (tr->spot_mean_x[0]+tr->spot_mean_x[1])/2, // x object
+	  (tr->spot_mean_y[0]+tr->spot_mean_y[1])/2, // y object
+	  heading(tr->spot_mean_x[1]-tr->spot_mean_x[0],tr->spot_mean_y[1]-tr->spot_mean_y[0]), // heading object
+	  tr->spot_positive_pixels[0], // n pixels large spot
+	  tr->spot_mean_x[0], // x large spot
+	  tr->spot_mean_y[0], // y large spot
+	  tr->spot_positive_pixels[1], // n pixels second largest spot
+	  tr->spot_mean_x[1], // x second largest spot
+	  tr->spot_mean_y[1]); // y second largest spot
+  
+#ifdef DEBUG_TRACKING
+  g_printerr("tracking_interface_tracking_two_bright_spots() done\n");
+#endif
+  return 0;
+}
+ 
+int tracking_interface_sort_spots(struct tracking_interface* tr)
+{
+  // sort the spots according to the number of positive pixels
+
+  int spp[TRACKING_INTERFACE_MAX_NUMBER_SPOTS];
+  int spx[TRACKING_INTERFACE_MAX_NUMBER_SPOTS];
+  int spy[TRACKING_INTERFACE_MAX_NUMBER_SPOTS];
+  int smx[TRACKING_INTERFACE_MAX_NUMBER_SPOTS];
+  int smy[TRACKING_INTERFACE_MAX_NUMBER_SPOTS];
+  int smr[TRACKING_INTERFACE_MAX_NUMBER_SPOTS];
+  int smg[TRACKING_INTERFACE_MAX_NUMBER_SPOTS];
+  int smb[TRACKING_INTERFACE_MAX_NUMBER_SPOTS];
+  int i,maxi;
+  
+  for(i=0;i<tr->number_spots;i++)
+    {
+      maxi=find_max_index_int(tr->number_spots,tr->spot_positive_pixels);
+      spp[i]=tr->spot_positive_pixels[maxi];
+      spx[i]=tr->spot_peak_x[maxi];
+      spy[i]=tr->spot_peak_y[maxi];
+      smx[i]=tr->spot_mean_x[maxi];
+      smy[i]=tr->spot_mean_y[maxi];
+      smr[i]=tr->spot_mean_red[maxi];
+      smg[i]=tr->spot_mean_green[maxi];
+      smb[i]=tr->spot_mean_blue[maxi];
+      tr->spot_positive_pixels[maxi]=-1; // make sure not pick again
+    }
+  
+  for(i=0;i<tr->number_spots;i++)
+    {
+      tr->spot_positive_pixels[i]=spp[i];
+      tr->spot_peak_x[i]=spx[i];
+      tr->spot_peak_y[i]=spy[i];
+      tr->spot_mean_x[i]=smx[i];
+      tr->spot_mean_y[i]=smy[i];
+      tr->spot_mean_red[i]=smr[i];
+      tr->spot_mean_green[i]=smg[i];
+      tr->spot_mean_blue[i]=smb[i];
+    }
+}
+
+
+int tracking_interface_draw_one_spot_xy(struct tracking_interface* tr,int spot_index,double red, double green, double blue, double size)
+ {// red, green, blue varies from 0 to 1
 #ifdef DEBUG_TRACKING
   fprintf(stderr,"tracking_interface_draw_one_spot_xy\n");
 #endif
@@ -489,13 +638,13 @@ int tracking_interface_tracking_one_bright_spot(struct tracking_interface* tr)
   cairo_t * cr;
   cr = gdk_cairo_create(gtk_widget_get_window(widgets.trackingdrawingarea));
   cairo_set_line_width (cr, 5);
-  cairo_set_source_rgb (cr,0.69,0.19,0.0);
+  cairo_set_source_rgb (cr,red,green,blue);
   cairo_move_to(cr, 
-		tr->spot_mean_x[spot_index]-2,
-		tr->spot_mean_y[spot_index]-2);
+		tr->spot_mean_x[spot_index]-size/2,
+		tr->spot_mean_y[spot_index]-size/2);
   cairo_line_to(cr,
-		tr->spot_mean_x[spot_index]+2,
-		tr->spot_mean_y[spot_index]+2);
+		tr->spot_mean_x[spot_index]+size/2,
+		tr->spot_mean_y[spot_index]+size/2);
   cairo_stroke(cr);
   cairo_destroy(cr);
   return 0;
@@ -567,12 +716,15 @@ int tracking_interface_get_luminosity(struct tracking_interface* tr)
       tr->lum[i]=(tr->p[0]+tr->p[1]+tr->p[2])/3.0;
       
       // this line below is to get rid of burn out pixels on the firewire camera with if filter
-      if(tr->lum[i]==255)tr->lum[i]=0;
+      // but we get rid of the center of led which is not good
+      // but pixels above threashold be far from max
+      if(tr->lum[i]==255)tr->lum[i]=150;
     }
 
+  
   //smooth_double_gaussian(tr->lum_tmp,tr->lum, tr->width, tr->height,0.3,-1); // sadly, this is too slow
   // might be worth trying out how a 2d fourier transform would be ???
-
+  // would be nice if that work so that we only look at led-like shapes 
 
 #ifdef DEBUG_TRACKING
   g_printerr("tracking_interface_get_luminosity() done\n");
@@ -608,7 +760,8 @@ int tracking_interface_find_spots_recursive(struct tracking_interface* tr)
   // set the spot array to 0
   set_array_to_value (tr->spot,tr->number_of_pixels,0); // set spot array to 0  
 
-  while(tr->number_spot_calls<tr->max_number_spots &&
+  while(tr->number_spot_calls<tr->max_number_spot_calls && 
+	tr->number_spots<tr->max_number_spots &&
 	find_max_positive_luminance_pixel(tr->lum,
 					  tr->width,
 					  tr->height,
@@ -644,7 +797,7 @@ int tracking_interface_find_spots_recursive(struct tracking_interface* tr)
 	      tr->spot_mean_x[tr->number_spots],
 	      tr->spot_mean_y[tr->number_spots]);
 #endif
-      //tracking_interface_draw_spot(tr);
+      //tracking_interface_draw_spot(tr); // if you want to see the spots
       
       // this is only a valid spot if larger than min spot size
       if(tr->number_positive_pixels>=tr->min_spot_size)
@@ -1079,5 +1232,28 @@ void gaussian_kernel(double* kernel,
 	  part_2= exp(-(num_part_2/den_part_2));
 	  kernel[i*y_size+j]=part_1*part_2;
 	}
+    }
+}
+
+double heading (double delta_x, double delta_y)
+{
+  double angle;
+  if(delta_x==0)
+    {
+      if(delta_y==0) return(0);
+      else if(delta_y>0) return(90);
+      else return(270);
+    }
+  else if(delta_y==0)
+    {
+      if(delta_x<0) return(180);
+      else return(0);
+    }
+  else 
+    {
+      angle=atanf(delta_y/delta_x)*57.29577951308232087685; /* 57.295... = 180/pi */
+      if(delta_x<0) angle+=180;
+      else if (delta_x>0&&delta_y<0) angle+=360;
+      return(angle);
     }
 }

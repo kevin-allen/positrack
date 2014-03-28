@@ -74,18 +74,22 @@ int init_window()
   gtk_builder_connect_signals (builder, NULL); // connect all signals
   g_object_unref (G_OBJECT (builder));
 
-  // set the home directory as the default directory
-  struct passwd *p;
-  char *username=getenv("USER");
-  p=getpwnam(username);
-  saving_directory_name=strcat(p->pw_dir,"/");
-
   // set the state of video and tracking
   widgets.video_running=0;
   widgets.tracking_running=0;
   
   // show the main window
   gtk_widget_show (widgets.window);      
+
+
+
+  // set the home directory as the default directory
+  struct passwd *p;
+  char *username=getenv("USER");
+  p=getpwnam(username);
+  rec_file_data.directory=strcat(p->pw_dir,"/");
+  printf("%s\n",rec_file_data.directory);
+
   return 0;
 }
 
@@ -217,13 +221,13 @@ void start_video()
 	  if(fw_inter.is_initialized!=1)
 	    {
 	      firewire_camera_interface_init(&fw_inter);
+#ifdef DEBUG_CALLBACK
 	      firewire_camera_interface_print_info(&fw_inter);
+#endif
 	    }
 	  firewire_camera_interface_start_transmission(&fw_inter);
 	  // let the pipeline ask for new data via a signal to cb_need_data function
 	}
-      
-      
       
       if(gst_inter.loop==NULL)
 	{
@@ -294,13 +298,75 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
 	}
     }
   widgets.tracking_running=1;
-  //tracking();
+  
+  if(recording_file_data_open_file()!=0)
+    {
+      g_printerr("recording_file_data_open_file() did not return 0\n");
+      return;
+    }
+
   g_timeout_add(tr.interval_between_tracking_calls_ms,tracking,user_data); // timer to trigger a tracking event
 #ifdef DEBUG_CALLBACK
   g_printerr("leaving playtrackingmenuitem_activate, tracking_running: %d\n",widgets.tracking_running);
 #endif
   
 }
+int recording_file_data_open_file()
+{
+  // get the name for the tracking file
+  const gchar *str;
+  gchar * str1;
+  gchar * str2;
+  gchar * str3;
+  
+  str=gtk_entry_get_text(GTK_ENTRY(widgets.filebaseentry));
+  str1=g_strdup_printf("%02d",gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widgets.trialnospinbutton)));
+  str2=".positrack";
+  rec_file_data.file_name=g_strdup_printf("%s_%s%s",str,str1,str2);
+
+  // check if the file already exist and warn the user if so
+  struct stat st;
+  if(stat(g_strdup_printf("%s",rec_file_data.file_name),&st) == 0)
+    {
+      // the file exist, start a dialog to get a confirmation before overwritting the file
+      //printf("%s is present\n",g_strdup_printf("%s%s",recording_inter.directory,str3));
+      GtkWidget *dialog, *label, *content_area;
+      gint result;
+      dialog = gtk_message_dialog_new (GTK_WINDOW(widgets.window),
+				       GTK_DIALOG_DESTROY_WITH_PARENT,
+				       GTK_MESSAGE_QUESTION,
+				       GTK_BUTTONS_YES_NO,
+				       "\n%s already exists.\nDo you want to overwrite it?",rec_file_data.file_name);
+      gtk_widget_show_all (dialog);
+      result=gtk_dialog_run (GTK_DIALOG (dialog));
+      if(result==GTK_RESPONSE_NO)
+	{
+	  // abort recording to avoid overwriting the file
+	  gtk_widget_destroy (dialog);
+	  return -1;
+	}
+      else
+	{
+	  gtk_widget_destroy (dialog);
+	}
+    }
+  rec_file_data.fp=fopen(rec_file_data.file_name,"w");
+  if (rec_file_data.fp==NULL)
+    {
+      fprintf(stderr,"error opening %s in recording_file_data_open_file()\n",rec_file_data.file_name);
+      return -1;
+    }
+  return 0;
+}
+
+int recording_file_data_close_file()
+{
+  // get the name for the tracking file
+  fclose(rec_file_data.fp);
+}
+
+
+
 
 void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
 {
@@ -309,9 +375,11 @@ void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
   tracked_object_free(&tob);
   if(app_flow.synch_mode==COMEDI)
     comedi_dev_free(&comedi_device);
+  recording_file_data_close_file();
   index=gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widgets.trialnospinbutton));
   index++; 
   gtk_spin_button_set_value(GTK_SPIN_BUTTON(widgets.trialnospinbutton),(gdouble)index);
+
   usleep(100000);
   stop_video();
 }

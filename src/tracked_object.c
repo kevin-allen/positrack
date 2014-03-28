@@ -97,10 +97,13 @@ int tracked_object_update_position(struct tracked_object* tob,double x, double y
 				    tob->y[tob->n]);
       //tob->speed[tob->n]=tob->sample_distance/((double)frame_duration_us/1000000);
     }
+  
+  tracked_object_draw_object(tob);
 #ifdef DEBUG_TRACKED_OBJECT
-  fprintf(stderr,"object position: %lf, %lf\n",
+  fprintf(stderr,"object position: %lf, %lf, heading: %lf\n",
 	  tob->x[tob->n],
-	  tob->y[tob->n]);
+	  tob->y[tob->n],
+	  tob->head_direction[tob->n]);
 #endif
   tob->n++;
 
@@ -114,6 +117,32 @@ int tracked_object_update_position(struct tracked_object* tob,double x, double y
       tob->head_direction_invalid=0;
       tob->travelled_distance=0;
     }
+  return 0;
+}
+int tracked_object_draw_object(struct tracked_object* tob)
+{
+  double red=0.1;
+  double green=0.1;
+  double blue=0.1;
+  
+  if(tob->x[tob->n]==-1.0)
+    { // don't draw if invalid position
+      return 0;
+    }
+
+  
+  cairo_t * cr;
+  cr = gdk_cairo_create(gtk_widget_get_window(widgets.trackingdrawingarea));
+  cairo_set_line_width (cr, 5);
+  cairo_set_source_rgb (cr,red,green,blue);
+  cairo_move_to(cr, 
+		tob->x[tob->n]-2,
+		tob->y[tob->n]-2);
+  cairo_line_to(cr,
+		tob->x[tob->n]+2,
+		tob->y[tob->n]+2);
+  cairo_stroke(cr);
+  cairo_destroy(cr);
   return 0;
 }
 

@@ -61,10 +61,13 @@ File with declarations of the main structures and functions used in positrack
 #define TRACKING_INTERFACE_LUMINANCE_THRESHOLD 50
 #define TRACKING_INTERFACE_WIDTH 800
 #define TRACKING_INTERFACE_HEIGHT 800
-#define TRACKING_INTERFACE_MAX_NUMBER_SPOTS 4
-#define TRACKING_INTERFACE_MAX_MEAN_LUMINANCE_FOR_TRACKING 130
+#define TRACKING_INTERFACE_MAX_NUMBER_SPOTS 2
+#define TRACKING_INTERFACE_MAX_NUMBER_SPOTS_CALLS 8
+
+#define TRACKING_INTERFACE_MAX_MEAN_LUMINANCE_FOR_TRACKING 8/* 0 */
 #define TRACKING_INTERFACE_MAX_SPOT_SIZE 40000
 #define TRACKING_INTERFACE_MIN_SPOT_SIZE 10
+#define TRACKING_INTERFACE_MIN_DISTANCE_TWO_SPOTS 150
 
 #define TRACKED_OBJECT_BUFFER_LENGTH 432000 // 432000 should give 240 minutes at 30Hz.
 
@@ -80,10 +83,10 @@ File with declarations of the main structures and functions used in positrack
 
 //#define DEBUG_ACQ // to turn on debugging output for the comedi card
 //#define DEBUG_CAMERA // to turn on debugging for the camera
-#define DEBUG_TRACKING // to turn on debugging for the tracking
+//#define DEBUG_TRACKING // to turn on debugging for the tracking
 //#define DEBUG_IMAGE // to turn on debugging for the image processing
-#define DEBUG_CALLBACK 
-#define DEBUG_TRACKED_OBJECT
+//#define DEBUG_CALLBACK
+//#define DEBUG_TRACKED_OBJECT
 //#define DEBUG_ACQ
 //#define CAPS "video/x-raw, format=RGB, framerate=30/1 width=160, pixel-aspect-ratio=1/1"
 
@@ -135,7 +138,7 @@ struct all_widget
 { // see positrack.glade file to know where these appear
   GtkWidget *window;  // main window
   GtkWidget *videodrawingarea; //  draw the video
-  GtkWidget *trackingdrawingarea; // draw the tracking results 
+  GtkWidget *trackingdrawingarea; // draw the tracking results
   GtkAdjustment *trial_no_adjustment;
   GtkWidget *videosource_dlg;
   GtkWidget *tracking_dlg;
@@ -147,7 +150,7 @@ struct all_widget
   GtkWidget *current_saving_directory_label2;
   GtkWidget *filebaseentry; // filebase of the file name
   GtkWidget *trialnospinbutton; // index following filebase for file name
-  GtkWidget *statusbar; // index following filebase for file name   
+  GtkWidget *statusbar; // index following filebase for file name
 
 
   GtkWidget *no_synchronization_radiobutton;
@@ -169,7 +172,7 @@ struct all_widget widgets; //defines a structure named widgets of the all_widget
 struct tracking_interface
 {
   // the tracking interface job is to find the spots or
-  // whatever is in the image frame that is used to 
+  // whatever is in the image frame that is used to
   // find location of tracked object and update tracked_object structure
   int is_initialized;
   int interval_between_tracking_calls_ms;
@@ -179,9 +182,11 @@ struct tracking_interface
   int n_channels;
   int rowstride;
   int max_number_spots;
+  int max_number_spot_calls;
   int number_spot_calls;
   int min_spot_size;
   int number_spots;
+  double max_distance_two_spots;
   struct timespec current_buffer_time;
   struct timespec previous_buffer_time;
   struct timespec inter_buffer_duration;
@@ -227,6 +232,15 @@ struct tracking_interface
 struct tracking_interface tr;
 
 
+struct recording_file_data
+{
+  FILE* fp;
+  gchar* file_name;
+  gchar* directory;
+};
+struct recording_file_data rec_file_data;
+
+
 struct tracked_object
 {
   // the tracked object is the subject being tracked
@@ -246,7 +260,7 @@ struct tracked_object
   double travelled_distance;
   double sample_distance;
   double samples_per_seconds;
-  int buffer_length; 
+  int buffer_length;
   double pixels_per_cm;
   int last_valid;
 };
@@ -286,15 +300,15 @@ struct gst_interface
   GstElement *sink_queue, *appsink_queue;
   //need to add queue pads
   GstPad *queue_sink_pad, *queue_appsink_pad;
-  GstCaps *filtercaps; 
+  GstCaps *filtercaps;
   GMainLoop *loop; // for gstreamer
   GstPadTemplate *videotee_src_pad_template; //object stores the template of the Request pads which act as source pads in Tee
-  GstPad *videotee_appsink_pad, *videocovert_src_pad, *videotee_sink_pad, *pad; //declaration of request Pads themselves 
+  GstPad *videotee_appsink_pad, *videocovert_src_pad, *videotee_sink_pad, *pad; //declaration of request Pads themselves
   gint64 position;
   GstMessage *msg;
   GstSample *sample;
   gboolean res;
-  GstMapInfo map; 
+  GstMapInfo map;
   GstBuffer *buffer;
   GstCaps *caps, *pad_caps;
   GstStructure *s;
@@ -332,7 +346,7 @@ struct comedi_dev
   int samples_read;
   int data_point_out_of_samples; // because read operation returns incomplete samples
   long int cumulative_samples_read;
-  comedi_cmd command; 
+  comedi_cmd command;
   unsigned int channel_list[COMEDI_DEVICE_MAX_CHANNELS]; // channel number for the comedi side
   int number_sampled_channels; // variable to be able to sample twice same channel on each sampling
   int is_acquiring;
@@ -347,7 +361,7 @@ struct comedi_dev comedi_device;
 
 GtkBuilder *builder; // to build the interface from glade
 gchar* trk_file_name; // directory + file name from gui
-gchar* saving_directory_name; // 
+gchar* saving_directory_name; //
 gchar* config_directory_name;
 gchar* config_file_name;
 
@@ -406,7 +420,7 @@ void save_pixbuf_to_file();
 static void print_pad_capabilities (GstElement *element, gchar *pad_name);
 
 //declare a function to register the video frames from appsink
-gboolean tracking(); 
+gboolean tracking();
 void snapshot ();
 
 
@@ -451,12 +465,13 @@ int tracking_interface_valid_buffer(struct tracking_interface* tr);
 int tracking_interface_get_luminance(struct tracking_interface* tr);
 int tracking_interface_get_mean_luminosity(struct tracking_interface* tr);
 int tracking_interface_tracking_one_bright_spot(struct tracking_interface* tr);
+int tracking_interface_tracking_two_bright_spots(struct tracking_interface* tr);
 int tracking_interface_find_spots_recursive(struct tracking_interface* tr);
 int tracking_interface_spot_summary(struct tracking_interface* tr);
+int tracking_interface_sort_spots(struct tracking_interface* tr);
 int tracking_interface_draw_spot(struct tracking_interface* tr);
-int tracking_interface_draw_one_spot_xy(struct tracking_interface* tr,int spot_index);
+int tracking_interface_draw_one_spot_xy(struct tracking_interface* tr,int spot_index,double red, double green, double blue, double size);
 int tracking_interface_draw_all_spots_xy(struct tracking_interface* tr);
-
 int tracking_interface_clear_drawingarea(struct tracking_interface* tr);
 int tracking_interface_print_luminance_array(struct tracking_interface* tr);
 int tracking_interface_print_spot_array(struct tracking_interface* tr);
@@ -468,7 +483,9 @@ defined in tracked_object.c
 int tracked_object_init(struct tracked_object* tob);
 int tracked_object_free(struct tracked_object* tob);
 int tracked_object_update_position(struct tracked_object* tob,double x, double y, double head_direction, int frame_duration_ms);
+int tracked_object_draw_object(struct tracked_object* tob);
 
+int recording_file_data_open_file();
 
 		
 int find_max_index(int num_data,double* data);	
@@ -493,5 +510,6 @@ int find_an_adjacent_positive_pixel(double* lum,
 				    int* num_positive_pixels, // single int
 				    double threshold);
 double distance(double x1, double y1, double x2, double y2);
+double heading (double delta_x, double delta_y);
 void smooth_double_gaussian(double* array,double* out, int x_size,int y_size, double smooth, double invalid);
 void gaussian_kernel(double* kernel,int x_size,int y_size, double standard_deviation);
