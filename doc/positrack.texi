@@ -231,17 +231,40 @@ This is the manual for positrack position tracking program.
 @cindex chapter, third
         @section Graphical user interface
      @subsection Preferences
-      In the graphical user interface, the configuration is accessible from the edit menu. 
-     @subsubsection Acquisition preferences
-     The acquisition dialog does not allow you to adjust any setting at the moment but it displays the current AD cards and drivers used. You can see how many channels are available from the detected cards and the current sampling rate.
-     @subsubsection Recording preferences
-     You can select the channels that you want to record in that page. Only channels with a check mark will be recorded.
-     @subsubsection Oscilloscope preferences
-      The oscilloscope has 10 groups of channels to display. The channels within a group are displayed together in the oscilloscope. Up to 16 channels can be part of a single group. You can change the channel selection for each group in the oscilloscope preferences dialog. You can drag and drop channels within groups to change their order. Changes to the oscilloscope have no effect on the recording process. Therefore, you can display channels that are not recorded or vice versa.
-     @subsection Recording
-     Pressing the red recording button will start recording. The button will remain pressed, which indicates you that positrack is recording. A second click on this same button will stop recording. During recording, a message is displayed on the status bar at the button of the main window. You can use this message to know if recording is in process. By default, the data are saved in your home directory. The recording directory can be changed in the recording preferences dialog. You can change the name of the file at the bottom right of the main window. The file index increases by 1 automatically when the recording is stopped.
-     @subsection Oscilloscope
-     The oscilloscope shows the raw data. You can control it via the toolbar at the bottom left of the main window. Pressing the play button will start the oscilloscope and a second click on the button will stop the oscilloscope. The oscilloscope is entirely independent from recording. This means that you can start and stop the oscilloscope without affecting the recording process. The oscilloscope has a buffer containing the recently displayed data. Therefore, you can at any time stop the oscilloscope and rewind it to see the previously shown signals. You can navigate backward or forward in the buffer using the buttons surrounding the play button.
+     The GUI is relatively simple. You can start and stop the playback of the video and start and stop the tracking process. Some of the configuration options are accessible from the edit menu.
+
+     @subsubsection Configuration file
+     positrack.config should be in your home directory and will be read when positrack starts. Each line sets a particular variable that can be set to a list of predetermined values
+     
+     @enumerate
+        @item
+        Video source: USB_V4L2 FIREWIRE_BLACK_WHITE FIREWIRE_COLOR
+        Tracking type: ONE_WHITE_SPOT TWO_WHITE_SPOTS
+        Synchronization signal: NONE COMEDI
+        Video playback: ON OFF
+        Draw detected spots: NO ALL ONLY_USED_SPOTS
+        Draw detected object: ON OFF
+        Valid position signal: ON OFF
+
+
+  fprintf(stderr,"ON OFF\n");
+  fprintf(stderr,"NO ALL ONLY_USED_SPOTS\n");
+  fprintf(stderr,"ONE_BLACK_DOT\n");
+  fprintf(stderr,"ON_OFF\n");
+  fprintf(stderr,"\nAn example is\n\n");
+  fprintf(stderr,"FIREWIRE\n");
+  fprintf(stderr,"ONE_WHITE_SPOT\n");
+  fprintf(stderr,"COMEDI\n");
+  fprintf(stderr,"ON\n");
+  fprintf(stderr,"ONLY_USED_SPOTS\n");
+  fprintf(stderr,"ONE_BLACK_DOT\n");
+  fprintf(stderr,"ON\n");
+
+     @end enumerate
+
+
+
+
 
      @section Controling positrack from a remote computer
      The X Window System running on Linux allows you to run a graphical application remotely from a different computer. Therefore, you can easily run positrack on a computer located in the lab and get the oscilloscope forwarded to your office computer. This is usually done with the command @code{ssh -l username -X 192.168.1.2}. The numbers there are the ip address of the computer running positrack. Then, just type @code{positrack}. How cool is that?
