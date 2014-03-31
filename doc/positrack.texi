@@ -1,0 +1,294 @@
+\input texinfo   @c -*-texinfo-*-
+@c process with  makeinfo positrack.texinfo --html
+@c %**start of header
+@setfilename positrack.info
+@settitle positrack manual 0.2
+@c %**end of header
+
+@copying
+Copyright @copyright{} 2014 Kevin Allen
+
+@quotation
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.2 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, with the Front-Cover Texts being ``positrack manual''.
+@end quotation
+@end copying
+
+@titlepage
+@title positrack manual
+@author Kevin Allen
+
+@c The following two commands start the copyright page.
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+@end titlepage
+@headings off
+  
+@c Output the table of contents at the beginning.
+@contents
+
+@ifnottex
+@node Top
+@top positrack manual
+
+@c to comment @image{screenshot,300,200,,png}
+
+@insertcopying
+@end ifnottex
+
+This is the manual for positrack position tracking program.
+
+@menu
+* Introduction::
+* Installation::
+* Usage::
+* Code::
+* Troubleshooting::
+* Reporting bugs::
+* Index::
+@end menu
+
+@node Introduction
+@chapter Introduction
+@cindex chapter, first
+        @section Purpose
+        positrack is a program to track the position of an object in a video signal and should run on most Gnu/Linux systems. My aim was to replace a similar program that had become obselete because it depends on old hardware (frame grabber, Handy Cam with analog output, Windows operating system, etc). We also wanted a system that could track at higher frequency than 25 Hz. Our aim at the moment is to develop an application that is simple to use and stable enough for scientific applications.
+        @section How it works
+        positrack is written in C and depends on four other free projects. The graphical user interface is built with the GTK+ library. This is the library maintained by the Gnome project. Firewire cameras are controlled via libdc1394 library. USB cameras and the video display are dealt with by Gstreamer. The system can use a DAC to send different output signals used by other applications or computers, this is done using the comedi drivers. All the code in positrack is free. positrack can be copied, modified and redistributed.
+         @section Possible hardware configurations
+         positrack was written to acquire video signal from firewire camera. It currently works with firewire 400 and 800 standards. To know if a camera is supported, check the list this website. I am currently using a xxx camera from ImagingSource. It is also possible to use a usb camera. This possiblity was implemented mainly to be able to develop positrack from computers that do not have a firewire port. To send analog signals out for synchronization, we are using a NI PCI-6251 card. That is probably a bit of an overkill but we know they work well from having use this card before. In theory, positrack should work without major modifications with most of the AD cards that are supported by the comedi project. In practice, this has not yet been tested.
+         @section Data files
+         The data are saved into a text file. The first line contains a title for each colum of data present in the data file. Below the title line, there is one line of data for each video frame captured during the tracking process.
+         @section Usage
+         positrack has a simple graphical user interface to start/stop the video playback and to start/stop the position tracking. Most of the configuration options are in a file called positrack.config that should be present in the home directory of the user. This configuration file controls the type of cameras should be used, the type of tracking being performed, etc. More on that below.
+
+@node Installation
+@chapter Installation
+@cindex chapter, second
+        Possibly the most complex task you face if you want to use positrack is to install the prerequisites. It could involve compiling and installing a linux kernel, along with a few other packages. The instructions below aim at making these steps as simple as possible. This process went smoothly the last few times we have tried it.
+
+        @section Computer and analog-to-digital cards
+        First, you need a computer. We have been developping positrack with a Dell OptiPlex 780-Desktop equipped with an Intel Core i7 processor. With this machine, we can track LEDs with a monochrome Imagingsource firewire (frame size: 800 x 800 pixels) at 51 Hz. The actual image processing time is below 10 ms so the bottle neck is either the camera or the firewire interface. The frequency could be increased if the video frame was smaller. Some firewire camera have scalable frame size, which can be set within the tracking software to limit the analysis to an area of interest.
+
+        positrack uses the comedi drivers to interact with the DAC card. You can have a look at the comedi website to know which acquisition cards are supported. We have only used the NI PCI-6251 card.
+
+        @section Gnu/Linux operating system
+        Once you have the computer equipped with the DAC card, you need to install a recent Gnu/Linux operating system. This usually involves burning a DVD and rebooting your system from the DVD. We are using the 64-bit version of Fedora 20.
+
+        @section Building a new vanilla kernel
+        Because the linux kernel coming with Fedora is heavily modified, we need to compile and install a vanilla kernel on the computer to be able to use the comedi drivers. To minimize delays in data processing, we use a preemptible kernel. This should reduce significantly the low latency responses of the computer.  We are developping positrack with the preemtive option found in the kernel version 3.4.4. Here are the steps to install that kernel.
+
+        @enumerate
+        @item
+        As a normal user, download the vanilla kernel from www.kernel.org and save the decompressed file in your home directory. 
+        
+        @code{cd ; wget http://www.kernel.org/pub/linux/kernel/v3.0/linux-3.4.4.tar.bz2}
+        @code{tar -jxvf linux-3.4.4.tar.bz2}
+
+        @item
+        Move in the new folder (eg, linux-3.4.4) and copy the .config file from the existing kernel. That config file should be suitable for the computer architecture and hardware you are currently using. 
+   
+        @code{cd linux-3.4.4 ; cp /boot/config-3.4.3-1.fc17.x86_64 .config}
+        
+        @item
+        Use the .config as the default for the new kernel options.
+ 
+        @code{make oldconfig}
+        
+        Answer yes (y) or m to most questions if you are not sure. This command will update the .config file so that it is compatible with the new kernel. You might have to install ncurses-devel to run make oldconfig.
+     
+        @item 
+        Add the pre-emptive option in the kernel. Navigate in the menu of menuconfig, go in processor type and features, Preemption Model, set it to Preemptible Kernel (Low-Latency Desktop). You might have to install ncurses-devel to run make menuconfig.
+        
+        @code{make menuconfig}
+        @item
+        Compile the kernel.
+
+        @code{make} or @code{make -j 8} if you can run many processes in parallel.
+
+        @item
+        Install the new kernel. You need to be root to do that.
+
+        @code{make modules_install}
+       
+        @code{make install}
+
+        @item
+        Set the new kernel as the default kernel in grub2.
+
+        List the different choice
+
+        @code{grep ^menuentry /boot/grub2/grub.cfg | cut -d "'" -f2}
+
+
+        Set the desired default
+
+        @code{grub2-set-default "menuentry title" }
+
+
+        Apply the change
+
+        @code{grub2-mkconfig -o /boot/grub2/grub.cfg}
+
+        @item
+        Reboot the computer and try to boot using the new kernel.
+
+        @code{shutdown -r now}
+
+        @item
+        Run uname -a to know which kernel is presently running. If it is your new kernel, it means that you have sucessfully installed the new kernel.
+
+        @code{uname -a}
+
+        @item
+        As root, make a symbolic link called linux in the /usr/src directory to the source directory of the new kernel. That will be used when installing comedi.
+
+        @code{ln -s ~/linux-3.4.4 /usr/src/linux}
+
+        @end enumerate
+
+        @section comedi and comedilib on Fedora 17
+     
+        @enumerate
+        @item
+        Download the current comedi drivers from the git repositories. You might need to install git.
+
+        @code{git clone git://comedi.org/git/comedi/comedi.git}
+
+        @code{git clone git://comedi.org/git/comedi/comedilib.git}
+
+        @item
+        Go in the comedi directory and install the package. You might need to install autoconf and automake first.
+       
+        @code{cd comedi; ./autogen.sh; ./configure; make}
+
+        As root @code{cd comedi;make install; depmod -a}
+        
+        @item
+        Restart your computer. If the cards are installed in the computer, files like @code{/dev/comedi0} should be created.
+
+        @item 
+        Install comedilib with yum
+
+        @code{yum install comedilib-devel}
+
+        @item
+        Configure your comedi devices. See http://www.comedi.org/doc/x333.html
+
+        During our latest installation, this step was done automatically when rebooting.
+              
+        If it is not the case, this is what you have to do with a two NI PCI-6259 card setup. 
+        @code{comedi_config /dev/comedi0 ni_pcimio}
+        @code{comedi_config /dev/comedi1 ni_pcimio}
+
+        You might want to have permission to write and read on the files /dev/comedi0 and /dev/comedi1. This will allow you to run positrack as a normal user. To make that process automated on Fedora 20:
+
+        @code{touch /etc/rc.d/rc.local; chmod ugo+x /etc/rc.d/rc.local}
+        Add #!/bin/sh at the top of /etc/rc.d/rc.local
+        @code{echo "chown user_name /dev/comedi0; chgrp group_name /dev/comedi0 >>  /etc/rc.d/rc.local"}
+
+        
+       @end enumerate
+
+
+        @section gtk+
+        To be able to compile positrack, you also need the gtk+2 development kit.
+
+        @code{yum install gtk2-devel}
+        
+
+        @section Gstreamer
+        @code{yum install gstreamer1-devel}
+        @code{yum install gstreamer1-plugins-base-devel}
+
+        @section libc1394
+        @code{yum install libdc1394-devel}
+
+        @section Installing positrack
+        @enumerate
+        @item
+        The code for positrack is on a Bitbucket repository. You will need @code{git} to get it. On Fedora, you can install git with @code{yum install git}.
+        You can get positrack by running this command : @code{git clone ...} 
+
+
+        @item
+        Then you can configure, compile and install positrack the traditional way.
+
+        @code{cd positrack;./autogen.sh;./configure; make; su -; make install}
+
+        @item
+        
+        Finally, create the positrack.config file in the @code{/home/user_name/} directory, where user_name is your user name.
+       @end enumerate 
+
+        If everything worked, you should have positrack installed on the computer.
+
+@node Usage
+@chapter Usage
+@cindex chapter, third
+        @section Graphical user interface
+     @subsection Preferences
+      In the graphical user interface, the configuration is accessible from the edit menu. 
+     @subsubsection Acquisition preferences
+     The acquisition dialog does not allow you to adjust any setting at the moment but it displays the current AD cards and drivers used. You can see how many channels are available from the detected cards and the current sampling rate.
+     @subsubsection Recording preferences
+     You can select the channels that you want to record in that page. Only channels with a check mark will be recorded.
+     @subsubsection Oscilloscope preferences
+      The oscilloscope has 10 groups of channels to display. The channels within a group are displayed together in the oscilloscope. Up to 16 channels can be part of a single group. You can change the channel selection for each group in the oscilloscope preferences dialog. You can drag and drop channels within groups to change their order. Changes to the oscilloscope have no effect on the recording process. Therefore, you can display channels that are not recorded or vice versa.
+     @subsection Recording
+     Pressing the red recording button will start recording. The button will remain pressed, which indicates you that positrack is recording. A second click on this same button will stop recording. During recording, a message is displayed on the status bar at the button of the main window. You can use this message to know if recording is in process. By default, the data are saved in your home directory. The recording directory can be changed in the recording preferences dialog. You can change the name of the file at the bottom right of the main window. The file index increases by 1 automatically when the recording is stopped.
+     @subsection Oscilloscope
+     The oscilloscope shows the raw data. You can control it via the toolbar at the bottom left of the main window. Pressing the play button will start the oscilloscope and a second click on the button will stop the oscilloscope. The oscilloscope is entirely independent from recording. This means that you can start and stop the oscilloscope without affecting the recording process. The oscilloscope has a buffer containing the recently displayed data. Therefore, you can at any time stop the oscilloscope and rewind it to see the previously shown signals. You can navigate backward or forward in the buffer using the buttons surrounding the play button.
+
+     @section Controling positrack from a remote computer
+     The X Window System running on Linux allows you to run a graphical application remotely from a different computer. Therefore, you can easily run positrack on a computer located in the lab and get the oscilloscope forwarded to your office computer. This is usually done with the command @code{ssh -l username -X 192.168.1.2}. The numbers there are the ip address of the computer running positrack. Then, just type @code{positrack}. How cool is that?
+     
+     @section Terminal mode
+     positrack can also record data without the graphical user interface. That can be useful if you want to run it from a shell script for example. Run @code{positrack --terminal config_file}. @code{config_file} is a file telling positrack what to do. It contain one entry per line. The first line is the name of the file in which the data will be recorded. The second line is the  sampling rate in Hz. The third line is the lenth of the recording in seconds. Each following line is a channel you want to record. The first channel is channel 0.
+
+
+     
+@node Code
+@chapter Code
+@cindex chapter, fourth
+        This section of the manual is only for those interested into learning how positrack works at the code level. That might be good to read that if you want to play a bit with the code.
+
+        positrack can run up to 3 threads. The main thread, which always runs, responds to the user input, draw the oscilloscope, and manages 2 other processing threads. Given that the interactions between the 3 processing threads are limited to copying a buffer with the raw data, many operations can occurs in parallel in the different threads without problem. Another advantage is that heavy processing of the data in the displaying thread is unlikely to block the acquisition thread and cause buffer overflow. Ideally, poor performance in the displaying thread should only impairs the display and not interfere with acquisition and recording of the data.
+
+        The user can start either the oscilloscope or the recording process. Either of these actions will start the acquisition thread. The recording and displaying processes are independent of each other. You can use the oscilloscope without recording or recording without the oscilloscope. Playing with the oscilloscope should not affect the recording.
+
+        @section Acquisition thread
+        This thread is responsible for fetching the data from the AD devices and to making the new data available to the rest of the program. It is therefore running whenever the recording or oscilloscope is running. There are two main structures used in the acquisition thread. One represents each individual device that are installed on the computer. The other is a comedi_interface which controls and syncrhonyzes the individual devices. The acquired data are available in the data_buffer of the comedi_interface structure. To avoid inconsistencies due to operations by multiple threads upon the same memory area performed at the same time or to prevent race conditions, this is the only memory chunck that is shared between the three processing threads. Moreover, when one thread read or write in that data_buffer, the other threads are prevented from reading or writing in it and must wait.
+        @section Recording thread
+        The recording thread gets the acquired data from the comedi_interface and copies the data needed into a recording_buffer. When enough data has accumulated into the recording_buffer, a call to the API @code{write()} is performed to save the data on a hard drive. Only the channels selected in the preference dialog box will be saved.
+         @section Displaying thread (main thread)
+         This thread gets the raw data from the acquisition buffer and reformat it so that is can be displayed on the screen. The data are drawn on a gtk drawing area using cairo. The oscilloscope also saves newly acquired data in a buffer so that the user can go back and have a look at recently acquired data.
+
+
+@node Troubleshooting
+@chapter Troubleshooting
+@cindex chapter, fifth
+        This section of the manual is to guide users when they encounter problems with positrack.
+
+        @section positrack fails to start
+
+        @subsection look at the error message
+        Try to start positrack from a terminal and look at what is printed on the screen. It will most likely point to what is not working. 
+             @subsection @code{/dev/comedi0} or @code{/dev/comedi1} is missing
+              If you use only one card, there should be only @code{/dev/comedi0} there but if you have two cards, you should find @code{/dev/comedi0} and @code{/dev/comedi1}. If they are missing, this suggests that comedi drivers were not loaded or install properly. One possibility is that the computer has rebooted with a different kernel that does not load comedi drivers. You can know which kernel you are running by typing @code{uname -a}.  A wrong kernel can booted if the Gnu/Linux distribution has done an automatic update and installed a new kernel as the default kernel. 
+              @subsection user does not have read and write permissions on @code{/dev/comedi0} or @code{/dev/comedi1}
+         By default, when the computer reboot the owner of these files will be set to root.  You need to give read and write permission to the current user on these files. Try @code{su -; chown myusername /dev/comedi0}. The best is to run a shell script that sets the right permission automatically when the computer boots, as shown in the installation section.
+       
+@node Reporting bugs
+@chapter Reporting bugs
+@cindex chapter, sixth
+        The formal way to report a bug or other annoyance found in positrack is via the Bitbucket site: .  Other means of communication (email, phone, etc.) are also possible.
+
+
+@node Index
+@unnumbered Index
+@printindex cp
+@bye
