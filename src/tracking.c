@@ -168,6 +168,9 @@ gboolean tracking()
       tr.number_frames_tracked=0;
       return FALSE;
     }
+
+
+  tracking_interface_clear_spot_data(&tr);
   
   // depending on tracking type //
   if(app_flow.trk_mode==ONE_WHITE_SPOT)
@@ -212,6 +215,9 @@ gboolean tracking()
       tracking_interface_free_buffer(&tr);
     }
 
+  // print the data to a file
+  tracking_interface_print_position_to_file(&tr);
+
   clock_gettime(CLOCK_REALTIME, &tr.end_tracking_time); // get the time we start tracking
   tr.tracking_time_duration=diff(&tr.start_tracking_time,&tr.end_tracking_time);
   
@@ -235,6 +241,37 @@ gboolean tracking()
 
     tr.number_frames_tracked++;
   return TRUE;
+}
+
+int tracking_interface_print_position_to_file(struct tracking_interface* tr)
+{
+
+  if(tob.n<=0)
+    {
+      fprintf(stderr,"try to save position data but tob.n <=0\n");
+      return -1;
+    }
+
+
+  // save data to the file
+  if(app_flow.trk_mode==TWO_WHITE_SPOTS)
+    {
+      fprintf(rec_file_data.fp,"%.2lf %.2lf %.2lf %d %d %.2lf %.2lf %d %.2lf %.2lf\n",
+	      tob.x[tob.n-1],
+	      tob.y[tob.n-1],
+	      tob.head_direction[tob.n-1],
+	      tr->number_spots,
+	      tr->spot_positive_pixels[0],
+	      tr->spot_mean_x[0],
+	      tr->spot_mean_y[0],
+	      tr->spot_positive_pixels[1],
+	      tr->spot_mean_x[1],
+	      tr->spot_mean_y[1]);
+    }
+  if(app_flow.trk_mode==ONE_WHITE_SPOT)
+    {
+      fprintf(rec_file_data.fp,"%.2lf %.2lf %.2lf %d %.2lf %.2lf\n",-1.0,-1.0,-1.0,0,-1.0,-1.0);
+    }
 }
 
 int tracking_interface_get_buffer(struct tracking_interface* tr)
@@ -519,6 +556,7 @@ int tracking_interface_tracking_two_bright_spots(struct tracking_interface* tr)
   // sort according to number of positive pixels
   tracking_interface_sort_spots(tr);
   
+  
   // draw some spots if requrired
   if(app_flow.draws_mode==ALL)
     {
@@ -533,8 +571,6 @@ int tracking_interface_tracking_two_bright_spots(struct tracking_interface* tr)
 				     -1.0,
 				     -1.0,
 				     microsecond_from_timespec(&tr->inter_buffer_duration));
-      // save data to the file
-      fprintf(rec_file_data.fp,"%.2lf %.2lf %.2lf %d %.2lf %.2lf %d %.2lf %.2lf\n",-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0);
       return 0;
     }
   // check if the two spots are within reasonable distance
@@ -545,8 +581,6 @@ int tracking_interface_tracking_two_bright_spots(struct tracking_interface* tr)
 				     -1.0,
 				     -1.0,
 				     microsecond_from_timespec(&tr->inter_buffer_duration));
-      // save data to the file
-      fprintf(rec_file_data.fp,"%.2lf %.2lf %.2lf %d %.2lf %.2lf %d %.2lf %.2lf\n",-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0);
       return 0;
     }
   if(app_flow.draws_mode==ALL)
@@ -566,18 +600,6 @@ int tracking_interface_tracking_two_bright_spots(struct tracking_interface* tr)
 				 (tr->spot_mean_y[0]+tr->spot_mean_y[1])/2, // y 
 				 heading(tr->spot_mean_x[1]-tr->spot_mean_x[0],tr->spot_mean_y[1]-tr->spot_mean_y[0]), // heading
 				 microsecond_from_timespec(&tr->inter_buffer_duration));
-  
-  // save data to the file
-  fprintf(rec_file_data.fp,"%.2lf %.2lf %.2lf %d %.2lf %.2lf %d %.2lf %.2lf\n",
-	  (tr->spot_mean_x[0]+tr->spot_mean_x[1])/2, // x object
-	  (tr->spot_mean_y[0]+tr->spot_mean_y[1])/2, // y object
-	  heading(tr->spot_mean_x[1]-tr->spot_mean_x[0],tr->spot_mean_y[1]-tr->spot_mean_y[0]), // heading object
-	  tr->spot_positive_pixels[0], // n pixels large spot
-	  tr->spot_mean_x[0], // x large spot
-	  tr->spot_mean_y[0], // y large spot
-	  tr->spot_positive_pixels[1], // n pixels second largest spot
-	  tr->spot_mean_x[1], // x second largest spot
-	  tr->spot_mean_y[1]); // y second largest spot
   
 #ifdef DEBUG_TRACKING
   g_printerr("tracking_interface_tracking_two_bright_spots() done\n");
@@ -1255,5 +1277,20 @@ double heading (double delta_x, double delta_y)
       if(delta_x<0) angle+=180;
       else if (delta_x>0&&delta_y<0) angle+=360;
       return(angle);
+    }
+}
+int tracking_interface_clear_spot_data(struct tracking_interface* tr)
+{
+  int i;
+  for(i=0;i<tr->max_number_spots;i++)
+    {
+      tr->spot_positive_pixels[i]=-1;
+      tr->spot_peak_x[i]=-1.0;
+      tr->spot_peak_y[i]=-1.0;
+      tr->spot_mean_x[i]=-1.0;
+      tr->spot_mean_y[i]=-1.0;
+      tr->spot_mean_red[i]=-1.0;
+      tr->spot_mean_green[i]=-1.0;
+      tr->spot_mean_blue[i]=-1.0;
     }
 }

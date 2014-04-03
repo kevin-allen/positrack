@@ -475,8 +475,8 @@ int tracking_interface_draw_all_spots_xy(struct tracking_interface* tr);
 int tracking_interface_clear_drawingarea(struct tracking_interface* tr);
 int tracking_interface_print_luminance_array(struct tracking_interface* tr);
 int tracking_interface_print_spot_array(struct tracking_interface* tr);
-
-
+int tracking_interface_print_position_to_file(struct tracking_interface* tr);
+int tracking_interface_clear_spot_data(struct tracking_interface* tr);
 /********************************
 defined in tracked_object.c
 ********************************/
