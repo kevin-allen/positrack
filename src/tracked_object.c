@@ -8,7 +8,6 @@ int tracked_object_init(struct tracked_object *tob)
 #ifdef DEBUG_TRACKED_OBJECT
   fprintf(stderr,"tracked_object_init\n");
 #endif
-
   
   tob->position_invalid=0;
   tob->head_direction_invalid=0;
@@ -60,7 +59,7 @@ int tracked_object_free(struct tracked_object *tob)
   fprintf(stderr,"tracked_object_delete\n");
 #endif
   
-  if(tob->is_initialized==0)
+  if(tob->is_initialized!=1)
     return 0;
   free(tob->x);
   free(tob->y);
@@ -68,6 +67,10 @@ int tracked_object_free(struct tracked_object *tob)
   free(tob->movement_heading);
   free(tob->speed);  
   return 0;
+#ifdef DEBUG_TRACKED_OBJECT
+  fprintf(stderr,"tracked_object_deleted\n");
+#endif
+
 }
 int tracked_object_update_position(struct tracked_object* tob,double x, double y, double head_direction, int frame_duration_us)// frame duration in microseconds
 {
@@ -106,8 +109,7 @@ int tracked_object_update_position(struct tracked_object* tob,double x, double y
 	  tob->head_direction[tob->n]);
 #endif
   tob->n++;
-
-
+  
   // buffer is unfortunately full
   // get back to beginning
   if(tob->n>=TRACKED_OBJECT_BUFFER_LENGTH)
@@ -129,8 +131,6 @@ int tracked_object_draw_object(struct tracked_object* tob)
     { // don't draw if invalid position
       return 0;
     }
-
-  
   cairo_t * cr;
   cr = gdk_cairo_create(gtk_widget_get_window(widgets.trackingdrawingarea));
   cairo_set_line_width (cr, 5);

@@ -88,6 +88,7 @@ int init_window()
   char *username=getenv("USER");
   p=getpwnam(username);
   rec_file_data.directory=strcat(p->pw_dir,"/");
+  rec_file_data.is_open=0;
   printf("%s\n",rec_file_data.directory);
 
   return 0;
@@ -305,6 +306,7 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
       return;
     }
 
+  clock_gettime(CLOCK_REALTIME, &tr.start_frame_tracking_time); // get the time we start tracking
   g_timeout_add(tr.interval_between_tracking_calls_ms,tracking,user_data); // timer to trigger a tracking event
 #ifdef DEBUG_CALLBACK
   g_printerr("leaving playtrackingmenuitem_activate, tracking_running: %d\n",widgets.tracking_running);
@@ -318,6 +320,7 @@ int recording_file_data_open_file()
   gchar * str1;
   gchar * str2;
   gchar * str3;
+
   
   str=gtk_entry_get_text(GTK_ENTRY(widgets.filebaseentry));
   str1=g_strdup_printf("%02d",gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widgets.trialnospinbutton)));
@@ -356,12 +359,14 @@ int recording_file_data_open_file()
       fprintf(stderr,"error opening %s in recording_file_data_open_file()\n",rec_file_data.file_name);
       return -1;
     }
+  rec_file_data.is_open=1;
   return 0;
 }
 
 int recording_file_data_close_file()
 {
   // get the name for the tracking file
+  if(rec_file_data.is_open==1)
   fclose(rec_file_data.fp);
 }
 
@@ -852,7 +857,7 @@ struct timespec diff(struct timespec* start, struct timespec* end)
 int microsecond_from_timespec(struct timespec* duration)
 {
   int ms;
-  ms=duration->tv_nsec/1000;
+  ms=(duration->tv_nsec/1000)+(duration->tv_sec*1000000);
   return ms;
 }
 GdkPixbuf *create_pixbuf(const gchar * filename)

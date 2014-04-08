@@ -83,7 +83,7 @@ File with declarations of the main structures and functions used in positrack
 
 //#define DEBUG_ACQ // to turn on debugging output for the comedi card
 //#define DEBUG_CAMERA // to turn on debugging for the camera
-//#define DEBUG_TRACKING // to turn on debugging for the tracking
+#define DEBUG_TRACKING // to turn on debugging for the tracking
 //#define DEBUG_IMAGE // to turn on debugging for the image processing
 //#define DEBUG_CALLBACK
 //#define DEBUG_TRACKED_OBJECT
@@ -194,6 +194,9 @@ struct tracking_interface
   struct timespec start_tracking_time;
   struct timespec end_tracking_time;
   struct timespec tracking_time_duration;
+  struct timespec start_frame_tracking_time; // single frame
+  struct timespec end_frame_tracking_time; // single frame
+  struct timespec frame_tracking_time_duration; // single frame
   struct timespec start_waiting_buffer_time;
   struct timespec end_waiting_buffer_time;
   struct timespec waiting_buffer_duration;
@@ -234,6 +237,7 @@ struct tracking_interface tr;
 
 struct recording_file_data
 {
+  int is_open;
   FILE* fp;
   gchar* file_name;
   gchar* directory;
@@ -352,6 +356,7 @@ struct comedi_dev
   int is_acquiring;
   lsampl_t comedi_baseline;
   lsampl_t comedi_ttl;
+  int is_initialized;
 
 };
 struct comedi_dev comedi_device;

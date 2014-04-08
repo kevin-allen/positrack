@@ -206,6 +206,7 @@ int comedi_dev_init(struct comedi_dev *dev, char* file_name)
 		    dev->aref,
 		    dev->comedi_baseline);
 
+  dev->is_initialized=1;
   return 0;
 }
 int comedi_dev_free(struct comedi_dev *dev)
@@ -213,6 +214,14 @@ int comedi_dev_free(struct comedi_dev *dev)
 #ifdef DEBUG_ACQ
   fprintf(stderr,"comedi_dev_free\n");
 #endif
+
+  if(dev->is_initialized!=1)
+    {
+#ifdef DEBUG_ACQ
+      fprintf(stderr,"comedi_dev_free done\n");
+#endif
+     return 0;
+    }
 
   // set the pulse channel to baseline
   comedi_data_write(dev->comedi_dev,
@@ -230,6 +239,11 @@ int comedi_dev_free(struct comedi_dev *dev)
   // free memory
   free(dev->range_input_array);
   free(dev->range_output_array);
+  dev->is_initialized==0;
+#ifdef DEBUG_ACQ
+  fprintf(stderr,"comedi_dev_free done\n");
+#endif
+
   return 0;
 }
 

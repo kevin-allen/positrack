@@ -91,6 +91,7 @@ int tracking_interface_init(struct tracking_interface* tr)
       fprintf(stderr, "problem allocating memory for tr->positive_pixel_y\n");
       return -1;
     }
+  
   tr->is_initialized=1;
   return 0;
 }
@@ -125,6 +126,10 @@ gboolean tracking()
   g_printerr("tracking(), tr.number_frames_tracked: %d\n",tr.number_frames_tracked);
 #endif
 
+  if(tr.number_frames_tracked==0)
+    clock_gettime(CLOCK_REALTIME, &tr.start_tracking_time); // get the time we start tracking
+
+
   if(widgets.tracking_running!=1)
     {
       tr.number_frames_tracked=0;
@@ -149,7 +154,6 @@ gboolean tracking()
       // usefull with usb cameras that changes sampling without letting us know
       tr.skip_next_tick=1;
     }
-  
   if(app_flow.synch_mode==COMEDI)
     {
       comedi_data_write(comedi_device.comedi_dev,
@@ -159,19 +163,19 @@ gboolean tracking()
 			comedi_device.aref,
 			comedi_device.comedi_ttl);
     }
-    
+  
+  clock_gettime(CLOCK_REALTIME, &tr.start_frame_tracking_time); // get the time we start tracking
+  clock_gettime(CLOCK_REALTIME, &tr.end_tracking_time); // just to get the application timestamp of the frame
+  tr.tracking_time_duration=diff(&tr.start_tracking_time,&tr.end_tracking_time);
+
   // check if the buffer contain a valid buffer
-  clock_gettime(CLOCK_REALTIME, &tr.start_tracking_time); // get the time we start tracking
   if(tracking_interface_valid_buffer(&tr)!=0)
     {
       g_printerr("tracking(), tracking_interface_valid_buffer() did not return 0\n");
       tr.number_frames_tracked=0;
       return FALSE;
     }
-
-
   tracking_interface_clear_spot_data(&tr);
-  
   // depending on tracking type //
   if(app_flow.trk_mode==ONE_WHITE_SPOT)
     {
@@ -191,7 +195,6 @@ gboolean tracking()
 	  return FALSE;
 	}
     }
-
   if(app_flow.pulse_valid_position==ON)
     {
       if(tob.last_valid==1)
@@ -209,7 +212,6 @@ gboolean tracking()
 			  comedi_device.aref,
 			  comedi_device.comedi_baseline);
     }
-
   if(app_flow.video_source==USB_V4L2)
     {
       tracking_interface_free_buffer(&tr);
@@ -218,16 +220,21 @@ gboolean tracking()
   // print the data to a file
   tracking_interface_print_position_to_file(&tr);
 
-  clock_gettime(CLOCK_REALTIME, &tr.end_tracking_time); // get the time we start tracking
-  tr.tracking_time_duration=diff(&tr.start_tracking_time,&tr.end_tracking_time);
+  clock_gettime(CLOCK_REALTIME, &tr.end_frame_tracking_time); // get the time we start tracking
+  tr.frame_tracking_time_duration=diff(&tr.start_frame_tracking_time,&tr.end_frame_tracking_time);
   
 
 #ifdef DEBUG_TRACKING 
-  g_printerr("offset: %d, buffer_duration: %ld, lum: %lf, waiting time: %d us, processing time: %d ms, current sampling rate: %.2lf Hz, interframe duration: %.2f ms\n",tr.current_buffer_offset,microsecond_from_timespec(&tr.inter_buffer_duration),tr.mean_luminance,microsecond_from_timespec(&tr.waiting_buffer_duration), microsecond_from_timespec(&tr.tracking_time_duration)/1000,tr.current_sampling_rate, (microsecond_from_timespec(&tr.inter_buffer_duration)/1000.0));
+  g_printerr("offset: %d, buffer_duration: %ld, lum: %lf, waiting time: %d us, processing time: %d ms, current sampling rate: %.2lf Hz, interframe duration: %.2f ms, %d ms\n",
+	     tr.current_buffer_offset,
+	     microsecond_from_timespec(&tr.inter_buffer_duration),
+	     tr.mean_luminance,microsecond_from_timespec(&tr.waiting_buffer_duration), 
+	     microsecond_from_timespec(&tr.frame_tracking_time_duration)/1000,
+	     tr.current_sampling_rate, 
+	     (microsecond_from_timespec(&tr.inter_buffer_duration)/1000.0),
+	     (int)((tr.tracking_time_duration.tv_sec*1000)+(tr.tracking_time_duration.tv_nsec/1000000.0)));
  #endif
-
-    /* // save position data into a data file */
-    
+  
     /* // synchronization pulse goes down here */
   if(app_flow.synch_mode==COMEDI)
     {
@@ -238,7 +245,6 @@ gboolean tracking()
 			comedi_device.aref,
 			comedi_device.comedi_baseline);
     }
-
     tr.number_frames_tracked++;
   return TRUE;
 }
@@ -256,7 +262,9 @@ int tracking_interface_print_position_to_file(struct tracking_interface* tr)
   // save data to the file
   if(app_flow.trk_mode==TWO_WHITE_SPOTS)
     {
-      fprintf(rec_file_data.fp,"%.2lf %.2lf %.2lf %d %d %.2lf %.2lf %d %.2lf %.2lf\n",
+      fprintf(rec_file_data.fp,"%d %d %.2lf %.2lf %.2lf %d %d %.2lf %.2lf %d %.2lf %.2lf\n",
+	      (int)((tr->tracking_time_duration.tv_sec*1000)+(tr->tracking_time_duration.tv_nsec/1000000.0)),
+	      tob.n,
 	      tob.x[tob.n-1],
 	      tob.y[tob.n-1],
 	      tob.head_direction[tob.n-1],
@@ -270,7 +278,7 @@ int tracking_interface_print_position_to_file(struct tracking_interface* tr)
     }
   if(app_flow.trk_mode==ONE_WHITE_SPOT)
     {
-      fprintf(rec_file_data.fp,"%.2lf %.2lf %.2lf %d %.2lf %.2lf\n",-1.0,-1.0,-1.0,0,-1.0,-1.0);
+      // fprintf(rec_file_data.fp,"%.2lf %.2lf %.2lf %d %.2lf %.2lf\n",-1.0,-1.0,-1.0,0,-1.0,-1.0);
     }
 }
 
@@ -531,6 +539,7 @@ int tracking_interface_tracking_one_bright_spot(struct tracking_interface* tr)
 
 int tracking_interface_tracking_two_bright_spots(struct tracking_interface* tr)
 {
+  // whathever happen that returns 0, we need to update tob's position
 #ifdef DEBUG_TRACKING
   g_printerr("tracking_interface_tracking_two_bright_spots()\n");
 #endif
@@ -543,6 +552,11 @@ int tracking_interface_tracking_two_bright_spots(struct tracking_interface* tr)
       g_printerr("mean_luminance (%lf) is too high for tracking\n",tr->mean_luminance);
       tr->number_spots=0;
       tr->number_positive_pixels=0;
+      tracked_object_update_position(&tob,
+				     -1.0,
+				     -1.0,
+				     -1.0,
+				     microsecond_from_timespec(&tr->inter_buffer_duration));
       return 0;
     }
   
@@ -555,8 +569,7 @@ int tracking_interface_tracking_two_bright_spots(struct tracking_interface* tr)
   
   // sort according to number of positive pixels
   tracking_interface_sort_spots(tr);
-  
-  
+    
   // draw some spots if requrired
   if(app_flow.draws_mode==ALL)
     {
@@ -1284,7 +1297,7 @@ int tracking_interface_clear_spot_data(struct tracking_interface* tr)
   int i;
   for(i=0;i<tr->max_number_spots;i++)
     {
-      tr->spot_positive_pixels[i]=-1;
+      tr->spot_positive_pixels[i]=0;
       tr->spot_peak_x[i]=-1.0;
       tr->spot_peak_y[i]=-1.0;
       tr->spot_mean_x[i]=-1.0;
@@ -1293,4 +1306,5 @@ int tracking_interface_clear_spot_data(struct tracking_interface* tr)
       tr->spot_mean_green[i]=-1.0;
       tr->spot_mean_blue[i]=-1.0;
     }
+  tr->number_spots=0;
 }
