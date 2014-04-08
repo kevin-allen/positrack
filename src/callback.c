@@ -306,7 +306,15 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
       return;
     }
 
-  clock_gettime(CLOCK_REALTIME, &tr.start_frame_tracking_time); // get the time we start tracking
+  // clear drawing area before starting new trial
+  tracking_interface_clear_drawingarea(&tr);
+
+  // set the statusbar to recording details
+  const gchar *str;
+  str=g_strdup_printf("Tracking in process, saving in %s",rec_file_data.file_name);
+  widgets.statusbar_context_id=gtk_statusbar_get_context_id(GTK_STATUSBAR(widgets.statusbar),"tracking");
+  widgets.statusbar_message_id=gtk_statusbar_push(GTK_STATUSBAR(widgets.statusbar),widgets.statusbar_context_id,str);
+
   g_timeout_add(tr.interval_between_tracking_calls_ms,tracking,user_data); // timer to trigger a tracking event
 #ifdef DEBUG_CALLBACK
   g_printerr("leaving playtrackingmenuitem_activate, tracking_running: %d\n",widgets.tracking_running);
@@ -384,8 +392,11 @@ void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
   index=gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widgets.trialnospinbutton));
   index++; 
   gtk_spin_button_set_value(GTK_SPIN_BUTTON(widgets.trialnospinbutton),(gdouble)index);
-
   usleep(100000);
+
+  widgets.statusbar_context_id=gtk_statusbar_get_context_id(GTK_STATUSBAR(widgets.statusbar),"tracking");
+  gtk_statusbar_remove(GTK_STATUSBAR(widgets.statusbar),widgets.statusbar_context_id,widgets.statusbar_message_id);
+  
   stop_video();
 }
 

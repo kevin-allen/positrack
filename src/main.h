@@ -151,8 +151,6 @@ struct all_widget
   GtkWidget *filebaseentry; // filebase of the file name
   GtkWidget *trialnospinbutton; // index following filebase for file name
   GtkWidget *statusbar; // index following filebase for file name
-
-
   GtkWidget *no_synchronization_radiobutton;
   GtkWidget *comedi_synchronization_radiobutton;
   GtkWidget *singlewhitespot_radiobutton;
@@ -161,7 +159,8 @@ struct all_widget
   GtkWidget *firewirecamerablackwhite_radiobutton;
   GtkWidget *firewirecameracolor_radiobutton;
   GtkWidget *videoplayback_checkbutton;
-
+  guint statusbar_context_id;
+  guint statusbar_message_id;
   int video_running;
   int tracking_running;
   int timeout_id;
