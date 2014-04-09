@@ -70,7 +70,6 @@ int init_window()
   icon_file_name=g_strdup_printf("%s/%s",DATADIR,file_name);
   gtk_window_set_icon(GTK_WINDOW(widgets.window), create_pixbuf(icon_file_name));
 
-  
   gtk_builder_connect_signals (builder, NULL); // connect all signals
   g_object_unref (G_OBJECT (builder));
 
@@ -80,7 +79,6 @@ int init_window()
   
   // show the main window
   gtk_widget_show (widgets.window);      
-
 
 
   // set the home directory as the default directory

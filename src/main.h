@@ -52,17 +52,17 @@ File with declarations of the main structures and functions used in positrack
 #define TIMEOUT_FOR_CAPTURE_MS 20 // time before the timeout try to get a new frame
 #define FIREWIRE_CAMERA_INTERFACE_NUMBER_OF_FRAMES_IN_RING_BUFFER 10
 
-#define VIDEO_SOURCE_USB_WIDTH 800 
-#define VIDEO_SOURCE_USB_HEIGHT 800
+#define VIDEO_SOURCE_USB_WIDTH 820 
+#define VIDEO_SOURCE_USB_HEIGHT 820
 #define VIDEO_SOURCE_USB_FRAMERATE 30 //30
 #define VIDEO_SOURCE_SCALABLE_LEFT_POSITION 300
-#define VIDEO_SOURCE_SCALABLE_TOP_POSITION 200
+#define VIDEO_SOURCE_SCALABLE_TOP_POSITION 70
 
 #define TRACKING_INTERFACE_LUMINANCE_THRESHOLD 50
-#define TRACKING_INTERFACE_WIDTH 800
-#define TRACKING_INTERFACE_HEIGHT 800
+#define TRACKING_INTERFACE_WIDTH 820
+#define TRACKING_INTERFACE_HEIGHT 820
 #define TRACKING_INTERFACE_MAX_NUMBER_SPOTS 2
-#define TRACKING_INTERFACE_MAX_NUMBER_SPOTS_CALLS 8
+#define TRACKING_INTERFACE_MAX_NUMBER_SPOTS_CALLS 7
 
 #define TRACKING_INTERFACE_MAX_MEAN_LUMINANCE_FOR_TRACKING 8/* 0 */
 #define TRACKING_INTERFACE_MAX_SPOT_SIZE 40000
@@ -83,7 +83,7 @@ File with declarations of the main structures and functions used in positrack
 
 //#define DEBUG_ACQ // to turn on debugging output for the comedi card
 //#define DEBUG_CAMERA // to turn on debugging for the camera
-#define DEBUG_TRACKING // to turn on debugging for the tracking
+//#define DEBUG_TRACKING // to turn on debugging for the tracking
 //#define DEBUG_IMAGE // to turn on debugging for the image processing
 //#define DEBUG_CALLBACK
 //#define DEBUG_TRACKED_OBJECT

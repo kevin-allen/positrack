@@ -64,3 +64,13 @@ TESTING HEAD DIRECTION DETECTION WITH 2 WHITE SPOTS
 	Tested with bw firewire 800 camera running at 51 Hz.
 	Expect to get a delay of 0 to 26 ms to complete the rotation.
 	
+
+
+To build a small-big IR array
+Farnell 1716707
+OFL-3102:LED 3mm Round Inf rot 940nm
+For low reflection on the walls
+Power supply 5V
+3 leds, 2,2 kOhms
+1 led, 18 kOhms
+
