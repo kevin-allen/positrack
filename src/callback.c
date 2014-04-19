@@ -312,7 +312,7 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
   str=g_strdup_printf("Tracking in process, saving in %s",rec_file_data.file_name);
   widgets.statusbar_context_id=gtk_statusbar_get_context_id(GTK_STATUSBAR(widgets.statusbar),"tracking");
   widgets.statusbar_message_id=gtk_statusbar_push(GTK_STATUSBAR(widgets.statusbar),widgets.statusbar_context_id,str);
-
+  
   g_timeout_add(tr.interval_between_tracking_calls_ms,tracking,user_data); // timer to trigger a tracking event
 #ifdef DEBUG_CALLBACK
   g_printerr("leaving playtrackingmenuitem_activate, tracking_running: %d\n",widgets.tracking_running);
