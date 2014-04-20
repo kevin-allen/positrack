@@ -319,6 +319,12 @@ static void cb_need_data (GstElement *appsrc,
   guint size;
   GstFlowReturn ret;
 
+  if(app_flow.playback_mode==OFF)
+    {
+      fprintf(stderr,"app_flow.playback_mode==OFF\n");
+      return;
+    }
+
   if(widgets.tracking_running==0)
     { // tracking not running, help yoursel and capture a frame
       // if it is running, just takes whatever is in the buffer

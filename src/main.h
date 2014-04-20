@@ -55,7 +55,7 @@ File with declarations of the main structures and functions used in positrack
 #define VIDEO_SOURCE_USB_WIDTH 860 
 #define VIDEO_SOURCE_USB_HEIGHT 860
 #define VIDEO_SOURCE_USB_FRAMERATE 30 //30
-#define VIDEO_SOURCE_SCALABLE_LEFT_POSITION 260
+#define VIDEO_SOURCE_SCALABLE_LEFT_POSITION 250
 #define VIDEO_SOURCE_SCALABLE_TOP_POSITION 40
 
 #define TRACKING_INTERFACE_LUMINANCE_THRESHOLD 50
@@ -84,10 +84,9 @@ File with declarations of the main structures and functions used in positrack
 //#define DEBUG_ACQ // to turn on debugging output for the comedi card
 //#define DEBUG_CAMERA // to turn on debugging for the camera
 //#define DEBUG_TRACKING // to turn on debugging for the tracking
-//#define DEBUG_IMAGE // to turn on debugging for the image processing
-//#define DEBUG_CALLBACK
+#define DEBUG_IMAGE // to turn on debugging for the image processing
+#define DEBUG_CALLBACK
 //#define DEBUG_TRACKED_OBJECT
-//#define DEBUG_ACQ
 //#define CAPS "video/x-raw, format=RGB, framerate=30/1 width=160, pixel-aspect-ratio=1/1"
 
 

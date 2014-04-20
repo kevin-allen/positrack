@@ -186,6 +186,7 @@ void on_playvideomenuitem_activate(GtkObject *object, gpointer user_data)
 }
 void start_video()
 {
+
 #ifdef DEBUG_CALLBACK
   fprintf(stderr,"start_video()\n");
 #endif
@@ -211,12 +212,16 @@ void start_video()
 	}
       if(app_flow.video_source==FIREWIRE_COLOR || app_flow.video_source==FIREWIRE_BLACK_WHITE)
 	{
-	  fprintf(stderr,"gst_interface_build_firewire_pipeline() done\n");
+#ifdef DEBUG_CALLBACK
+	  fprintf(stderr,"gst_interface_build_firewire_pipeline() call\n");
+#endif
 	  if(gst_inter.firewire_pipeline_built!=1)
 	    {
 	      gst_interface_build_firewire_pipeline(&gst_inter);
 	    }
+#ifdef DEBUG_CALLBACK
 	  fprintf(stderr,"gst_interface_build_firewire_pipeline() done\n");
+#endif
 	  if(fw_inter.is_initialized!=1)
 	    {
 	      firewire_camera_interface_init(&fw_inter);
@@ -259,6 +264,7 @@ void stop_video()
 #ifdef DEBUG_CALLBACK
   fprintf(stderr,"stop_video()\n");
 #endif
+
   if(widgets.video_running==1)
     {
       gst_element_set_state(gst_inter.pipeline, GST_STATE_PAUSED);
@@ -670,7 +676,7 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
     }
   else if (strcmp(videoplayback_mode, "OFF") == 0) 
     {
-      app_flow->synch_mode=OFF;
+      app_flow->playback_mode=OFF;
       printf("playback mode: %s\n",videoplayback_mode);
     }
   else
@@ -714,12 +720,12 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
   if (strcmp(plusevalid_position, "ON") == 0) 
     {
       app_flow->pulse_valid_position=ON;
-      printf("playback mode: %s\n",plusevalid_position);
+      printf("pulse_valid_position mode: %s\n",plusevalid_position);
     }
   else if (strcmp(plusevalid_position, "OFF") == 0) 
     {
       app_flow->pulse_valid_position=OFF;
-      printf("playback mode: %s\n",plusevalid_position);
+      printf("pulse_valid_position mode: %s\n",plusevalid_position);
     }
   else
     {
