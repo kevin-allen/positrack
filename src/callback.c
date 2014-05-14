@@ -388,20 +388,21 @@ int recording_file_data_close_file()
 void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
 {
   int index;
-  widgets.tracking_running=0; // making tracking function to return FALSE */
-  tracked_object_free(&tob);
-  if(app_flow.synch_mode==COMEDI)
-    comedi_dev_free(&comedi_device);
-  recording_file_data_close_file();
-  index=gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widgets.trialnospinbutton));
-  index++; 
-  gtk_spin_button_set_value(GTK_SPIN_BUTTON(widgets.trialnospinbutton),(gdouble)index);
-  usleep(100000);
-
-  widgets.statusbar_context_id=gtk_statusbar_get_context_id(GTK_STATUSBAR(widgets.statusbar),"tracking");
-  gtk_statusbar_remove(GTK_STATUSBAR(widgets.statusbar),widgets.statusbar_context_id,widgets.statusbar_message_id);
-  
-  stop_video();
+  if(widgets.tracking_running==1)
+    {
+      widgets.tracking_running=0; // making tracking function to return FALSE */
+      tracked_object_free(&tob);
+      if(app_flow.synch_mode==COMEDI)
+	comedi_dev_free(&comedi_device);
+      recording_file_data_close_file();
+      index=gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widgets.trialnospinbutton));
+      index++; 
+      gtk_spin_button_set_value(GTK_SPIN_BUTTON(widgets.trialnospinbutton),(gdouble)index);
+      usleep(100000);
+      widgets.statusbar_context_id=gtk_statusbar_get_context_id(GTK_STATUSBAR(widgets.statusbar),"tracking");
+      gtk_statusbar_remove(GTK_STATUSBAR(widgets.statusbar),widgets.statusbar_context_id,widgets.statusbar_message_id);
+      stop_video();
+    }
 }
 
 
