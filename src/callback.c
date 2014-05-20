@@ -294,7 +294,7 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
   tracked_object_init(&tob);
   tr.number_frames_tracked=0;
   
-  if(app_flow.synch_mode==COMEDI||app_flow.pulse_valid_position==ON)
+  if(app_flow.synch_mode==COMEDI||app_flow.pulse_valid_position==ON||app_flow.pulse_distance==ON)
     {
       if(comedi_dev_init(&comedi_device, "/dev/comedi0")!=0)
 	{
@@ -302,6 +302,12 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
 	  return;
 	}
     }
+
+  if(app_flow.pulse_distance==ON)
+    { // start the stimulating thread that will pulse when stimulation_flag is set
+      stimulation_start_stimulation(&stim);
+    }
+
   widgets.tracking_running=1;
   
   if(recording_file_data_open_file()!=0)
@@ -392,7 +398,12 @@ void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
     {
       widgets.tracking_running=0; // making tracking function to return FALSE */
       tracked_object_free(&tob);
-      if(app_flow.synch_mode==COMEDI)
+      if(app_flow.pulse_distance==ON)
+	{ // stop the stimulating thread that will pulse when stimulation_flag is set
+	  stimulation_stop_stimulation(&stim);
+	}
+            
+      if(app_flow.synch_mode==COMEDI||app_flow.pulse_valid_position==ON||app_flow.pulse_distance==ON)
 	comedi_dev_free(&comedi_device);
       recording_file_data_close_file();
       index=gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widgets.trialnospinbutton));
@@ -402,6 +413,11 @@ void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
       widgets.statusbar_context_id=gtk_statusbar_get_context_id(GTK_STATUSBAR(widgets.statusbar),"tracking");
       gtk_statusbar_remove(GTK_STATUSBAR(widgets.statusbar),widgets.statusbar_context_id,widgets.statusbar_message_id);
       stop_video();
+
+
+ 
+
+
     }
 }
 

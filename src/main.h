@@ -79,6 +79,7 @@ File with declarations of the main structures and functions used in positrack
 #define COMEDI_DEVICE_MAX_CHANNELS 32
 #define COMEDI_DEVICE_SYNCH_ANALOG_OUTPUT 0
 #define COMEDI_DEVICE_VALID_POSITION_ANALOG_OUTPUT 1
+#define COMEDI_DEVICE_STIMULATION_ANALOG_OUTPUT 1
 #define COMEDI_DEVICE_BASELINE_VOLT 0.0
 #define COMEDI_DEVICE_TTL_VOLT 3.0
 
@@ -244,6 +245,35 @@ struct recording_file_data
 };
 struct recording_file_data rec_file_data;
 
+struct stimulation
+{
+  int is_stimulating;
+  int stimulation_flag; // stimulate when == 1
+  double baseline_volt; // for ttl pulse
+  lsampl_t comedi_intensity;
+  lsampl_t comedi_baseline;
+  lsampl_t input_data;
+  int stimulation_count;
+  struct timespec time_last_stimulation;
+  struct timespec time_now;
+  struct timespec elapsed_last_stimulation;
+  struct timespec inter_pulse_duration; // for train stimulation    
+  struct timespec pulse_duration;
+  struct timespec duration_refractory_period;
+  double trial_duration_sec;
+  double pulse_duration_ms;
+  double pulse_frequency_Hz;
+  int number_pulses_per_train;
+  double refractory_period_train_ms;
+  double inter_pulse_duration_ms;
+  double  stimulation_intensity_volt; 
+  double end_to_start_pulse_ms; // for the train stimulation
+  struct timespec time_beginning_trial;
+  struct timespec elapsed_beginning_trial;
+  struct timespec req;
+};
+struct stimulation stim;
+
 
 struct tracked_object
 {
@@ -362,9 +392,6 @@ struct comedi_dev
 
 };
 struct comedi_dev comedi_device;
-
-
-
 
 GtkBuilder *builder; // to build the interface from glade
 gchar* trk_file_name; // directory + file name from gui
@@ -494,6 +521,13 @@ int tracked_object_draw_object(struct tracked_object* tob);
 int tracked_object_display_path_variables(struct tracked_object* tob);
 int recording_file_data_open_file();
 
+/********************************
+defined in stimulation.c
+********************************/
+int stimulation_init(struct stimulation *stim);
+int stimulation_start_stimulation(struct stimulation* stim);
+int stimulation_stop_stimulation(struct stimulation* stim);
+static gboolean stimulation_timer_update();
 		
 int find_max_index(int num_data,double* data);	
 int find_max_index_int(int num_data,int* data);	   
@@ -520,3 +554,6 @@ double distance(double x1, double y1, double x2, double y2);
 double heading (double delta_x, double delta_y);
 void smooth_double_gaussian(double* array,double* out, int x_size,int y_size, double smooth, double invalid);
 void gaussian_kernel(double* kernel,int x_size,int y_size, double standard_deviation);
+
+// for stimulation
+int timespec_first_larger(struct timespec* t1, struct timespec* t2);

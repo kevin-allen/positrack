@@ -114,26 +114,17 @@ int tracked_object_update_position(struct tracked_object* tob,double x, double y
     {
       if(tob->travelled_distance-tob->last_pulsed_distance>TRACKED_OBJECT_PULSE_DISTANCE)
 	{
+	  stim.stimulation_flag=1;
 	  tob->last_pulsed_distance=tob->travelled_distance;
 	  tob->number_pulses++;
-	  comedi_data_write(comedi_device.comedi_dev,
-			    comedi_device.subdevice_analog_output,
-			    COMEDI_DEVICE_VALID_POSITION_ANALOG_OUTPUT,
-			    comedi_device.range_set_output,
-			    comedi_device.aref,
-			    comedi_device.comedi_ttl);
 	}
       else
-	comedi_data_write(comedi_device.comedi_dev,
-			  comedi_device.subdevice_analog_output,
-			  COMEDI_DEVICE_VALID_POSITION_ANALOG_OUTPUT,
-			  comedi_device.range_set_output,
-			  comedi_device.aref,
-			  comedi_device.comedi_baseline);
+	{
+	  stim.stimulation_flag=0;
+	}
     }
   
-
-
+  
   tracked_object_draw_object(tob);
   if(tob->n%25==0)
     tracked_object_display_path_variables(tob);
@@ -216,11 +207,13 @@ int tracked_object_display_path_variables(struct tracked_object* tob)
   cairo_set_source_rgb (cr,0.1,0.1,0.1);
   cairo_move_to(cr,0,15);
   cairo_show_text (cr, g_strdup_printf("Distance: %.2lf ",tob->travelled_distance));
-  cairo_move_to(cr,0,30);
-  cairo_show_text (cr, g_strdup_printf("Pulses: %d ",tob->number_pulses));
+  if(app_flow.pulse_distance==ON)
+    {
+      cairo_move_to(cr,0,30);
+      cairo_show_text (cr, g_strdup_printf("Pulses: %d ",tob->number_pulses));
+    }
   return 0;
 }
-
 
 
 double distance(double x1, double y1, double x2, double y2)
