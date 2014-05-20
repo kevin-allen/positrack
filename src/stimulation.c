@@ -21,8 +21,8 @@ int stimulation_init(struct stimulation *stim)
   stim->pulse_duration_ms=1;
   stim->pulse_frequency_Hz=200;
   stim->number_pulses_per_train=10;
-  stim->refractory_period_train_ms=1000;
-  stim->stimulation_intensity_volt=8;
+  stim->refractory_period_train_ms=200;
+  stim->stimulation_intensity_volt=3;
 
   stim->inter_pulse_duration_ms=1000/stim->pulse_frequency_Hz;
   stim->inter_pulse_duration=set_timespec_from_ms(stim->inter_pulse_duration_ms);
@@ -99,11 +99,9 @@ static gboolean stimulation_timer_update()
 			    comedi_device.range_set_output,
 			    comedi_device.aref,
 			    comedi_device.comedi_baseline);
-	  nanosleep(&stim.pulse_duration,&stim.req);
+	  nanosleep(&stim.inter_pulse_duration,&stim.req);
 	}
-      stim.elapsed_beginning_trial=diff(&stim.time_beginning_trial,&stim.time_last_stimulation);
-      printf("%d %.2lf %.2lf %d %.2lf\n",
-	     stim.elapsed_beginning_trial.tv_sec*1000+stim.elapsed_beginning_trial.tv_nsec/1000000,
+      printf("%.2lf %.2lf %d %.2lf\n",
 	     stim.pulse_duration_ms,
 	     stim.pulse_frequency_Hz,
 	     stim.number_pulses_per_train,

@@ -201,13 +201,13 @@ int tracked_object_display_path_variables(struct tracked_object* tob)
   cairo_select_font_face (cr, "sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL  );
   cairo_set_font_size (cr, 14.0);
   cairo_set_source_rgb (cr,0.9,0.9,0.9);
-  cairo_rectangle(cr, 0, 0,150,45);
+  cairo_rectangle(cr, 0, 0,175,45);
   cairo_fill(cr);
 
   cairo_set_source_rgb (cr,0.1,0.1,0.1);
   cairo_move_to(cr,0,15);
-  cairo_show_text (cr, g_strdup_printf("Distance: %.2lf pixels",tob->travelled_distance));
-  cairo_move_to(cr,0,15);
+  cairo_show_text (cr, g_strdup_printf("Distance: %.2lf",tob->travelled_distance));
+  cairo_move_to(cr,0,30);
   cairo_show_text (cr, g_strdup_printf("Duration: %d sec",(int)tr.tracking_time_duration_all.tv_sec));
   if(app_flow.pulse_distance==ON)
     {
