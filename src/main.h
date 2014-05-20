@@ -70,6 +70,7 @@ File with declarations of the main structures and functions used in positrack
 #define TRACKING_INTERFACE_MIN_DISTANCE_TWO_SPOTS 150
 
 #define TRACKED_OBJECT_BUFFER_LENGTH 432000 // 432000 should give 240 minutes at 30Hz.
+#define TRACKED_OBJECT_PULSE_DISTANCE 2000 // distance to run before pulse is done
 
 
 #define MAX_BUFFER_LENGTH 100000 // buffer length for each comedi_dev
@@ -130,6 +131,7 @@ struct main_app_flow
   enum drawspots_mode draws_mode;
   enum drawobject_mode drawo_mode;
   enum on_off pulse_valid_position;
+  enum on_off pulse_distance;
 };
 struct main_app_flow app_flow;
 
@@ -260,11 +262,13 @@ struct tracked_object
   double percentage_position_invalid_total;
   double percentage_position_invalid_last_100;
   double travelled_distance;
+  double last_pulsed_distance;
   double sample_distance;
   double samples_per_seconds;
   int buffer_length;
   double pixels_per_cm;
   int last_valid;
+  int number_pulses;
 };
 struct tracked_object tob;
 
@@ -487,7 +491,7 @@ int tracked_object_init(struct tracked_object* tob);
 int tracked_object_free(struct tracked_object* tob);
 int tracked_object_update_position(struct tracked_object* tob,double x, double y, double head_direction, int frame_duration_ms);
 int tracked_object_draw_object(struct tracked_object* tob);
-
+int tracked_object_display_path_variables(struct tracked_object* tob);
 int recording_file_data_open_file();
 
 		

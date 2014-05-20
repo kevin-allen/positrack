@@ -15,10 +15,11 @@ int tracked_object_init(struct tracked_object *tob)
   tob->percentage_position_invalid_total=0;
   tob->percentage_position_invalid_last_100=0;
   tob->travelled_distance=0;
+  tob->last_pulsed_distance=0;
   tob->samples_per_seconds=0;
   tob->buffer_length=TRACKED_OBJECT_BUFFER_LENGTH; 
   tob->pixels_per_cm=-1.0;
-    
+  tob->number_pulses=0;
   double* x; // given by traking_interface
   double* y; // given by tracking interface
   double* head_direction; // given by tracking interface
@@ -92,16 +93,50 @@ int tracked_object_update_position(struct tracked_object* tob,double x, double y
     }
   if(head_direction==-1.0)
     tob->head_direction_invalid++;
-  if(tob->n>0)
+  if(tob->n>1&&tob->last_valid==1&&tob->x[tob->n-1]!=-1.0&&tob->y[tob->n-1]!=-1.0)
     {
+      // do not consider first tracking sample as it is often rest from previous 
+      // buffer, this should be solved at the acquisition level in the future
+      // the line above should be    if(tob->n>0 ...
       tob->sample_distance=distance(tob->x[tob->n-1],
 				    tob->y[tob->n-1],
 				    tob->x[tob->n],
 				    tob->y[tob->n]);
+
+      if(tob->sample_distance>1)// to prevent jitter in leds to contribute to distance
+	{
+	  tob->travelled_distance=tob->travelled_distance+tob->sample_distance;
+	}
       //tob->speed[tob->n]=tob->sample_distance/((double)frame_duration_us/1000000);
     }
   
+  if(app_flow.pulse_distance==ON)
+    {
+      if(tob->travelled_distance-tob->last_pulsed_distance>TRACKED_OBJECT_PULSE_DISTANCE)
+	{
+	  tob->last_pulsed_distance=tob->travelled_distance;
+	  tob->number_pulses++;
+	  comedi_data_write(comedi_device.comedi_dev,
+			    comedi_device.subdevice_analog_output,
+			    COMEDI_DEVICE_VALID_POSITION_ANALOG_OUTPUT,
+			    comedi_device.range_set_output,
+			    comedi_device.aref,
+			    comedi_device.comedi_ttl);
+	}
+      else
+	comedi_data_write(comedi_device.comedi_dev,
+			  comedi_device.subdevice_analog_output,
+			  COMEDI_DEVICE_VALID_POSITION_ANALOG_OUTPUT,
+			  comedi_device.range_set_output,
+			  comedi_device.aref,
+			  comedi_device.comedi_baseline);
+    }
+  
+
+
   tracked_object_draw_object(tob);
+  if(tob->n%25==0)
+    tracked_object_display_path_variables(tob);
 #ifdef DEBUG_TRACKED_OBJECT
   fprintf(stderr,"object position: %lf, %lf, heading: %lf\n",
 	  tob->x[tob->n],
@@ -121,21 +156,43 @@ int tracked_object_update_position(struct tracked_object* tob,double x, double y
     }
   return 0;
 }
+
+
 int tracked_object_draw_object(struct tracked_object* tob)
 {
-  double red=0.1;
-  double green=0.1;
-  double blue=0.1;
-  
-  if(tob->x[tob->n]==-1.0)
-    { // don't draw if invalid position
-      return 0;
-    }
+  // previous positions are shown in black, current in orange
+  double red1=0.1;
+  double green1=0.1;
+  double blue1=0.1;
+  double red2=0.7;
+  double green2=0.1;
+  double blue2=0.7;
   cairo_t * cr;
   cr = gdk_cairo_create(gtk_widget_get_window(widgets.trackingdrawingarea));
   cairo_set_line_width (cr, 5);
-  cairo_set_source_rgb (cr,red,green,blue);
-  cairo_move_to(cr, 
+
+
+  // if previous position was valid, set it to black
+  if(tob->n>0 && tob->x[tob->n-1]!=-1.0)
+    {
+      cairo_set_source_rgb (cr,red1,green1,blue1);
+      cairo_move_to(cr, 
+		    tob->x[tob->n-1]-2,
+		    tob->y[tob->n-1]-2);
+      cairo_line_to(cr,
+		    tob->x[tob->n-1]+2,
+		    tob->y[tob->n-1]+2);
+      cairo_stroke(cr);
+    }
+
+  if(tob->x[tob->n]==-1.0)
+    { // don't draw if invalid position
+      cairo_destroy(cr);
+      return 0;
+    }
+  
+  cairo_set_source_rgb (cr,red2,green2,blue2);
+  cairo_move_to(cr,
 		tob->x[tob->n]-2,
 		tob->y[tob->n]-2);
   cairo_line_to(cr,
@@ -145,6 +202,26 @@ int tracked_object_draw_object(struct tracked_object* tob)
   cairo_destroy(cr);
   return 0;
 }
+
+int tracked_object_display_path_variables(struct tracked_object* tob)
+{
+  cairo_t * cr;
+  cr = gdk_cairo_create(gtk_widget_get_window(widgets.trackingdrawingarea));
+  cairo_select_font_face (cr, "sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL  );
+  cairo_set_font_size (cr, 14.0);
+  cairo_set_source_rgb (cr,0.9,0.9,0.9);
+  cairo_rectangle(cr, 0, 0,150,30);
+  cairo_fill(cr);
+
+  cairo_set_source_rgb (cr,0.1,0.1,0.1);
+  cairo_move_to(cr,0,15);
+  cairo_show_text (cr, g_strdup_printf("Distance: %.2lf ",tob->travelled_distance));
+  cairo_move_to(cr,0,30);
+  cairo_show_text (cr, g_strdup_printf("Pulses: %d ",tob->number_pulses));
+  return 0;
+}
+
+
 
 double distance(double x1, double y1, double x2, double y2)
 {

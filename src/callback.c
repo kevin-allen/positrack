@@ -491,7 +491,7 @@ void on_videoplayback_checkbutton_toggled(GtkObject *object, gpointer user_data)
 
 void main_app_print_example_config_file(struct main_app_flow* app_flow)
 {
-  fprintf(stderr,"\nChoose one option per line for:\n\nvideosource\ntracking_mode\nsynchronization_mode\nvideoplayback_mode\ndrawspot_mode\ndrawobject_mode\npulse_valid_position\n\n");
+  fprintf(stderr,"\nChoose one option per line for:\n\nvideosource\ntracking_mode\nsynchronization_mode\nvideoplayback_mode\ndrawspot_mode\ndrawobject_mode\npulse_valid_position\npulse_distance\n");
   fprintf(stderr,"\nYour options on each line are\n\n");
   fprintf(stderr,"USB_V4L2 FIREWIRE_BLACK_WHITE FIREWIRE_COLOR\n");
   fprintf(stderr,"ONE_WHITE_SPOT TWO_WHITE_SPOTS\n");
@@ -499,7 +499,8 @@ void main_app_print_example_config_file(struct main_app_flow* app_flow)
   fprintf(stderr,"ON OFF\n");
   fprintf(stderr,"NO ALL ONLY_USED_SPOTS\n");
   fprintf(stderr,"ONE_BLACK_DOT\n");
-  fprintf(stderr,"ON_OFF\n");
+  fprintf(stderr,"ON OFF\n");
+  fprintf(stderr,"ON OFF\n");
   fprintf(stderr,"\nAn example is\n\n");
   fprintf(stderr,"FIREWIRE\n");
   fprintf(stderr,"ONE_WHITE_SPOT\n");
@@ -508,6 +509,7 @@ void main_app_print_example_config_file(struct main_app_flow* app_flow)
   fprintf(stderr,"ONLY_USED_SPOTS\n");
   fprintf(stderr,"ONE_BLACK_DOT\n");
   fprintf(stderr,"ON\n");
+  fprintf(stderr,"OFF\n");
 }
 int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
 {
@@ -527,6 +529,7 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
   drawspot_mode
   drawobject_mode
   pulse_valid_position
+  pulse_distance
 
   example of file:
   FIREWIRE_COLOR
@@ -536,7 +539,7 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
   ONLY_USED_SPOTS
   ONE_BLACK_DOT
   ON
-
+  OFF
   ***********************************************/
   // check if config file is in the directory
   gchar* config_directory_name;
@@ -559,7 +562,8 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
   char videoplayback_mode[255];
   char drawspots_mode[255];
   char drawobject_mode[255];
-  char plusevalid_position[255];
+  char pulsevalid_position[255];
+  char pulse_distance[255];
   int i,ret;
 
   // read variables from file
@@ -606,9 +610,15 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
       main_app_print_example_config_file(app_flow);
       return -1;
     }
-  if(fscanf(fp,"%s",&plusevalid_position)!=1)
+  if(fscanf(fp,"%s",&pulsevalid_position)!=1)
     {
       fprintf(stderr,"problem reading pulsevalid_position from %s\n",config_file_name);
+      main_app_print_example_config_file(app_flow);
+      return -1;
+    }
+  if(fscanf(fp,"%s",&pulse_distance)!=1)
+    {
+      fprintf(stderr,"problem reading pulse_distance from %s\n",config_file_name);
       main_app_print_example_config_file(app_flow);
       return -1;
     }
@@ -717,22 +727,41 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
       main_app_print_example_config_file(app_flow);
       return -1;
     }
-  if (strcmp(plusevalid_position, "ON") == 0) 
+  if (strcmp(pulsevalid_position, "ON") == 0) 
     {
       app_flow->pulse_valid_position=ON;
-      printf("pulse_valid_position mode: %s\n",plusevalid_position);
+      printf("pulse_valid_position mode: %s\n",pulsevalid_position);
     }
-  else if (strcmp(plusevalid_position, "OFF") == 0) 
+  else if (strcmp(pulsevalid_position, "OFF") == 0) 
     {
       app_flow->pulse_valid_position=OFF;
-      printf("pulse_valid_position mode: %s\n",plusevalid_position);
+      printf("pulse_valid_position mode: %s\n",pulsevalid_position);
     }
   else
     {
-      fprintf(stderr,"value of plusevalid_position in %s is not recognized: %s\n",config_file_name,plusevalid_position);
+      fprintf(stderr,"value of pulsevalid_position in %s is not recognized: %s\n",config_file_name,pulsevalid_position);
       main_app_print_example_config_file(app_flow);
       return -1;
     }
+
+  if (strcmp(pulse_distance, "ON") == 0) 
+    {
+      app_flow->pulse_distance=ON;
+      printf("pulse_distance mode: %s\n",pulse_distance);
+    }
+  else if (strcmp(pulse_distance, "OFF") == 0) 
+    {
+      app_flow->pulse_distance=OFF;
+      printf("pulse_distance mode: %s\n",pulse_distance);
+    }
+  else
+    {
+      fprintf(stderr,"value of pulse_distance in %s is not recognized: %s\n",config_file_name,pulse_distance);
+      main_app_print_example_config_file(app_flow);
+      return -1;
+    }
+
+
   return 0;
 }
 
