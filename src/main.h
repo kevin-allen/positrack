@@ -72,6 +72,7 @@ File with declarations of the main structures and functions used in positrack
 #define TRACKED_OBJECT_BUFFER_LENGTH 432000 // 432000 should give 240 minutes at 30Hz.
 #define TRACKED_OBJECT_PULSE_DISTANCE 2000 // distance to run before pulse is done
 
+#define STIMULATION_TIMER_MS 5
 
 #define MAX_BUFFER_LENGTH 100000 // buffer length for each comedi_dev
 #define DEFAULT_SAMPLING_RATE 20000
@@ -388,6 +389,7 @@ struct comedi_dev
   int is_acquiring;
   lsampl_t comedi_baseline;
   lsampl_t comedi_ttl;
+  lsampl_t comedi_ttl_stimulation;
   int is_initialized;
 
 };

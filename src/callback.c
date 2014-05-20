@@ -305,6 +305,7 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
 
   if(app_flow.pulse_distance==ON)
     { // start the stimulating thread that will pulse when stimulation_flag is set
+      stimulation_init(&stim);
       stimulation_start_stimulation(&stim);
     }
 
