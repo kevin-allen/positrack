@@ -141,6 +141,10 @@ gboolean tracking()
       tr.skip_next_tick=0;
       return TRUE;
     }
+
+  clock_gettime(CLOCK_REALTIME, &tr.time_now); // how long since this tracking trial started
+  tr.tracking_time_duration_all=diff(&tr.start_tracking_time_all,&tr.time_now);
+
   if(tracking_interface_get_buffer(&tr)!=0)
     {
       g_printerr("tracking(), tracking_interface_get_buffer() did not return 0\n");

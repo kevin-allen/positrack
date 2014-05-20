@@ -72,7 +72,7 @@ File with declarations of the main structures and functions used in positrack
 #define TRACKED_OBJECT_BUFFER_LENGTH 432000 // 432000 should give 240 minutes at 30Hz.
 #define TRACKED_OBJECT_PULSE_DISTANCE 2000 // distance to run before pulse is done
 
-#define STIMULATION_TIMER_MS 5
+#define STIMULATION_TIMER_MS 5 // number of ms betweek calls to stimulation_timer_update()
 
 #define MAX_BUFFER_LENGTH 100000 // buffer length for each comedi_dev
 #define DEFAULT_SAMPLING_RATE 20000
@@ -193,9 +193,13 @@ struct tracking_interface
   struct timespec previous_buffer_time;
   struct timespec inter_buffer_duration;
   double current_sampling_rate;
-  struct timespec start_tracking_time;
-  struct timespec end_tracking_time;
-  struct timespec tracking_time_duration;
+  struct timespec start_tracking_time; // for a sample
+  struct timespec end_tracking_time; // for a sample
+  struct timespec tracking_time_duration; // for a sample
+  struct timespec start_tracking_time_all; // for all samples
+  struct timespec time_now; // for all samples
+  struct timespec tracking_time_duration_all; // for all samples
+
   struct timespec start_frame_tracking_time; // single frame
   struct timespec end_frame_tracking_time; // single frame
   struct timespec frame_tracking_time_duration; // single frame
