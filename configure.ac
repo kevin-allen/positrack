@@ -19,6 +19,7 @@ PKG_CHECK_MODULES([GSTREAMER_APP],[gstreamer-app-1.0],[],[])
 PKG_CHECK_MODULES([GTK], [gtk+-2.0 >= 2.4.0])
 PKG_CHECK_MODULES([cairo], [cairo])
 AC_SEARCH_LIBS([clock_gettime],[rt])
+AC_SEARCH_LIBS([pthread_create],[pthread])
 AC_SEARCH_LIBS([sqrt],[m])
 AC_SEARCH_LIBS([comedi_open],[libcomedi]) # not working
 AC_SEARCH_LIBS([raw1394_new_handle],[raw1394]) 

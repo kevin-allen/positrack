@@ -9,13 +9,13 @@ if stim->stimulation_flag==1, it will stimulate
 int stimulation_init(struct stimulation *stim)
 {
   stim->stimulation_flag=0; // stimulate when == 1
-  stim->is_stimulating=0; // control the thread
+  stim->is_stimulating=0; // to stop the thread
+  stim->stimulation_thread_running=0; 
   stim->baseline_volt=0; // for ttl pulse
   stim->comedi_intensity=0;
   stim->comedi_baseline=0;
   stim->input_data;
   stim->stimulation_count=0;
-  clock_gettime(CLOCK_REALTIME,&stim->time_last_stimulation);
 
   // these 5 variables should be set from a configuration file positrack.stimulation.config
   stim->pulse_duration_ms=1;
@@ -23,7 +23,9 @@ int stimulation_init(struct stimulation *stim)
   stim->number_pulses_per_train=10;
   stim->refractory_period_train_ms=200;
   stim->stimulation_intensity_volt=3;
-
+  stim->thread_sleep_ms=5;
+  stim->thread_sleep_timespec=set_timespec_from_ms(stim->thread_sleep_ms);
+  
   stim->inter_pulse_duration_ms=1000/stim->pulse_frequency_Hz;
   stim->inter_pulse_duration=set_timespec_from_ms(stim->inter_pulse_duration_ms);
   stim->pulse_duration=set_timespec_from_ms(stim->pulse_duration_ms);
@@ -47,10 +49,19 @@ int stimulation_start_stimulation(struct stimulation* stim)
       fprintf(stderr,"stimulation is already running in stimulation_start_stimulation()\n");
       return -1;
     }
-  //start a timer that will call oscilloscope_interface_timer_update();
-  stim->is_stimulating=1;
-  g_timeout_add(STIMULATION_TIMER_MS,(GSourceFunc) stimulation_timer_update,(gpointer) widgets.trackingdrawingarea);
-  return 0;
+ if (stim->stimulation_thread_running==1)
+    {
+      fprintf(stderr,"stimulation thread already running in stimulation_start_stimulation\n");
+      return -1;
+    }
+ clock_gettime(CLOCK_REALTIME,&stim->time_last_stimulation); // get the time the thread was created
+ if((stimulation_thread_id=pthread_create(&stimulation_thread, NULL, stimulation_thread_function,(void*)stim))==1)
+    {
+      fprintf(stderr,"error creating the stimulation thread, error_no:%d\n",
+	      stimulation_thread_id);
+      return -1;
+    }
+ return 0;
 }
 int stimulation_stop_stimulation(struct stimulation* stim)
 {
@@ -65,26 +76,38 @@ int stimulation_stop_stimulation(struct stimulation* stim)
   return 0;
 }
 
-static gboolean stimulation_timer_update()
+void * stimulation_thread_function(void * stimulation_inter )
 {
-  // function run by the stimulation thread, see stimulation_start_stimulation()
-  if(stim.is_stimulating==0)
-    { // this will be the last tic.
-      return FALSE;
-    }
-  if(stim.stimulation_flag==0)
-    {
-      return TRUE;
-    }
+  struct stimulation  *stim;
+  stim=(struct stimulation *) stimulation_inter;
+  void * pt=NULL;
+  stim->stimulation_thread_running=1;
+  stim->is_stimulating=1;
 
+  while(stim->is_stimulating==1)
+    {
+      stimulation_stimulate(stim);
+      nanosleep(&stim->thread_sleep_timespec,&stim->req);
+    }
+  stim->stimulation_thread_running=0;
+  pthread_exit(NULL);
+}
+
+
+int stimulation_stimulate(struct stimulation* stim)
+{
+  if(stim->stimulation_flag==0)
+    {
+      return 0;
+    }
   // reach here => stimulate
   int i;
-  clock_gettime(CLOCK_REALTIME,&stim.time_now);
-  stim.elapsed_last_stimulation=diff(&stim.time_last_stimulation,&stim.time_now);
-  if(timespec_first_larger(&stim.elapsed_last_stimulation,&stim.duration_refractory_period)) 
+  clock_gettime(CLOCK_REALTIME,&stim->time_now);
+  stim->elapsed_last_stimulation=diff(&stim->time_last_stimulation,&stim->time_now);
+  if(timespec_first_larger(&stim->elapsed_last_stimulation,&stim->duration_refractory_period)) 
     {
-      clock_gettime(CLOCK_REALTIME,&stim.time_last_stimulation);
-      for(i=0; i < stim.number_pulses_per_train;i++)
+      clock_gettime(CLOCK_REALTIME,&stim->time_last_stimulation);
+      for(i=0; i < stim->number_pulses_per_train;i++)
 	{
 	  comedi_data_write(comedi_device.comedi_dev,
 			    comedi_device.subdevice_analog_output,
@@ -92,22 +115,24 @@ static gboolean stimulation_timer_update()
 			    comedi_device.range_set_output,
 			    comedi_device.aref,
 			    comedi_device.comedi_ttl_stimulation);
-	  nanosleep(&stim.pulse_duration,&stim.req);
+	  nanosleep(&stim->pulse_duration,&stim->req);
 	  comedi_data_write(comedi_device.comedi_dev,
 			    comedi_device.subdevice_analog_output,
 			    COMEDI_DEVICE_STIMULATION_ANALOG_OUTPUT,
 			    comedi_device.range_set_output,
 			    comedi_device.aref,
 			    comedi_device.comedi_baseline);
-	  nanosleep(&stim.inter_pulse_duration,&stim.req);
+	  nanosleep(&stim->inter_pulse_duration,&stim->req);
 	}
-      printf("%.2lf %.2lf %d %.2lf\n",
-	     stim.pulse_duration_ms,
-	     stim.pulse_frequency_Hz,
-	     stim.number_pulses_per_train,
-	     stim.stimulation_intensity_volt);
+#ifdef DEBUG_STIMULATION
+      printf("pulse: %.2lf ms, frequency %.2lf Hz, number pulses: %d, intensity: %.2lf V\n",
+	     stim->pulse_duration_ms,
+	     stim->pulse_frequency_Hz,
+	     stim->number_pulses_per_train,
+	     stim->stimulation_intensity_volt);
+#endif
     }
-  return TRUE;
+  return 0;
 }
 int timespec_first_larger(struct timespec* t1, struct timespec* t2)
 { 

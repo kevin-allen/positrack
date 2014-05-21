@@ -41,8 +41,9 @@ File with declarations of the main structures and functions used in positrack
 #include <gst/app/gstappsink.h>
 #include <comedi.h> // for the driver
 #include <comedilib.h> // for the driver API
-
+#include <pthread.h> // to be able to create threads
 #include <glib.h>
+
 #define _FILE_OFFSET_BITS 64 // to have files larger than 2GB
 #define NSEC_PER_SEC (1000000000) // The number of nsecs per sec
 
@@ -253,6 +254,7 @@ struct recording_file_data rec_file_data;
 struct stimulation
 {
   int is_stimulating;
+  int stimulation_thread_running;
   int stimulation_flag; // stimulate when == 1
   double baseline_volt; // for ttl pulse
   lsampl_t comedi_intensity;
@@ -276,9 +278,14 @@ struct stimulation
   struct timespec time_beginning_trial;
   struct timespec elapsed_beginning_trial;
   struct timespec req;
+  double thread_sleep_ms;
+  struct timespec thread_sleep_timespec;
+
+
 };
 struct stimulation stim;
-
+pthread_t stimulation_thread;
+int stimulation_thread_id;
 
 struct tracked_object
 {
@@ -533,7 +540,8 @@ defined in stimulation.c
 int stimulation_init(struct stimulation *stim);
 int stimulation_start_stimulation(struct stimulation* stim);
 int stimulation_stop_stimulation(struct stimulation* stim);
-static gboolean stimulation_timer_update();
+void * stimulation_thread_function(void * stimulation_inter);
+int stimulation_stimulate(struct stimulation* stim);
 		
 int find_max_index(int num_data,double* data);	
 int find_max_index_int(int num_data,int* data);	   
