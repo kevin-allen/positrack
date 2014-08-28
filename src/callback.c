@@ -514,11 +514,11 @@ void main_app_print_example_config_file(struct main_app_flow* app_flow)
   fprintf(stderr,"\nChoose one option per line for:\n\nvideosource\ntracking_mode\nsynchronization_mode\nvideoplayback_mode\ndrawspot_mode\ndrawobject_mode\npulse_valid_position\npulse_distance\n");
   fprintf(stderr,"\nYour options on each line are\n\n");
   fprintf(stderr,"USB_V4L2 FIREWIRE_BLACK_WHITE FIREWIRE_COLOR\n");
-  fprintf(stderr,"ONE_WHITE_SPOT TWO_WHITE_SPOTS\n");
+  fprintf(stderr,"ONE_WHITE_SPOT TWO_WHITE_SPOTS RED_GREEN_BLUE_SPOTS\n");
   fprintf(stderr,"NONE COMEDI\n");
   fprintf(stderr,"ON OFF\n");
   fprintf(stderr,"NO ALL ONLY_USED_SPOTS\n");
-  fprintf(stderr,"ONE_BLACK_DOT\n");
+  fprintf(stderr,"ONE_BLACK_DOT NO_DOT\n");
   fprintf(stderr,"ON OFF\n");
   fprintf(stderr,"ON OFF\n");
   fprintf(stderr,"\nAn example is\n\n");
@@ -557,7 +557,7 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
   NONE
   ON
   ONLY_USED_SPOTS
-  ONE_BLACK_DOT
+  ONE_BLACK_DOT 
   ON
   OFF
   ***********************************************/
@@ -677,6 +677,12 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
       app_flow->trk_mode=TWO_WHITE_SPOTS;
       printf("tracking mode: %s\n",tracking_mode);
     }
+  else if (strcmp(tracking_mode, "RED_GREEN_BLUE_SPOTS") == 0) 
+    {                             
+      app_flow->trk_mode=RED_GREEN_BLUE_SPOTS;
+      printf("tracking mode: %s\n",tracking_mode);
+    }
+
   else
     {
       fprintf(stderr,"value of tracking_mode %s is not recognized: %s\n",config_file_name,tracking_mode);
@@ -738,7 +744,12 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
     }
   if (strcmp(drawobject_mode, "ONE_BLACK_DOT") == 0) 
     {
-      app_flow->drawo_mode=OFF;
+      app_flow->drawo_mode=ONE_BLACK_DOT;
+      printf("draw object mode: %s\n",drawobject_mode);
+    }
+  if (strcmp(drawobject_mode, "NO_DOT") == 0) 
+    {
+      app_flow->drawo_mode=NO_DOT;
       printf("draw object mode: %s\n",drawobject_mode);
     }
   else
@@ -747,6 +758,10 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
       main_app_print_example_config_file(app_flow);
       return -1;
     }
+
+
+
+
   if (strcmp(pulsevalid_position, "ON") == 0) 
     {
       app_flow->pulse_valid_position=ON;

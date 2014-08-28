@@ -199,6 +199,21 @@ gboolean tracking()
 	  return FALSE;
 	}
     }
+
+
+  if(app_flow.trk_mode==RED_GREEN_BLUE_SPOTS)
+    {
+      if(tracking_interface_tracking_red_green_blue_spots(&tr)!=0)
+	{
+	  g_printerr("tracking(), tracking_interface_tracking_red_green_blue_spots() did not return 0\n");
+	  tr.number_frames_tracked=0;
+	  return FALSE;
+	}
+    }
+
+
+
+
   if(app_flow.pulse_valid_position==ON)
     {
       if(tob.last_valid==1)
@@ -623,6 +638,117 @@ int tracking_interface_tracking_two_bright_spots(struct tracking_interface* tr)
 #endif
   return 0;
 }
+
+
+
+int tracking_interface_tracking_red_green_blue_spots(struct tracking_interface* tr)
+{
+#ifdef DEBUG_TRACKING
+  g_printerr("tracking_interface_tracking_red_green_blue_spots() start\n");
+#endif
+  // whathever happen that returns 0, we need to update tob's position
+#ifdef DEBUG_TRACKING
+  g_printerr("tracking_interface_tracking_two_bright_spots()\n");
+#endif
+
+  //tracking_interface_clear_drawingarea(tr);
+  tracking_interface_get_luminosity(tr);
+  tracking_interface_get_mean_luminance(tr);
+  if(tr->mean_luminance>tr->max_mean_luminance_for_tracking)
+    {
+      g_printerr("mean_luminance (%lf) is too high for tracking\n",tr->mean_luminance);
+      tr->number_spots=0;
+      tr->number_positive_pixels=0;
+      tracked_object_update_position(&tob,
+				     -1.0,
+				     -1.0,
+				     -1.0,
+				     microsecond_from_timespec(&tr->inter_buffer_duration));
+      return 0;
+    }
+  
+  // find all the spots recursively, get the summary data for each spot
+  if(tracking_interface_find_spots_recursive(tr)!=0)
+    {
+      g_printerr("tracking_interface_find_spots_recursive() did not return 0\n");
+      return -1;
+    }
+  
+  // sort according to number of positive pixels
+  tracking_interface_sort_spots(tr);
+    
+  // draw some spots if requrired
+  if(app_flow.draws_mode==ALL)
+    {
+      tracking_interface_draw_all_spots_xy(tr);
+    }
+
+  // stop here if not at least 2 spots
+  if(tr->number_spots<2)
+    {
+      tracked_object_update_position(&tob,
+				     -1.0,
+				     -1.0,
+				     -1.0,
+				     microsecond_from_timespec(&tr->inter_buffer_duration));
+      return 0;
+    }
+
+  
+  // check if the two spots are within reasonable distance
+  if(distance(tr->spot_mean_x[0],tr->spot_mean_y[0],tr->spot_mean_x[1],tr->spot_mean_y[1])>tr->max_distance_two_spots)
+    {
+      tracked_object_update_position(&tob,
+				     -1.0,
+				     -1.0,
+				     -1.0,
+				     microsecond_from_timespec(&tr->inter_buffer_duration));
+      return 0;
+    }
+  if(app_flow.draws_mode==ALL)
+    {
+      tracking_interface_draw_all_spots_xy(tr);
+    }
+
+  if(app_flow.draws_mode==ONLY_USED_SPOTS)
+    {
+      int i=0;
+      while(i<tr->number_spots)
+	{
+	  tracking_interface_draw_one_spot_xy(tr,i,1,0,0,3);
+	  i++;
+	}
+
+      //      tracking_interface_draw_one_spot_xy(tr,1,0,0,1,2); //tr->spot_mean_red[1]/255,tr->spot_mean_green[1]/255,tr->spot_mean_blue[1]/255,2);
+      //tracking_interface_draw_one_spot_xy(tr,2,0,1,0,1); //tr->spot_mean_red[2]/255,tr->spot_mean_green[2]/255,tr->spot_mean_blue[2]/255,1);
+    }
+
+
+#ifdef DEBUG_TRACKING
+  g_printerr("x1: %.2lf, y1: %.2lf, x2: %.2lf, y2: %.2lf\n",tr->spot_mean_x[0],tr->spot_mean_y[0],tr->spot_mean_x[1],tr->spot_mean_y[1]);
+#endif
+  tracked_object_update_position(&tob,
+				 (tr->spot_mean_x[0]+tr->spot_mean_x[1])/2, // x
+				 (tr->spot_mean_y[0]+tr->spot_mean_y[1])/2, // y 
+				 heading(tr->spot_mean_x[1]-tr->spot_mean_x[0],tr->spot_mean_y[1]-tr->spot_mean_y[0]), // heading
+				 microsecond_from_timespec(&tr->inter_buffer_duration));
+
+
+
+
+
+
+
+#ifdef DEBUG_TRACKING
+  g_printerr("tracking_interface_tracking_red_green_blue_spots() done\n");
+#endif
+  return 0;
+}
+
+
+
+
+
  
 int tracking_interface_sort_spots(struct tracking_interface* tr)
 {
@@ -828,13 +954,16 @@ int tracking_interface_find_spots_recursive(struct tracking_interface* tr)
       // get the summary of the spot, from the positive_pixels
       tracking_interface_spot_summary(tr);
 #ifdef DEBUG_TRACKING
-      fprintf(stderr,"spot: %d, num_pix: %d, peakx: %d, peaky: %d, peak_mean_x: %lf, peak_mean_y: %lf\n",
+      fprintf(stderr,"spot: %d, num_pix: %d, peakx: %d, peaky: %d, peak_mean_x: %lf, peak_mean_y: %lf, peak_mean_red: %lf, peak_mean_green: %lf, peak_mean_blue: %lf\n",
 	      tr->number_spots,
 	      tr->spot_positive_pixels[tr->number_spots],
 	      tr->spot_peak_x[tr->number_spots],
 	      tr->spot_peak_y[tr->number_spots],
 	      tr->spot_mean_x[tr->number_spots],
-	      tr->spot_mean_y[tr->number_spots]);
+	      tr->spot_mean_y[tr->number_spots],
+	      tr->spot_mean_red[tr->number_spots],
+	      tr->spot_mean_green[tr->number_spots],
+	      tr->spot_mean_blue[tr->number_spots]);
 #endif
       //tracking_interface_draw_spot(tr); // if you want to see the spots
       
@@ -1023,8 +1152,8 @@ int tracking_interface_spot_summary(struct tracking_interface* tr)
   tr->spot_peak_y[si]=tr->positive_pixels_y[0];
   for(i=1;i<tr->number_positive_pixels;i++)
     {
-      if(tr->lum[(tr->positive_pixels_x[i]*tr->height)+tr->positive_pixels_y[i]] >
-	 tr->lum[(tr->spot_peak_x[si]*tr->height)+tr->spot_peak_y[si]])
+      if(tr->lum[(tr->positive_pixels_y[i]*tr->width)+tr->positive_pixels_x[i]] >
+	 tr->lum[(tr->spot_peak_y[si]*tr->width)+tr->spot_peak_x[si]])
 	{
 	  tr->spot_peak_x[si]=tr->positive_pixels_x[i];
 	  tr->spot_peak_y[si]=tr->positive_pixels_y[i];
@@ -1033,14 +1162,30 @@ int tracking_interface_spot_summary(struct tracking_interface* tr)
   tr->spot_mean_x[si]=mean_int(tr->number_positive_pixels,tr->positive_pixels_x,-1.0);
   tr->spot_mean_y[si]=mean_int(tr->number_positive_pixels,tr->positive_pixels_y,-1.0);
 
+
+
   /**********************************************
-  /* the color assignment has not been written */
+  /* the color assignment of this spot          */
   /**********************************************/
-  // sorry more urgent things to code!
-  // get the mean color of the spots
-  //double* spot_mean_red;
-  //double* spot_mean_green;
-  //double* spot_mean_blue;
+  int sum_red =0;
+  int sum_green =0;
+  int sum_blue = 0;
+  guint length;
+  tr->pixels=gdk_pixbuf_get_pixels_with_length(tr->pixbuf,&length);
+  for(i=0;i<tr->number_positive_pixels;i++)
+    {
+      // set a pointer to the right pixel (rgb) in the original image buffer
+      tr->p = tr->pixels+
+	((tr->positive_pixels_y[i]*tr->width)+tr->positive_pixels_x[i])
+	* tr->n_channels; // 3 char per sample
+      
+      sum_red=sum_red+tr->p[0];
+      sum_green=sum_green+tr->p[1];
+      sum_blue=sum_blue+tr->p[2];
+    }
+  tr->spot_mean_red[si]=(double)sum_red/(double)tr->number_positive_pixels;
+  tr->spot_mean_green[si]=(double)sum_green/(double)tr->number_positive_pixels;
+  tr->spot_mean_blue[si]=(double)sum_blue/(double)tr->number_positive_pixels;
   return 0;
 }
 

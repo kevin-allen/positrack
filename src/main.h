@@ -62,7 +62,7 @@ File with declarations of the main structures and functions used in positrack
 #define TRACKING_INTERFACE_LUMINANCE_THRESHOLD 50
 #define TRACKING_INTERFACE_WIDTH 860
 #define TRACKING_INTERFACE_HEIGHT 860
-#define TRACKING_INTERFACE_MAX_NUMBER_SPOTS 2
+#define TRACKING_INTERFACE_MAX_NUMBER_SPOTS 4 // was 2 before
 #define TRACKING_INTERFACE_MAX_NUMBER_SPOTS_CALLS 7
 
 #define TRACKING_INTERFACE_MAX_MEAN_LUMINANCE_FOR_TRACKING 8/* 0 */
@@ -86,8 +86,8 @@ File with declarations of the main structures and functions used in positrack
 #define COMEDI_DEVICE_TTL_VOLT 3.0
 
 //#define DEBUG_ACQ // to turn on debugging output for the comedi card
-#define DEBUG_CAMERA // to turn on debugging for the camera
-//#define DEBUG_TRACKING // to turn on debugging for the tracking
+//#define DEBUG_CAMERA // to turn on debugging for the camera
+#define DEBUG_TRACKING // to turn on debugging for the tracking
 #define DEBUG_IMAGE // to turn on debugging for the image processing
 #define DEBUG_CALLBACK
 //#define DEBUG_TRACKED_OBJECT
@@ -104,7 +104,8 @@ enum videosource {
 };
 enum tracking_mode {
   ONE_WHITE_SPOT = 1,
-  TWO_WHITE_SPOTS = 2
+  TWO_WHITE_SPOTS = 2,
+  RED_GREEN_BLUE_SPOTS = 3
 };
 enum synchronization_mode {
   NONE = 1,
@@ -120,6 +121,7 @@ enum drawspots_mode {
   ONLY_USED_SPOTS = 3
 };
 enum drawobject_mode {
+  NO_DOT = 1,
   ONE_BLACK_DOT = 2
 };
 
@@ -216,9 +218,6 @@ struct tracking_interface
   double luminance_threshold;
   double mean_luminance;
   double max_mean_luminance_for_tracking;
-  double mean_red;
-  double mean_blue;
-  double mean_green;
   double* lum; // pointer to the array containing the luminance of image, use double so that we can filter in place
   double* lum_tmp; // before smoothing
   int* spot; // pointer to an array used in the detection of spots, to flag the pixels
@@ -237,6 +236,8 @@ struct tracking_interface
   double* spot_mean_red;
   double* spot_mean_green;
   double* spot_mean_blue;
+
+
   int index_largest_spot;
 };
 struct tracking_interface tr;
@@ -514,6 +515,7 @@ int tracking_interface_get_luminance(struct tracking_interface* tr);
 int tracking_interface_get_mean_luminosity(struct tracking_interface* tr);
 int tracking_interface_tracking_one_bright_spot(struct tracking_interface* tr);
 int tracking_interface_tracking_two_bright_spots(struct tracking_interface* tr);
+int tracking_interface_tracking_red_green_blue_spots(struct tracking_interface* tr);
 int tracking_interface_find_spots_recursive(struct tracking_interface* tr);
 int tracking_interface_spot_summary(struct tracking_interface* tr);
 int tracking_interface_sort_spots(struct tracking_interface* tr);

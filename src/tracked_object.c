@@ -124,8 +124,10 @@ int tracked_object_update_position(struct tracked_object* tob,double x, double y
 	}
     }
   
-  
-  tracked_object_draw_object(tob);
+  if(app_flow.drawo_mode==ONE_BLACK_DOT)
+    {
+      tracked_object_draw_object(tob);
+    }
   if(tob->n%25==0)
     tracked_object_display_path_variables(tob);
 #ifdef DEBUG_TRACKED_OBJECT
