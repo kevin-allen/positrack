@@ -86,7 +86,7 @@ File with declarations of the main structures and functions used in positrack
 #define COMEDI_DEVICE_TTL_VOLT 3.0
 
 //#define DEBUG_ACQ // to turn on debugging output for the comedi card
-//#define DEBUG_CAMERA // to turn on debugging for the camera
+#define DEBUG_CAMERA // to turn on debugging for the camera
 //#define DEBUG_TRACKING // to turn on debugging for the tracking
 #define DEBUG_IMAGE // to turn on debugging for the image processing
 #define DEBUG_CALLBACK
@@ -329,6 +329,7 @@ struct firewire_camera_interface
   dc1394framerate_t framerate;
   dc1394video_mode_t video_mode;
   dc1394color_coding_t coding;
+  dc1394color_codings_t codings;
   unsigned int width, height;
   unsigned int num_pixels;
   dc1394video_frame_t *frame;
