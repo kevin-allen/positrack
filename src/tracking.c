@@ -62,6 +62,32 @@ int tracking_interface_init(struct tracking_interface* tr)
       return -1;
     }
 
+  if((tr->spot_red_score=malloc(sizeof(double)*tr->max_number_spots))==NULL)
+    {
+      fprintf(stderr, "problem allocating memory for tr->spot_red_score\n");
+      return -1;
+    }
+
+  if((tr->spot_green_score=malloc(sizeof(double)*tr->max_number_spots))==NULL)
+    {
+      fprintf(stderr, "problem allocating memory for tr->spot_green_score\n");
+      return -1;
+    }
+
+  if((tr->spot_blue_score=malloc(sizeof(double)*tr->max_number_spots))==NULL)
+    {
+      fprintf(stderr, "problem allocating memory for tr->spot_blue_score\n");
+      return -1;
+    }
+
+  if((tr->spot_taken=malloc(sizeof(double)*tr->max_number_spots))==NULL)
+    {
+      fprintf(stderr, "problem allocating memory for tr->spot_taken\n");
+      return -1;
+    }
+
+
+
   tr->luminance_threshold=TRACKING_INTERFACE_LUMINANCE_THRESHOLD;
 
   if((tr->lum=malloc(sizeof(double)*tr->width*tr->height))==NULL)
@@ -112,6 +138,10 @@ int tracking_interface_free(struct tracking_interface* tr)
   free(tr->spot_mean_red);
   free(tr->spot_mean_green);
   free(tr->spot_mean_blue);
+  free(tr->spot_red_score);
+  free(tr->spot_green_score);
+  free(tr->spot_blue_score);
+  free(tr->spot_taken);
   free(tr->positive_pixels_x);
   free(tr->positive_pixels_y);
   return 0;
@@ -200,7 +230,6 @@ gboolean tracking()
 	}
     }
 
-
   if(app_flow.trk_mode==RED_GREEN_BLUE_SPOTS)
     {
       if(tracking_interface_tracking_red_green_blue_spots(&tr)!=0)
@@ -276,8 +305,6 @@ int tracking_interface_print_position_to_file(struct tracking_interface* tr)
       fprintf(stderr,"try to save position data but tob.n <=0\n");
       return -1;
     }
-
-
   // save data to the file
   if(app_flow.trk_mode==TWO_WHITE_SPOTS)
     {
@@ -299,6 +326,28 @@ int tracking_interface_print_position_to_file(struct tracking_interface* tr)
     {
       // fprintf(rec_file_data.fp,"%.2lf %.2lf %.2lf %d %.2lf %.2lf\n",-1.0,-1.0,-1.0,0,-1.0,-1.0);
     }
+
+  if(app_flow.trk_mode==RED_GREEN_BLUE_SPOTS)
+    {
+      fprintf(rec_file_data.fp,"%d %d %.2lf %.2lf %.2lf %d %d %.2lf %.2lf %d %.2lf %.2lf %d %.2lf %.2lf \n",
+	      (int)((tr->tracking_time_duration.tv_sec*1000)+(tr->tracking_time_duration.tv_nsec/1000000.0)),
+	      tob.n,
+	      tob.x[tob.n-1],
+	      tob.y[tob.n-1],
+	      tob.head_direction[tob.n-1],
+	      tr->number_spots,
+	      tr->spot_positive_pixels[tr->irs],
+	      tr->spot_mean_x[tr->irs],
+	      tr->spot_mean_y[tr->irs],
+	      tr->spot_positive_pixels[tr->igs],
+	      tr->spot_mean_x[tr->igs],
+	      tr->spot_mean_y[tr->igs],
+	      tr->spot_positive_pixels[tr->ibs],
+	      tr->spot_mean_x[tr->ibs],
+	      tr->spot_mean_y[tr->ibs]);
+    }
+
+
 }
 
 int tracking_interface_get_buffer(struct tracking_interface* tr)
@@ -683,6 +732,7 @@ int tracking_interface_tracking_red_green_blue_spots(struct tracking_interface* 
       tracking_interface_draw_all_spots_xy(tr);
     }
 
+  
   // stop here if not at least 2 spots
   if(tr->number_spots<2)
     {
@@ -694,34 +744,34 @@ int tracking_interface_tracking_red_green_blue_spots(struct tracking_interface* 
       return 0;
     }
 
+  // get the color scores of the spots
+  tracking_interface_set_color_score(tr);
   
-  // check if the two spots are within reasonable distance
-  if(distance(tr->spot_mean_x[0],tr->spot_mean_y[0],tr->spot_mean_x[1],tr->spot_mean_y[1])>tr->max_distance_two_spots)
-    {
-      tracked_object_update_position(&tob,
-				     -1.0,
-				     -1.0,
-				     -1.0,
-				     microsecond_from_timespec(&tr->inter_buffer_duration));
-      return 0;
-    }
-  if(app_flow.draws_mode==ALL)
-    {
-      tracking_interface_draw_all_spots_xy(tr);
-    }
 
   if(app_flow.draws_mode==ONLY_USED_SPOTS)
     {
-      int i=0;
-      while(i<tr->number_spots)
-	{
-	  tracking_interface_draw_one_spot_xy(tr,i,1,0,0,3);
-	  i++;
-	}
-
-      //      tracking_interface_draw_one_spot_xy(tr,1,0,0,1,2); //tr->spot_mean_red[1]/255,tr->spot_mean_green[1]/255,tr->spot_mean_blue[1]/255,2);
-      //tracking_interface_draw_one_spot_xy(tr,2,0,1,0,1); //tr->spot_mean_red[2]/255,tr->spot_mean_green[2]/255,tr->spot_mean_blue[2]/255,1);
+      tracking_interface_draw_one_spot_xy(tr,tr->irs,1,0,0,3);
+      tracking_interface_draw_one_spot_xy(tr,tr->igs,0,1,0,3);
+      tracking_interface_draw_one_spot_xy(tr,tr->ibs,0,0,1,3);
     }
+
+
+  
+
+  /* // check if the two spots are within reasonable distance */
+  /* if(distance(tr->spot_mean_x[0],tr->spot_mean_y[0],tr->spot_mean_x[1],tr->spot_mean_y[1])>tr->max_distance_two_spots) */
+  /*   { */
+  /*     tracked_object_update_position(&tob, */
+  /* 				     -1.0, */
+  /* 				     -1.0, */
+  /* 				     -1.0, */
+  /* 				     microsecond_from_timespec(&tr->inter_buffer_duration)); */
+  /*     return 0; */
+  /*   } */
+
+
+
+
 
 
 #ifdef DEBUG_TRACKING
@@ -747,7 +797,58 @@ int tracking_interface_tracking_red_green_blue_spots(struct tracking_interface* 
 
 
 
+int tracking_interface_set_color_score(struct tracking_interface* tr)
+{
+  // function to get the color scores of spots based on their mean red, green and blue values
+  int i;
+  for(i=0;i<tr->number_spots;i++)
+    {
+      tr->spot_red_score[i]= tr->spot_mean_red[i]-((tr->spot_mean_green[i]+tr->spot_mean_blue[i])/2);
+      tr->spot_green_score[i]= tr->spot_mean_green[i]-((tr->spot_mean_red[i]+tr->spot_mean_blue[i])/2);;
+      tr->spot_blue_score[i]= tr->spot_mean_blue[i]-((tr->spot_mean_red[i]+tr->spot_mean_green[i])/2);;
+    }
 
+  for(i=0;i<tr->number_spots;i++)
+    tr->spot_taken[i]=0;
+
+  // find the red spot
+  double max=0;
+  for(i=0;i<tr->number_spots;i++)
+    { 
+      if(tr->spot_red_score[i]>max)
+	{
+	  tr->irs=i;
+	  max=tr->spot_red_score[i];
+	}
+    }
+  tr->spot_taken[tr->irs]=1;
+
+  // find green spot
+  max=0;
+  for(i=0;i<tr->number_spots;i++)
+    { 
+      if(tr->spot_green_score[i]>max&& tr->spot_taken[i]!=1)
+	{
+	  tr->igs=i;
+	  max=tr->spot_green_score[i];
+	}
+    }
+  tr->spot_taken[tr->igs]=1;
+
+  // find blue spot
+  max=0;
+  for(i=0;i<tr->number_spots;i++)
+    { 
+      if(tr->spot_blue_score[i]>max&&tr->spot_taken[i]!=1)
+	{
+	  tr->ibs=i;
+	  max=tr->spot_blue_score[i];
+	}
+    }
+  tr->spot_taken[tr->ibs]=1;
+ 
+  return 0;
+}
 
  
 int tracking_interface_sort_spots(struct tracking_interface* tr)

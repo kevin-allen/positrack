@@ -62,8 +62,8 @@ File with declarations of the main structures and functions used in positrack
 #define TRACKING_INTERFACE_LUMINANCE_THRESHOLD 50
 #define TRACKING_INTERFACE_WIDTH 860
 #define TRACKING_INTERFACE_HEIGHT 860
-#define TRACKING_INTERFACE_MAX_NUMBER_SPOTS 4 // was 2 before
-#define TRACKING_INTERFACE_MAX_NUMBER_SPOTS_CALLS 7
+#define TRACKING_INTERFACE_MAX_NUMBER_SPOTS 4 // was 2 before for black and white 2 spots detection
+#define TRACKING_INTERFACE_MAX_NUMBER_SPOTS_CALLS 6
 
 #define TRACKING_INTERFACE_MAX_MEAN_LUMINANCE_FOR_TRACKING 8/* 0 */
 #define TRACKING_INTERFACE_MAX_SPOT_SIZE 40000
@@ -236,8 +236,13 @@ struct tracking_interface
   double* spot_mean_red;
   double* spot_mean_green;
   double* spot_mean_blue;
-
-
+  double* spot_red_score;
+  double* spot_green_score;
+  double* spot_blue_score;
+  int* spot_taken;
+  int irs; // index red spot
+  int igs; // index green spot
+  int ibs; // index blue spot
   int index_largest_spot;
 };
 struct tracking_interface tr;
@@ -527,6 +532,8 @@ int tracking_interface_print_luminance_array(struct tracking_interface* tr);
 int tracking_interface_print_spot_array(struct tracking_interface* tr);
 int tracking_interface_print_position_to_file(struct tracking_interface* tr);
 int tracking_interface_clear_spot_data(struct tracking_interface* tr);
+int tracking_interface_set_color_score(struct tracking_interface* tr);
+
 /********************************
 defined in tracked_object.c
 ********************************/
