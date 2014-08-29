@@ -3,7 +3,7 @@ Initial notes when started the positrack project
 Features:
 
 1) runs on linux
-2) use IEEE 1394 interface because it is fast and used by many high-end cameras. Webcam might have been simpler and cheaper but I think IEEE 1394 cam might be better for accurate measurments. Webcams are better to work at home.
+2) use IEEE 1394 interface because it is fast and used by many high-end cameras.
 3) Linux has built in drivers for IEEE 1394.
 3) libdc1394 is the library that provides a complete high level application programming interface (API) for developers (me) who wish to control IEEE 1394 based cameras
     it seems to be the most popular,  has lesser GNU licence.

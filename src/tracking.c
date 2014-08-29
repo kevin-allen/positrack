@@ -61,58 +61,47 @@ int tracking_interface_init(struct tracking_interface* tr)
       fprintf(stderr, "problem allocating memory for tr->spot_mean_blue\n");
       return -1;
     }
-
   if((tr->spot_red_score=malloc(sizeof(double)*tr->max_number_spots))==NULL)
     {
       fprintf(stderr, "problem allocating memory for tr->spot_red_score\n");
       return -1;
     }
-
   if((tr->spot_green_score=malloc(sizeof(double)*tr->max_number_spots))==NULL)
     {
       fprintf(stderr, "problem allocating memory for tr->spot_green_score\n");
       return -1;
     }
-
   if((tr->spot_blue_score=malloc(sizeof(double)*tr->max_number_spots))==NULL)
     {
       fprintf(stderr, "problem allocating memory for tr->spot_blue_score\n");
       return -1;
     }
-
   if((tr->spot_taken=malloc(sizeof(double)*tr->max_number_spots))==NULL)
     {
       fprintf(stderr, "problem allocating memory for tr->spot_taken\n");
       return -1;
     }
-
   if((tr->spot_color=malloc(sizeof(enum color)*tr->max_number_spots))==NULL)
     {
       fprintf(stderr, "problem allocating memory for tr->spot_color\n");
       return -1;
     }
-
   if((tr->spot_distance_to_middle=malloc(sizeof(double)*tr->max_number_spots))==NULL)
     {
       fprintf(stderr, "problem allocating memory for tr->spot_distance_to_middle\n");
       return -1;
     }
-
-
   tr->luminance_threshold=TRACKING_INTERFACE_LUMINANCE_THRESHOLD;
-
   if((tr->lum=malloc(sizeof(double)*tr->width*tr->height))==NULL)
     {
       fprintf(stderr, "problem allocating memory for tr->lum\n");
       return -1;
     }
-
   if((tr->lum_tmp=malloc(sizeof(double)*tr->width*tr->height))==NULL)
     {
       fprintf(stderr, "problem allocating memory for tr->lum_tmp\n");
       return -1;
     }
-
   if((tr->spot=malloc(sizeof(int)*tr->width*tr->height))==NULL)
     {
       fprintf(stderr, "problem allocating memory for tr->spot\n");
@@ -128,7 +117,6 @@ int tracking_interface_init(struct tracking_interface* tr)
       fprintf(stderr, "problem allocating memory for tr->positive_pixel_y\n");
       return -1;
     }
-  
   tr->is_initialized=1;
   return 0;
 }
@@ -168,16 +156,14 @@ gboolean tracking()
 #ifdef DEBUG_TRACKING
   g_printerr("tracking(), tr.number_frames_tracked: %d\n",tr.number_frames_tracked);
 #endif
-
   if(tr.number_frames_tracked==0)
     clock_gettime(CLOCK_REALTIME, &tr.start_tracking_time); // get the time we start tracking
-
-
   if(widgets.tracking_running!=1)
     {
       tr.number_frames_tracked=0;
       return FALSE; // returning false will stop the loop
     }
+
   if(tr.skip_next_tick==1) // do nothing this time
     { // usefull with camera that changes their sampling rate
       // without asking us
@@ -242,7 +228,6 @@ gboolean tracking()
 	  return FALSE;
 	}
     }
-
   if(app_flow.trk_mode==RED_GREEN_BLUE_SPOTS)
     {
       if(tracking_interface_tracking_red_green_blue_spots(&tr)!=0)
@@ -252,10 +237,6 @@ gboolean tracking()
 	  return FALSE;
 	}
     }
-
-
-
-
   if(app_flow.pulse_valid_position==ON)
     {
       if(tob.last_valid==1)
@@ -273,18 +254,12 @@ gboolean tracking()
 			  comedi_device.aref,
 			  comedi_device.comedi_baseline);
     }
-  if(app_flow.video_source==USB_V4L2)
-    {
-      tracking_interface_free_buffer(&tr);
-    }
-
   // print the data to a file
   tracking_interface_print_position_to_file(&tr);
 
   clock_gettime(CLOCK_REALTIME, &tr.end_frame_tracking_time); // get the time we start tracking
   tr.frame_tracking_time_duration=diff(&tr.start_frame_tracking_time,&tr.end_frame_tracking_time);
   
-
 #ifdef DEBUG_TRACKING 
   g_printerr("offset: %d, buffer_duration: %ld, lum: %lf, waiting time: %d us, processing time: %d ms, current sampling rate: %.2lf Hz, interframe duration: %.2f ms, %d ms\n",
 	     tr.current_buffer_offset,
@@ -296,7 +271,7 @@ gboolean tracking()
 	     (int)((tr.tracking_time_duration.tv_sec*1000)+(tr.tracking_time_duration.tv_nsec/1000000.0)));
  #endif
   
-    /* // synchronization pulse goes down here */
+  /* // synchronization pulse goes down here */
   if(app_flow.synch_mode==COMEDI)
     {
       comedi_data_write(comedi_device.comedi_dev,
@@ -337,7 +312,8 @@ int tracking_interface_print_position_to_file(struct tracking_interface* tr)
     }
   if(app_flow.trk_mode==ONE_WHITE_SPOT)
     {
-      // fprintf(rec_file_data.fp,"%.2lf %.2lf %.2lf %d %.2lf %.2lf\n",-1.0,-1.0,-1.0,0,-1.0,-1.0);
+      // surely we need to implement this at some point
+      //fprintf(rec_file_data.fp,"%.2lf %.2lf %.2lf %d %.2lf %.2lf\n",-1.0,-1.0,-1.0,0,-1.0,-1.0);
     }
 
   if(app_flow.trk_mode==RED_GREEN_BLUE_SPOTS)
@@ -359,65 +335,16 @@ int tracking_interface_print_position_to_file(struct tracking_interface* tr)
 	      tr->spot_mean_x[tr->ibs],
 	      tr->spot_mean_y[tr->ibs]);
     }
-
-
 }
 
 int tracking_interface_get_buffer(struct tracking_interface* tr)
 {
   // choose where the buffer is coming from
-  if(app_flow.video_source==USB_V4L2)
-    {
-      tracking_interface_usb_v4l2_get_buffer(tr);
-    }
-  if(app_flow.video_source==FIREWIRE_COLOR || app_flow.video_source==FIREWIRE_BLACK_WHITE)
-    {
-      tracking_interface_firewire_get_buffer(tr);
-    }
+  tracking_interface_firewire_get_buffer(tr);
   return 0;
 }
 
-int tracking_interface_usb_v4l2_get_buffer(struct tracking_interface* tr)
-{
-#ifdef DEBUG_TRACKING
-  fprintf(stderr,"tracking_interface_usb_v4l2_get_buffer()\n");
-#endif
-  
-  GdkPixbuf *tmp_pixbuf;
-  clock_gettime(CLOCK_REALTIME, &tr->start_waiting_buffer_time); // get the time we start waiting
-  // get a sample
-  gst_inter.sample=gst_app_sink_pull_sample((GstAppSink*)gst_inter.appsink);
-  // get a buffer from sample
-  gst_inter.buffer=gst_sample_get_buffer(gst_inter.sample);
-  clock_gettime(CLOCK_REALTIME, &tr->end_waiting_buffer_time); // get the time we end waiting
-  tr->waiting_buffer_duration=diff(&tr->start_waiting_buffer_time,&tr->end_waiting_buffer_time);
-  
-  //get the time of buffer
-  tr->previous_buffer_time=tr->current_buffer_time;
-  GST_TIME_TO_TIMESPEC(GST_BUFFER_TIMESTAMP(gst_inter.buffer), tr->current_buffer_time);
-  //offset=frame number
-  tr->previous_buffer_offset=tr->current_buffer_offset;
-  tr->current_buffer_offset=GST_BUFFER_OFFSET(gst_inter.buffer);
-  //get a pixmap from each buffer
-  gst_buffer_map (gst_inter.buffer, &gst_inter.map, GST_MAP_READ);
-  // get a pixbuf based on the data in the map
-  tmp_pixbuf = gdk_pixbuf_new_from_data (gst_inter.map.data,
-      					 GDK_COLORSPACE_RGB, FALSE, 8,
-      					 tr->width, tr->height,
-      					 GST_ROUND_UP_4 (tr->width * 3), NULL, NULL);
-  // make a physical copy of the data from tmp_pixbuf
-  tr->pixbuf=gdk_pixbuf_copy(tmp_pixbuf);
-  // free the buffer
-  gst_buffer_unmap (gst_inter.buffer, &gst_inter.map);
-  gst_buffer_unref (gst_inter.buffer);
-  
-  //  probably needs to unref tmp_pixbuf //
-#ifdef DEBUG_TRACKING
-  fprintf(stderr,"tracking_interface_usb_v4l2_get_buffer() done\n");
-#endif
 
-  return 0;
-}
 int tracking_interface_firewire_get_buffer(struct tracking_interface* tr)
 {
 #ifdef DEBUG_TRACKING
@@ -442,21 +369,16 @@ int tracking_interface_firewire_get_buffer(struct tracking_interface* tr)
   fprintf(stderr,"previous buffer time: %d\n",microsecond_from_timespec(&tr->previous_buffer_time));
   fprintf(stderr,"current buffer time: %d\n",microsecond_from_timespec(&tr->current_buffer_time));
 #endif
-    
   //offset=frame number
   tr->previous_buffer_offset=tr->current_buffer_offset;
   tr->current_buffer_offset=fw_inter.frame->frames_behind;
-
   // Put that into GdkPixbuf
   if(tr->pixbuf!=NULL)
     g_object_unref(tr->pixbuf);
-  
-
   tr->pixbuf=gdk_pixbuf_new_from_data (fw_inter.rgb_frame->image,
 				       GDK_COLORSPACE_RGB, FALSE, 8,
 				       tr->width, tr->height,
 				       GST_ROUND_UP_4 (tr->width * 3), NULL, NULL);
-  
 #ifdef DEBUG_TRACKING
   fprintf(stderr,"tracking_interface_firewire_get_buffer() done\n");
 #endif
@@ -475,9 +397,7 @@ int tracking_interface_valid_buffer(struct tracking_interface* tr)
 #ifdef DEBUG_TRACKING
   g_printerr("tracking_interface_valid_buffer() %d\n",tr->number_frames_tracked);
 #endif
-
   int buffer_width, buffer_height,bits_per_sample;
-
   tr->n_channels=gdk_pixbuf_get_n_channels(tr->pixbuf);
   if(tr->n_channels!=3)
     {
@@ -491,13 +411,11 @@ int tracking_interface_valid_buffer(struct tracking_interface* tr)
       g_printerr("bits_per_sample should be 8 but it is %d\n",bits_per_sample);
       return -1;
     }
-
   if(gdk_pixbuf_get_has_alpha(tr->pixbuf))
     {
       g_printerr("gdk_pixbuf_get_has_alpha is TRUE but should be FALSE\n");
       return -1;
     }
-
   // check the size of the buffer
   buffer_width = gdk_pixbuf_get_width (tr->pixbuf);
   buffer_height = gdk_pixbuf_get_height (tr->pixbuf);
@@ -745,7 +663,6 @@ int tracking_interface_tracking_red_green_blue_spots(struct tracking_interface* 
       tracking_interface_draw_all_spots_xy(tr);
     }
 
-  
   // stop here if not at least 2 spots
   if(tr->number_spots<2)
     {
@@ -763,7 +680,6 @@ int tracking_interface_tracking_red_green_blue_spots(struct tracking_interface* 
   // eliminate spots when there are more than one of a given color, often caused by reflection
   tracking_eliminate_duplicate_color(tr);
   
-  fprintf(stderr,"irs: %d, igs: %d, ibs: %d\n",tr->irs,tr->igs,tr->ibs);
   if(app_flow.draws_mode==ONLY_USED_SPOTS)
     { 
       if(tr->irs!=-1)
@@ -789,9 +705,6 @@ int tracking_interface_tracking_red_green_blue_spots(struct tracking_interface* 
   tracking_interface_position_from_red_green_blue_spots(tr);
   tracking_interface_head_direction_from_red_green_blue_spots(tr);
   
-#ifdef DEBUG_TRACKING
-  g_printerr("x: %.2lf, y: %.2lf, hd: %.2lf\n",tr->x_object,tr->y_object,tr->head_direction_object);
-#endif
   tracked_object_update_position(&tob,
 				 tr->x_object, // x
 				 tr->y_object,
@@ -870,8 +783,6 @@ int tracking_interface_position_from_red_green_blue_spots(struct tracking_interf
   double mAngleRGB=60; // what should that be ?
   double mAngleRBG=60; // what should that be ?
 
-
-
   // if we got 3 colours
   if (Red_X != -1 && Green_X != -1 && Blue_X != -1)
     {
@@ -890,7 +801,6 @@ int tracking_interface_position_from_red_green_blue_spots(struct tracking_interf
       return;
     }
   
-  
   // if blue is missing
   if(Red_X != -1 && Blue_X == -1 && Green_X != -1)
     {
@@ -899,50 +809,37 @@ int tracking_interface_position_from_red_green_blue_spots(struct tracking_interf
       deltaRG_Y = Green_Y - Red_Y;
       deltaRG_Y = 0 - deltaRG_Y; // to be cartesian
       angleRG = heading(deltaRG_X,deltaRG_Y);
-      
       // get the angle R-positionHead (remove mAngleRG from angleRG, if smaller than 0, add 360.
       angleRHead = angleRG - mAngleBRG;
       if(angleRHead < 0)
 	{
 	  angleRHead += 360;
 	}
-      
       // find the distance RG
       distanceRG = distance(Red_X, Red_Y, Green_X, Green_Y);  
-      
       // find the distance R to head position, given we know the hypotenuse and the the angle RBHead.
       double angleRGHead = mAngleRBG/2; 
       double sinRGH = sin(angleRGHead * 3.14159265 / 180);  // angle should be in radian
       // degree * PI / 180
       distanceRHead = sinRGH * distanceRG;
-      //
-      // call a function that returns the point of the end of a vector
-      //
       FindEndVector(Red_X,Red_Y,angleRHead,distanceRHead,&tr->x_object,&tr->y_object);
       return;
     }
-  
-
 
   // if red is missing
   if(Red_X == -1 && Green_X != -1 && Blue_X != -1)
     {
- 
       // find the angle GB with function
       deltaBG_X = Green_X - Blue_X;
       deltaBG_Y = Green_Y - Blue_Y;
       deltaBG_Y = 0 - deltaBG_Y; // to be cartesian
-      
       angleBG = heading(deltaBG_X,deltaBG_Y);
-            
       // get the angle G-positionHead (add angleRGB to angleGB)
-      angleBHead = angleBG + mAngleRBG;
-      
+      angleBHead = angleBG + mAngleRBG;      
       if(angleBHead >= 360)
 	{
 	  angleBHead -= 360;
 	}
-      
       // find the distance GB
       distanceBG = distance(Blue_X, Blue_Y, Green_X, Green_Y);
       // find the distance G to head position, given we know the hypotenuse and the angle GBHead.
@@ -960,7 +857,6 @@ int tracking_interface_head_direction_from_red_green_blue_spots(struct tracking_
 
   // the parameters are the estimate position of the red, green and blue LEDs in the frame.
   // by default the value is -1, needs to have at least 2 points to calculate the head direction
-
   // use these variable names for simplicity of code
   double Red_X;
   double Red_Y;
@@ -979,7 +875,6 @@ int tracking_interface_head_direction_from_red_green_blue_spots(struct tracking_
       Red_X = -1.0;
       Red_Y = -1.0;
     }
-
   if(tr->igs!=-1)
     {
       Green_X = tr->spot_mean_x[tr->igs];
@@ -990,8 +885,6 @@ int tracking_interface_head_direction_from_red_green_blue_spots(struct tracking_
       Green_X = -1.0;
       Green_Y = -1.0;
     }
-
-
   if(tr->ibs!=-1)
     {
       Blue_X = tr->spot_mean_x[tr->ibs];
@@ -1007,36 +900,29 @@ int tracking_interface_head_direction_from_red_green_blue_spots(struct tracking_
   double deltaGR_X = 0;
   double deltaGR_Y = 0;
   double angleGR = 0;
-  
   double deltaRB_X = 0;
   double deltaRB_Y = 0;
   double angleRB = 0;
-  
   double deltaGB_X = 0;
   double deltaGB_Y = 0;
   double angleGB = 0;
-  
   double angleBGR = 0;
-
   double estimatedAngleBGR = 60; // mean to be kept between calls
 
   // the coordinates are in Microsoft style... need to be cartesian.
   // if we got the 3 colored spots available
   if (Red_X != -1 && Blue_X != -1 && Green_X != -1) 
     {
-      
       // find the angle BR
       deltaGR_X = Red_X - Green_X;
       deltaGR_Y = Red_Y - Green_Y;
       deltaGR_Y = 0 - deltaGR_Y;
       angleGR = heading(deltaGR_X,deltaGR_Y);
-      
       // find the angle BG
       deltaGB_X = Blue_X - Green_X;
       deltaGB_Y = Blue_Y - Green_Y;
       deltaGB_Y = 0 - deltaGB_Y;
       angleGB = heading(deltaGB_X,deltaGB_Y);
-            
       //find the angle GBR and the vector pointing east
       if (angleGB >= angleGR)
 	{
@@ -1046,7 +932,6 @@ int tracking_interface_head_direction_from_red_green_blue_spots(struct tracking_
 	{
 	  angleBGR = (angleGB + 360) - angleGR;
 	}
-      
       if (angleBGR > 180) // this could happen if there is some reflexion on the wall of error
 	// in detection of the green or red led
 	{
@@ -1056,7 +941,6 @@ int tracking_interface_head_direction_from_red_green_blue_spots(struct tracking_
 	{
 	  estimatedAngleBGR = angleBGR;  // set the estimate of angleGBR for samples where one LED is missing
 	}
-      
       // 3) add GBR/2 to the BR angle 
       tr->head_direction_object= angleGR + (angleBGR/2);
       if (tr->head_direction_object >= 360)
@@ -1065,11 +949,7 @@ int tracking_interface_head_direction_from_red_green_blue_spots(struct tracking_
 	}
       return 0;
     }
-  
-  
-  
-  
-  
+    
   // if the red light is missing
   if (Red_X == -1 && Blue_X != -1 && Green_X != -1)
     {
@@ -1078,7 +958,6 @@ int tracking_interface_head_direction_from_red_green_blue_spots(struct tracking_
       deltaGB_Y = Blue_Y - Green_Y;
       deltaGB_Y = 0 - deltaGB_Y;	// to work a la Descartes
       angleGB = heading(deltaGB_X,deltaGB_Y);
-
       // substract half the angle GBR ( we can only estimate the angle since R is missing)
       if (angleGB < estimatedAngleBGR/2)
 	{
@@ -1100,7 +979,6 @@ int tracking_interface_head_direction_from_red_green_blue_spots(struct tracking_
       deltaGR_Y = Red_Y - Green_Y;
       deltaGR_Y = 0 - deltaGR_Y;
       angleGR = heading(deltaGR_X,deltaGR_Y);
-      
       // add half the angle GBR ( we can only estimate the angle since R is missing)
       if (angleGR + (estimatedAngleBGR/2) > 359)
 	{
@@ -1123,18 +1001,15 @@ int tracking_interface_head_direction_from_red_green_blue_spots(struct tracking_
       deltaRB_Y = Blue_Y - Red_Y;
       deltaRB_Y = 0 - deltaRB_Y;  // to be cartesian
       angleRB = heading(deltaRB_X,deltaRB_Y);
-      
       // remove 90 deg and if negative, add 360
       if (angleRB < 90)
 	{
 	  tr->head_direction_object = angleRB  + 360 - 90;
 	}
-      
       else
 	{
 	  tr->head_direction_object = angleRB - 90;
 	}
-      
       return 0;
     }
   return 0;
@@ -1150,7 +1025,6 @@ int tracking_eliminate_duplicate_color(struct tracking_interface* tr)
       for(j=0;j<tr->number_spots;j++)
 	if(tr->spot_color[j]==i)
 	    sum++;
-      
       if(sum>1)
 	{  // find the index of the spot with minimum distance to center
 	  double min_distance=tr->width+tr->height; // something always bigger than a spot to middle
@@ -1162,7 +1036,6 @@ int tracking_eliminate_duplicate_color(struct tracking_interface* tr)
 		min_distance=tr->spot_distance_to_middle[j];
 	      }
 	  // turn distant spots of that color to black
-
 	  for(j=0;j<tr->number_spots;j++)
 	    if(tr->spot_color[j]==i&&j!=min_spot_index)
 	      tr->spot_color[j]=BLACK;
@@ -1181,7 +1054,6 @@ int tracking_eliminate_duplicate_color(struct tracking_interface* tr)
       if(tr->spot_color[i]==BLUE)
 	tr->ibs=i;
     }
-  
   return 0;
 }
 
@@ -1195,13 +1067,11 @@ int tracking_interface_set_color_score(struct tracking_interface* tr)
       tr->spot_green_score[i]= tr->spot_mean_green[i]-((tr->spot_mean_red[i]+tr->spot_mean_blue[i])/2);;
       tr->spot_blue_score[i]= tr->spot_mean_blue[i]-((tr->spot_mean_red[i]+tr->spot_mean_green[i])/2);;
     }
-
   for(i=0;i<tr->number_spots;i++)
     {
       tr->spot_taken[i]=0;
       tr->spot_color[i]=BLACK; // by default all black
     }
-
   // assign a color to all the spots
   for(i=0;i<tr->number_spots;i++)
     {
@@ -1214,8 +1084,6 @@ int tracking_interface_set_color_score(struct tracking_interface* tr)
       if(tr->spot_blue_score[i]>tr->spot_red_score[i] & tr->spot_blue_score[i]>tr->spot_green_score[i])
 	tr->spot_color[i]=BLUE;
     }
-
- 
   return 0;
 }
 
@@ -1273,7 +1141,6 @@ int tracking_interface_draw_one_spot_xy(struct tracking_interface* tr,int spot_i
 #endif
   if(tr->number_spots==0)
     return 0;
-  
   cairo_t * cr;
   cr = gdk_cairo_create(gtk_widget_get_window(widgets.trackingdrawingarea));
   cairo_set_line_width (cr, 5);
@@ -1359,7 +1226,6 @@ int tracking_interface_get_luminosity(struct tracking_interface* tr)
       // but pixels above threashold be far from max
       if(tr->lum[i]==255)tr->lum[i]=150;
     }
-
   
   //smooth_double_gaussian(tr->lum_tmp,tr->lum, tr->width, tr->height,0.3,-1); // sadly, this is too slow
   // might be worth trying out how a 2d fourier transform would be ???

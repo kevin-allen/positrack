@@ -103,11 +103,9 @@ enum color{
   BLUE = 3,
   BLACK = 4
 };
-
 enum videosource {
-  USB_V4L2 = 1,
-  FIREWIRE_BLACK_WHITE = 2,
-  FIREWIRE_COLOR = 3
+  FIREWIRE_BLACK_WHITE = 1,
+  FIREWIRE_COLOR = 2
 };
 enum tracking_mode {
   ONE_WHITE_SPOT = 1,
@@ -168,7 +166,7 @@ struct all_widget
   GtkWidget *comedi_synchronization_radiobutton;
   GtkWidget *singlewhitespot_radiobutton;
   GtkWidget *twowhitespots_radiobutton;
-  GtkWidget *usbcamera_radiobutton;
+  GtkWidget *redgreenbluespots_radiobutton;
   GtkWidget *firewirecamerablackwhite_radiobutton;
   GtkWidget *firewirecameracolor_radiobutton;
   GtkWidget *videoplayback_checkbutton;
