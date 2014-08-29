@@ -86,6 +86,17 @@ int tracking_interface_init(struct tracking_interface* tr)
       return -1;
     }
 
+  if((tr->spot_color=malloc(sizeof(enum color)*tr->max_number_spots))==NULL)
+    {
+      fprintf(stderr, "problem allocating memory for tr->spot_color\n");
+      return -1;
+    }
+
+  if((tr->spot_distance_to_middle=malloc(sizeof(double)*tr->max_number_spots))==NULL)
+    {
+      fprintf(stderr, "problem allocating memory for tr->spot_distance_to_middle\n");
+      return -1;
+    }
 
 
   tr->luminance_threshold=TRACKING_INTERFACE_LUMINANCE_THRESHOLD;
@@ -142,6 +153,8 @@ int tracking_interface_free(struct tracking_interface* tr)
   free(tr->spot_green_score);
   free(tr->spot_blue_score);
   free(tr->spot_taken);
+  free(tr->spot_color);
+  free(tr->spot_distance_to_middle);
   free(tr->positive_pixels_x);
   free(tr->positive_pixels_y);
   return 0;
@@ -746,47 +759,44 @@ int tracking_interface_tracking_red_green_blue_spots(struct tracking_interface* 
 
   // get the color scores of the spots
   tracking_interface_set_color_score(tr);
-  
 
+  // eliminate spots when there are more than one of a given color, often caused by reflection
+  tracking_eliminate_duplicate_color(tr);
+  
+  fprintf(stderr,"irs: %d, igs: %d, ibs: %d\n",tr->irs,tr->igs,tr->ibs);
   if(app_flow.draws_mode==ONLY_USED_SPOTS)
-    {
-      tracking_interface_draw_one_spot_xy(tr,tr->irs,1,0,0,3);
-      tracking_interface_draw_one_spot_xy(tr,tr->igs,0,1,0,3);
-      tracking_interface_draw_one_spot_xy(tr,tr->ibs,0,0,1,3);
+    { 
+      if(tr->irs!=-1)
+	tracking_interface_draw_one_spot_xy(tr,tr->irs,1,0,0,3);
+      if(tr->igs!=-1)
+	tracking_interface_draw_one_spot_xy(tr,tr->igs,0,1,0,3);
+      if(tr->ibs!=-1)
+	tracking_interface_draw_one_spot_xy(tr,tr->ibs,0,0,1,3);
     }
 
 
+  if(tr->irs==-1&&tr->igs==-1 || tr->irs==-1&&tr->ibs==-1  || tr->igs==-1&&tr->ibs==-1)
+    {
+      tracked_object_update_position(&tob,
+  				     -1.0,
+  				     -1.0,
+  				     -1.0,
+  				     microsecond_from_timespec(&tr->inter_buffer_duration));
+      return 0;
+    }
+
+  // we have at least 2 valid spots of 2 different color, need to calculate the head position and head direction
+  tracking_interface_position_from_red_green_blue_spots(tr);
+  tracking_interface_head_direction_from_red_green_blue_spots(tr);
   
-
-  /* // check if the two spots are within reasonable distance */
-  /* if(distance(tr->spot_mean_x[0],tr->spot_mean_y[0],tr->spot_mean_x[1],tr->spot_mean_y[1])>tr->max_distance_two_spots) */
-  /*   { */
-  /*     tracked_object_update_position(&tob, */
-  /* 				     -1.0, */
-  /* 				     -1.0, */
-  /* 				     -1.0, */
-  /* 				     microsecond_from_timespec(&tr->inter_buffer_duration)); */
-  /*     return 0; */
-  /*   } */
-
-
-
-
-
-
 #ifdef DEBUG_TRACKING
-  g_printerr("x1: %.2lf, y1: %.2lf, x2: %.2lf, y2: %.2lf\n",tr->spot_mean_x[0],tr->spot_mean_y[0],tr->spot_mean_x[1],tr->spot_mean_y[1]);
+  g_printerr("x: %.2lf, y: %.2lf, hd: %.2lf\n",tr->x_object,tr->y_object,tr->head_direction_object);
 #endif
   tracked_object_update_position(&tob,
-				 (tr->spot_mean_x[0]+tr->spot_mean_x[1])/2, // x
-				 (tr->spot_mean_y[0]+tr->spot_mean_y[1])/2, // y 
-				 heading(tr->spot_mean_x[1]-tr->spot_mean_x[0],tr->spot_mean_y[1]-tr->spot_mean_y[0]), // heading
+				 tr->x_object, // x
+				 tr->y_object,
+				 tr->head_direction_object,
 				 microsecond_from_timespec(&tr->inter_buffer_duration));
-
-
-
-
-
 
 
 #ifdef DEBUG_TRACKING
@@ -795,7 +805,389 @@ int tracking_interface_tracking_red_green_blue_spots(struct tracking_interface* 
   return 0;
 }
 
+int tracking_interface_position_from_red_green_blue_spots(struct tracking_interface* tr)
+{
 
+  // the parameters are the estimate position of the red, green and blue LEDs in the frame.
+  // by default the value is -1, needs to have at least 2 points to calculate the head direction
+
+  // use these variable names for simplicity of code
+  double Red_X;
+  double Red_Y;
+  double Green_X;
+  double Green_Y;
+  double Blue_X;
+  double Blue_Y;
+  tr->x_object=-1.0;
+  tr->y_object=-1.0;
+  if(tr->irs!=-1)
+    {
+      Red_X = tr->spot_mean_x[tr->irs];
+      Red_Y = tr->spot_mean_y[tr->irs];
+    }
+  else
+    {
+      Red_X = -1.0;
+      Red_Y = -1.0;
+    }
+
+  if(tr->igs!=-1)
+    {
+      Green_X = tr->spot_mean_x[tr->igs];
+      Green_Y = tr->spot_mean_y[tr->igs];
+    }
+  else
+    {
+      Green_X = -1.0;
+      Green_Y = -1.0;
+    }
+
+
+  if(tr->ibs!=-1)
+    {
+      Blue_X = tr->spot_mean_x[tr->ibs];
+      Blue_Y = tr->spot_mean_y[tr->ibs];
+    }
+  else
+    {
+      Blue_X = -1.0;
+      Blue_Y = -1.0;
+    }
+  double deltaRB_X = 0;
+  double deltaRB_Y = 0;
+  double angleRB = 0;
+  double angleRHead = 0;
+  double distanceRHead = 0;
+  double distanceRB = 0;
+  double deltaGB_X = 0;
+  double deltaGB_Y = 0;
+  double angleGB = 0;
+  double angleGHead = 0;
+  double distanceGHead = 0;
+  double distanceGB;
+  double midpoint_RG_X;
+  double midpoint_RG_Y;
+  double mAngleGRB=60; // what should that be ?
+  double mAngleRBG=60; // what should that be ?
+  double mAngleRGB=60; // what should that be ?
+
+
+
+  // if we got 3 colours
+  if (Red_X != -1 && Green_X != -1 && Blue_X != -1)
+    {
+      fprintf(stderr,"3 colour finding position\n");
+      // get the midpoint x between the two points
+      tr->x_object= (Red_X + Green_X)/2.0;
+      tr->y_object= (Red_Y + Green_Y)/2.0;
+      fprintf(stderr,"Red_X: %lf Green_X: %lf\n",Red_X,Green_X);
+      fprintf(stderr,"x_object: %lf y_object: %lf\n",tr->x_object,tr->y_object);
+      return;
+    }
+  
+  // if blue light is missing
+  if(Red_X != -1 && Green_X != -1 && Blue_X == -1)
+    {
+      // get the midpoint x between the two points
+      tr->x_object = (Red_X + Green_X)/2.0;
+      tr->y_object = (Red_Y + Green_Y)/2.0;
+      return;
+    }
+  
+  
+  // if green is missing
+  if(Red_X != -1 && Green_X == -1 && Blue_X != -1)
+    {
+      // find the angle RB with function
+      deltaRB_X = Blue_X - Red_X;
+      deltaRB_Y = Blue_Y - Red_Y;
+      deltaRB_Y = 0 - deltaRB_Y; // to be cartesian
+      angleRB = heading(deltaRB_X,deltaRB_Y);
+      
+      // get the angle R-positionHead (remove mAngleRB from angleRB, if smaller than 0, add 360.
+      angleRHead = angleRB - mAngleGRB;
+      if(angleRHead < 0)
+	{
+	  angleRHead += 360;
+	}
+      
+      // find the distance RB
+      distanceRB = distance(Red_X, Red_Y, Blue_X, Blue_Y);   //sqrt((deltaRB_X * deltaRB_X) + (deltaRB_Y * deltaRB_Y));
+      
+      // find the distance R to head position, given we know the hypotenuse and the the angle RBHead.
+      double angleRBHead = mAngleRBG/2; 
+      double sinRBH = sin(angleRBHead * 3.14159265 / 180);  // angle should be in radian
+      // degree * PI / 180
+      distanceRHead = sinRBH * distanceRB;
+      //
+      // call a function that returns the point of the end of a vector
+      //
+      FindEndVector(Red_X,Red_Y,angleRHead,distanceRHead,&tr->x_object,&tr->y_object);
+      return;
+      
+    }
+  
+  // if red is missing
+  if(Red_X == -1 && Green_X != -1 && Blue_X != -1)
+    {
+ 
+      // find the angle GB with function
+      deltaGB_X = Blue_X - Green_X;
+      deltaGB_Y = Blue_Y - Green_Y;
+      deltaGB_Y = 0 - deltaGB_Y; // to be cartesian
+      
+      angleGB = heading(deltaGB_X,deltaGB_Y);
+            
+      // get the angle G-positionHead (add angleRGB to angleGB)
+      angleGHead = angleGB + mAngleRGB;
+      
+      if(angleGHead >= 360)
+	{
+	  angleGHead -= 360;
+	}
+      
+      // find the distance GB
+      distanceGB = distance(Green_X, Green_Y, Blue_X, Blue_Y);
+      // find the distance G to head position, given we know the hypotenuse and the angle GBHead.
+      double angleGBHead = mAngleRBG/2;
+      double sinGBH = sin(angleGBHead * 3.14159265 / 180);
+      distanceGHead = sinGBH * distanceGB;
+      FindEndVector(Green_X,Green_Y,angleGHead,distanceGHead,&tr->x_object,&tr->y_object);
+      return;
+    }
+  
+  return 0;
+}
+int tracking_interface_head_direction_from_red_green_blue_spots(struct tracking_interface* tr)
+{
+
+  // the parameters are the estimate position of the red, green and blue LEDs in the frame.
+  // by default the value is -1, needs to have at least 2 points to calculate the head direction
+
+  // use these variable names for simplicity of code
+  double Red_X;
+  double Red_Y;
+  double Green_X;
+  double Green_Y;
+  double Blue_X;
+  double Blue_Y;
+  tr->head_direction_object=-1.0;
+  if(tr->irs!=-1)
+    {
+      Red_X = tr->spot_mean_x[tr->irs];
+      Red_Y = tr->spot_mean_y[tr->irs];
+    }
+  else
+    {
+      Red_X = -1.0;
+      Red_Y = -1.0;
+    }
+
+  if(tr->igs!=-1)
+    {
+      Green_X = tr->spot_mean_x[tr->igs];
+      Green_Y = tr->spot_mean_y[tr->igs];
+    }
+  else
+    {
+      Green_X = -1.0;
+      Green_Y = -1.0;
+    }
+
+
+  if(tr->ibs!=-1)
+    {
+      Blue_X = tr->spot_mean_x[tr->ibs];
+      Blue_Y = tr->spot_mean_y[tr->ibs];
+    }
+  else
+    {
+      Blue_X = -1.0;
+      Blue_Y = -1.0;
+    }
+
+  double angleHeadDirection = -1;
+  double deltaBR_X = 0;
+  double deltaBR_Y = 0;
+  double angleBR = 0;
+  
+  double deltaRG_X = 0;
+  double deltaRG_Y = 0;
+  double angleRG = 0;
+  
+  double deltaBG_X = 0;
+  double deltaBG_Y = 0;
+  double angleBG = 0;
+  
+  double angleGBR = 0;
+
+  double estimatedAngleGBR = 60; // mean to be kept between calls
+
+  // the coordinates are in Microsoft style... need to be cartesian.
+  // if we got the 3 colored spots available
+  if (Red_X != -1 && Green_X != -1 && Blue_X != -1) 
+    {
+      
+      // find the angle BR
+      deltaBR_X = Red_X - Blue_X;
+      deltaBR_Y = Red_Y - Blue_Y;
+      deltaBR_Y = 0 - deltaBR_Y;
+      angleBR = heading(deltaBR_X,deltaBR_Y);
+      
+      // find the angle BG
+      deltaBG_X = Green_X - Blue_X;
+      deltaBG_Y = Green_Y - Blue_Y;
+      deltaBG_Y = 0 - deltaBG_Y;
+      angleBG = heading(deltaBG_X,deltaBG_Y);
+            
+      //find the angle GBR and the vector pointing east
+      if (angleBG >= angleBR)
+	{
+	  angleGBR = angleBG - angleBR;
+	}
+      if (angleBG < angleBR)
+	{
+	  angleGBR = (angleBG + 360) - angleBR;
+	}
+      
+      if (angleGBR > 180) // this could happen if there is some reflexion on the wall of error
+	// in detection of the green or red led
+	{
+	  angleGBR = estimatedAngleGBR;
+	}
+      else
+	{
+	  estimatedAngleGBR = angleGBR;  // set the estimate of angleGBR for samples where one LED is missing
+	}
+      
+      // 3) add GBR/2 to the BR angle 
+      tr->head_direction_object= angleBR + (angleGBR/2);
+      if (tr->head_direction_object >= 360)
+	{
+	  tr->head_direction_object -= 360;
+	}
+      return 0;
+    }
+  
+  
+  
+  
+  
+  // if the red light is missing
+  if (Red_X == -1 && Green_X != -1 && Blue_X != -1)
+    {
+      // find the angle BG
+      deltaBG_X = Green_X - Blue_X;
+      deltaBG_Y = Green_Y - Blue_Y;
+      deltaBG_Y = 0 - deltaBG_Y;	// to work a la Descartes
+      angleBG = heading(deltaBG_X,deltaBG_Y);
+
+      // substract half the angle GBR ( we can only estimate the angle since R is missing)
+      if (angleBG < estimatedAngleGBR/2)
+	{
+	  tr->head_direction_object = (angleBG + 360) - (estimatedAngleGBR/2);
+	}
+      else
+	{
+	  tr->head_direction_object = angleBG - (estimatedAngleGBR/2);
+	}
+      return 0;
+    }
+	
+
+  // if the green is missing
+  if (Red_X != -1 && Green_X == -1 && Blue_X != -1)
+    {
+      // find the angle BR
+      deltaBR_X = Red_X - Blue_X;
+      deltaBR_Y = Red_Y - Blue_Y;
+      deltaBR_Y = 0 - deltaBR_Y;
+      angleBR = heading(deltaBR_X,deltaBR_Y);
+      
+      // add half the angle GBR ( we can only estimate the angle since R is missing)
+      if (angleBR + (estimatedAngleGBR/2) > 359)
+	{
+	  tr->head_direction_object = (angleBR + estimatedAngleGBR/2) - 360;
+	}
+      else
+	{
+	  tr->head_direction_object = angleBR + (estimatedAngleGBR/2);
+	}
+      return 0;
+    }
+  
+  //
+  // if the blue is missing
+  //
+  if (Blue_X == -1 && Red_X != -1 && Green_X != -1)
+    {
+      // find RG angle
+      deltaRG_X = Green_X - Red_X;
+      deltaRG_Y = Green_Y - Red_Y;
+      deltaRG_Y = 0 - deltaRG_Y;  // to be cartesian
+      angleRG = heading(deltaRG_X,deltaRG_Y);
+      
+      // remove 90 deg and if negative, add 360
+      if (angleRG < 90)
+	{
+	  tr->head_direction_object = angleRG  + 360 - 90;
+	}
+      
+      else
+	{
+	  tr->head_direction_object = angleRG - 90;
+	}
+      
+      return 0;
+    }
+    
+  return 0;
+}
+
+int tracking_eliminate_duplicate_color(struct tracking_interface* tr)
+{
+  int i,sum,j;
+  for(i=1;i<4;i++) // loop for 3 colors
+    {
+      // count how many spots were set to this color
+      sum=0;
+      for(j=0;j<tr->number_spots;j++)
+	if(tr->spot_color[j]==i)
+	    sum++;
+      
+      if(sum>1)
+	{  // find the index of the spot with minimum distance to center
+	  double min_distance=tr->width+tr->height; // something always bigger than a spot to middle
+	  int min_spot_index;
+	  for(j=0;j<tr->number_spots;j++)
+	    if(tr->spot_color[j]==i&&tr->spot_distance_to_middle[j]<min_distance)
+	      { 
+		min_spot_index=j;
+		min_distance=tr->spot_distance_to_middle[j];
+	      }
+	  // turn distant spots of that color to black
+
+	  for(j=0;j<tr->number_spots;j++)
+	    if(tr->spot_color[j]==i&&j!=min_spot_index)
+	      tr->spot_color[j]=BLACK;
+	}
+    }
+
+  tr->irs=-1;
+  tr->igs=-1;
+  tr->ibs=-1;
+  for(i=0;i<tr->number_spots;i++)
+    {
+      if(tr->spot_color[i]==RED)
+	tr->irs=i;
+      if(tr->spot_color[i]==GREEN)
+	tr->igs=i;
+      if(tr->spot_color[i]==BLUE)
+	tr->ibs=i;
+    }
+  
+  return 0;
+}
 
 int tracking_interface_set_color_score(struct tracking_interface* tr)
 {
@@ -809,43 +1201,24 @@ int tracking_interface_set_color_score(struct tracking_interface* tr)
     }
 
   for(i=0;i<tr->number_spots;i++)
-    tr->spot_taken[i]=0;
-
-  // find the red spot
-  double max=0;
-  for(i=0;i<tr->number_spots;i++)
-    { 
-      if(tr->spot_red_score[i]>max)
-	{
-	  tr->irs=i;
-	  max=tr->spot_red_score[i];
-	}
+    {
+      tr->spot_taken[i]=0;
+      tr->spot_color[i]=BLACK; // by default all black
     }
-  tr->spot_taken[tr->irs]=1;
 
-  // find green spot
-  max=0;
+  // assign a color to all the spots
   for(i=0;i<tr->number_spots;i++)
-    { 
-      if(tr->spot_green_score[i]>max&& tr->spot_taken[i]!=1)
-	{
-	  tr->igs=i;
-	  max=tr->spot_green_score[i];
-	}
+    {
+      if(tr->spot_red_score[i]>tr->spot_green_score[i] & tr->spot_red_score[i]>tr->spot_blue_score[i])
+	tr->spot_color[i]=RED;
+      
+      if(tr->spot_green_score[i]>tr->spot_red_score[i] & tr->spot_green_score[i]>tr->spot_blue_score[i])
+	tr->spot_color[i]=GREEN;
+      
+      if(tr->spot_blue_score[i]>tr->spot_red_score[i] & tr->spot_blue_score[i]>tr->spot_green_score[i])
+	tr->spot_color[i]=BLUE;
     }
-  tr->spot_taken[tr->igs]=1;
 
-  // find blue spot
-  max=0;
-  for(i=0;i<tr->number_spots;i++)
-    { 
-      if(tr->spot_blue_score[i]>max&&tr->spot_taken[i]!=1)
-	{
-	  tr->ibs=i;
-	  max=tr->spot_blue_score[i];
-	}
-    }
-  tr->spot_taken[tr->ibs]=1;
  
   return 0;
 }
@@ -858,11 +1231,13 @@ int tracking_interface_sort_spots(struct tracking_interface* tr)
   int spp[TRACKING_INTERFACE_MAX_NUMBER_SPOTS];
   int spx[TRACKING_INTERFACE_MAX_NUMBER_SPOTS];
   int spy[TRACKING_INTERFACE_MAX_NUMBER_SPOTS];
-  int smx[TRACKING_INTERFACE_MAX_NUMBER_SPOTS];
-  int smy[TRACKING_INTERFACE_MAX_NUMBER_SPOTS];
-  int smr[TRACKING_INTERFACE_MAX_NUMBER_SPOTS];
-  int smg[TRACKING_INTERFACE_MAX_NUMBER_SPOTS];
-  int smb[TRACKING_INTERFACE_MAX_NUMBER_SPOTS];
+  double smx[TRACKING_INTERFACE_MAX_NUMBER_SPOTS];
+  double smy[TRACKING_INTERFACE_MAX_NUMBER_SPOTS];
+  double smr[TRACKING_INTERFACE_MAX_NUMBER_SPOTS];
+  double smg[TRACKING_INTERFACE_MAX_NUMBER_SPOTS];
+  double smb[TRACKING_INTERFACE_MAX_NUMBER_SPOTS];
+  double sdm[TRACKING_INTERFACE_MAX_NUMBER_SPOTS];
+
   int i,maxi;
   
   for(i=0;i<tr->number_spots;i++)
@@ -876,6 +1251,7 @@ int tracking_interface_sort_spots(struct tracking_interface* tr)
       smr[i]=tr->spot_mean_red[maxi];
       smg[i]=tr->spot_mean_green[maxi];
       smb[i]=tr->spot_mean_blue[maxi];
+      sdm[i]=tr->spot_distance_to_middle[maxi];
       tr->spot_positive_pixels[maxi]=-1; // make sure not pick again
     }
   
@@ -889,6 +1265,7 @@ int tracking_interface_sort_spots(struct tracking_interface* tr)
       tr->spot_mean_red[i]=smr[i];
       tr->spot_mean_green[i]=smg[i];
       tr->spot_mean_blue[i]=smb[i];
+      tr->spot_distance_to_middle[i]=sdm[i];
     }
 }
 
@@ -1055,7 +1432,7 @@ int tracking_interface_find_spots_recursive(struct tracking_interface* tr)
       // get the summary of the spot, from the positive_pixels
       tracking_interface_spot_summary(tr);
 #ifdef DEBUG_TRACKING
-      fprintf(stderr,"spot: %d, num_pix: %d, peakx: %d, peaky: %d, peak_mean_x: %lf, peak_mean_y: %lf, peak_mean_red: %lf, peak_mean_green: %lf, peak_mean_blue: %lf\n",
+      fprintf(stderr,"spot: %d, num_pix: %d, peakx: %d, peaky: %d, mean_x: %lf, mean_y: %lf, mean_red: %lf, mean_green: %lf, mean_blue: %lf dist_mid: %lf color: %d\n",
 	      tr->number_spots,
 	      tr->spot_positive_pixels[tr->number_spots],
 	      tr->spot_peak_x[tr->number_spots],
@@ -1064,7 +1441,9 @@ int tracking_interface_find_spots_recursive(struct tracking_interface* tr)
 	      tr->spot_mean_y[tr->number_spots],
 	      tr->spot_mean_red[tr->number_spots],
 	      tr->spot_mean_green[tr->number_spots],
-	      tr->spot_mean_blue[tr->number_spots]);
+	      tr->spot_mean_blue[tr->number_spots],
+	      tr->spot_distance_to_middle[tr->number_spots],
+	      tr->spot_color[tr->number_spots]);
 #endif
       //tracking_interface_draw_spot(tr); // if you want to see the spots
       
@@ -1287,6 +1666,12 @@ int tracking_interface_spot_summary(struct tracking_interface* tr)
   tr->spot_mean_red[si]=(double)sum_red/(double)tr->number_positive_pixels;
   tr->spot_mean_green[si]=(double)sum_green/(double)tr->number_positive_pixels;
   tr->spot_mean_blue[si]=(double)sum_blue/(double)tr->number_positive_pixels;
+
+
+  /***************************************
+  distance from spot to middle of image 
+  ****************************************/
+  tr->spot_distance_to_middle[si]=distance(tr->spot_mean_x[si],tr->spot_mean_y[si], (double)tr->width/2, (double)tr->height/2);
   return 0;
 }
 
@@ -1557,4 +1942,95 @@ int tracking_interface_clear_spot_data(struct tracking_interface* tr)
       tr->spot_mean_blue[i]=-1.0;
     }
   tr->number_spots=0;
+}
+
+
+/**********FindEndVector************************************************
+- calculate the coordinates of a point given the point of origin, the length, and the
+  angle of the vector
+- returns the value in end_x and end_y
+- IMPORTANT : the angle of the vector is as follow : East = 0, North = 90 etc ( see Hux_Heading function)
+			**** the coordinates returned are for the windows system of coordinates
+				 These are not Cartesian coordinates...
+**************************************************************************************/
+void FindEndVector(double start_x, double start_y, double angle, double length, double* end_x, double* end_y)
+{
+  double add_x = 0;
+  double add_y = 0;
+  double sub_x = 0;
+  double sub_y = 0;
+  *end_x = 5;
+  *end_y = 5;
+  
+  if (angle == 0)
+    {
+      *end_x = start_x + length;
+      *end_y = start_y;
+      return;
+    }
+  
+  if ((angle > 0) && (angle < 90))
+    {
+      add_x = cos(angle * 3.14159265 / 180) * length;
+      sub_y = sin(angle * 3.14159265 / 180) * length;  // for window style coordinates it is substration
+      *end_x = start_x + add_x;
+      *end_y = start_y - sub_y; // for window style coordinates it is a substration
+      return;
+    }
+  if (angle == 90)
+    {
+      *end_x = start_x;
+      *end_y = start_y - length; // for window style coordinates it is a substration
+      return;
+    }
+  
+  if ((angle > 90) && (angle < 180))
+    {
+      angle = 180 - angle; // to get the angle of a right triangle with x axis
+      sub_x = cos(angle * 3.14159265 / 180) * length;
+      sub_y = sin(angle * 3.14159265 / 180) * length;   // for window style coordinates it is a substration
+      *end_x = start_x - sub_x;
+      *end_y = start_y - sub_y;       // for window style coordinates it is a substration
+      return;
+    }
+  
+  if (angle == 180)
+    {
+      *end_x = start_x - length;
+      *end_y = start_y;
+      return;
+    }
+  
+  if ((angle > 180) && (angle < 270))
+    {
+      angle = angle - 180;
+      sub_x = cos(angle * 3.14159265 / 180) * length;
+      add_y = sin(angle * 3.14159265 / 180) * length;   // for window style coordinates it is an addition
+      *end_x = start_x - sub_x;
+      *end_y = start_y + add_y;    // for window style coordinates it is an addition
+      return;
+    }
+  
+  if (angle == 270)
+    {
+      *end_x = start_x;
+      *end_y = start_y + length;    // for window style coordinates it is an addition
+      return;
+    }
+  
+  if ((angle > 270) && (angle < 360))
+    {
+      angle = 360 - angle;
+      add_x = cos(angle * 3.14159265 / 180) * length;
+      add_y = sin(angle * 3.14159265 / 180) * length;  // for window style coordinates it is an addition
+      *end_x = start_x + add_x;
+      *end_y = start_y + add_y;   // for window style coordinates it is an addition
+      return;
+    }
+  
+  // if more than one point is missing
+  *end_x = -1;
+  *end_y = -1;
+  
+  return;
 }

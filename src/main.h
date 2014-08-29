@@ -97,6 +97,13 @@ File with declarations of the main structures and functions used in positrack
 /***********************************************************************************
  structure that holds all the gui widgets that we need to control during execution
 ***********************************************************************************/
+enum color{
+  RED = 1,
+  GREEN = 2,
+  BLUE = 3,
+  BLACK = 4
+};
+
 enum videosource {
   USB_V4L2 = 1,
   FIREWIRE_BLACK_WHITE = 2,
@@ -240,10 +247,15 @@ struct tracking_interface
   double* spot_green_score;
   double* spot_blue_score;
   int* spot_taken;
+  enum color* spot_color;
+  double* spot_distance_to_middle;
   int irs; // index red spot
   int igs; // index green spot
   int ibs; // index blue spot
   int index_largest_spot;
+  double x_object;
+  double y_object;
+  double head_direction_object;
 };
 struct tracking_interface tr;
 
@@ -533,6 +545,9 @@ int tracking_interface_print_spot_array(struct tracking_interface* tr);
 int tracking_interface_print_position_to_file(struct tracking_interface* tr);
 int tracking_interface_clear_spot_data(struct tracking_interface* tr);
 int tracking_interface_set_color_score(struct tracking_interface* tr);
+int tracking_interface_position_from_red_green_blue_spots(struct tracking_interface* tr);
+int tracking_interface_head_direction_from_red_green_blue_spots(struct tracking_interface* tr);
+int tracking_eliminate_duplicate_color(struct tracking_interface* tr);
 
 /********************************
 defined in tracked_object.c
@@ -578,6 +593,6 @@ double distance(double x1, double y1, double x2, double y2);
 double heading (double delta_x, double delta_y);
 void smooth_double_gaussian(double* array,double* out, int x_size,int y_size, double smooth, double invalid);
 void gaussian_kernel(double* kernel,int x_size,int y_size, double standard_deviation);
-
+void FindEndVector(double start_x, double start_y, double angle, double length, double* end_x, double* end_y);
 // for stimulation
 int timespec_first_larger(struct timespec* t1, struct timespec* t2);

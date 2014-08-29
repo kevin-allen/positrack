@@ -747,7 +747,7 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
       app_flow->drawo_mode=ONE_BLACK_DOT;
       printf("draw object mode: %s\n",drawobject_mode);
     }
-  if (strcmp(drawobject_mode, "NO_DOT") == 0) 
+  else if (strcmp(drawobject_mode, "NO_DOT") == 0) 
     {
       app_flow->drawo_mode=NO_DOT;
       printf("draw object mode: %s\n",drawobject_mode);
@@ -758,9 +758,6 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
       main_app_print_example_config_file(app_flow);
       return -1;
     }
-
-
-
 
   if (strcmp(pulsevalid_position, "ON") == 0) 
     {
