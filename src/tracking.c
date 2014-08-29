@@ -798,7 +798,6 @@ int tracking_interface_tracking_red_green_blue_spots(struct tracking_interface* 
 				 tr->head_direction_object,
 				 microsecond_from_timespec(&tr->inter_buffer_duration));
 
-
 #ifdef DEBUG_TRACKING
   g_printerr("tracking_interface_tracking_red_green_blue_spots() done\n");
 #endif
@@ -853,106 +852,104 @@ int tracking_interface_position_from_red_green_blue_spots(struct tracking_interf
       Blue_X = -1.0;
       Blue_Y = -1.0;
     }
-  double deltaRB_X = 0;
-  double deltaRB_Y = 0;
-  double angleRB = 0;
+  double deltaRG_X = 0;
+  double deltaRG_Y = 0;
+  double angleRG = 0;
   double angleRHead = 0;
   double distanceRHead = 0;
-  double distanceRB = 0;
-  double deltaGB_X = 0;
-  double deltaGB_Y = 0;
-  double angleGB = 0;
-  double angleGHead = 0;
-  double distanceGHead = 0;
-  double distanceGB;
-  double midpoint_RG_X;
-  double midpoint_RG_Y;
-  double mAngleGRB=60; // what should that be ?
-  double mAngleRBG=60; // what should that be ?
+  double distanceRG = 0;
+  double deltaBG_X = 0;
+  double deltaBG_Y = 0;
+  double angleBG = 0;
+  double angleBHead = 0;
+  double distanceBHead = 0;
+  double distanceBG;
+  double midpoint_RB_X;
+  double midpoint_RB_Y;
+  double mAngleBRG=60; // what should that be ?
   double mAngleRGB=60; // what should that be ?
+  double mAngleRBG=60; // what should that be ?
 
 
 
   // if we got 3 colours
   if (Red_X != -1 && Green_X != -1 && Blue_X != -1)
     {
-      fprintf(stderr,"3 colour finding position\n");
       // get the midpoint x between the two points
-      tr->x_object= (Red_X + Green_X)/2.0;
-      tr->y_object= (Red_Y + Green_Y)/2.0;
-      fprintf(stderr,"Red_X: %lf Green_X: %lf\n",Red_X,Green_X);
-      fprintf(stderr,"x_object: %lf y_object: %lf\n",tr->x_object,tr->y_object);
+      tr->x_object= (Red_X + Blue_X)/2.0;
+      tr->y_object= (Red_Y + Blue_Y)/2.0;
       return;
     }
   
-  // if blue light is missing
-  if(Red_X != -1 && Green_X != -1 && Blue_X == -1)
+  // if green light is missing
+  if(Red_X != -1 && Blue_X != -1 && Green_X == -1)
     {
       // get the midpoint x between the two points
-      tr->x_object = (Red_X + Green_X)/2.0;
-      tr->y_object = (Red_Y + Green_Y)/2.0;
+      tr->x_object = (Red_X + Blue_X)/2.0;
+      tr->y_object = (Red_Y + Blue_Y)/2.0;
       return;
     }
   
   
-  // if green is missing
-  if(Red_X != -1 && Green_X == -1 && Blue_X != -1)
+  // if blue is missing
+  if(Red_X != -1 && Blue_X == -1 && Green_X != -1)
     {
-      // find the angle RB with function
-      deltaRB_X = Blue_X - Red_X;
-      deltaRB_Y = Blue_Y - Red_Y;
-      deltaRB_Y = 0 - deltaRB_Y; // to be cartesian
-      angleRB = heading(deltaRB_X,deltaRB_Y);
+      // find the angle RG with function
+      deltaRG_X = Green_X - Red_X;
+      deltaRG_Y = Green_Y - Red_Y;
+      deltaRG_Y = 0 - deltaRG_Y; // to be cartesian
+      angleRG = heading(deltaRG_X,deltaRG_Y);
       
-      // get the angle R-positionHead (remove mAngleRB from angleRB, if smaller than 0, add 360.
-      angleRHead = angleRB - mAngleGRB;
+      // get the angle R-positionHead (remove mAngleRG from angleRG, if smaller than 0, add 360.
+      angleRHead = angleRG - mAngleBRG;
       if(angleRHead < 0)
 	{
 	  angleRHead += 360;
 	}
       
-      // find the distance RB
-      distanceRB = distance(Red_X, Red_Y, Blue_X, Blue_Y);   //sqrt((deltaRB_X * deltaRB_X) + (deltaRB_Y * deltaRB_Y));
+      // find the distance RG
+      distanceRG = distance(Red_X, Red_Y, Green_X, Green_Y);  
       
       // find the distance R to head position, given we know the hypotenuse and the the angle RBHead.
-      double angleRBHead = mAngleRBG/2; 
-      double sinRBH = sin(angleRBHead * 3.14159265 / 180);  // angle should be in radian
+      double angleRGHead = mAngleRBG/2; 
+      double sinRGH = sin(angleRGHead * 3.14159265 / 180);  // angle should be in radian
       // degree * PI / 180
-      distanceRHead = sinRBH * distanceRB;
+      distanceRHead = sinRGH * distanceRG;
       //
       // call a function that returns the point of the end of a vector
       //
       FindEndVector(Red_X,Red_Y,angleRHead,distanceRHead,&tr->x_object,&tr->y_object);
       return;
-      
     }
   
+
+
   // if red is missing
   if(Red_X == -1 && Green_X != -1 && Blue_X != -1)
     {
  
       // find the angle GB with function
-      deltaGB_X = Blue_X - Green_X;
-      deltaGB_Y = Blue_Y - Green_Y;
-      deltaGB_Y = 0 - deltaGB_Y; // to be cartesian
+      deltaBG_X = Green_X - Blue_X;
+      deltaBG_Y = Green_Y - Blue_Y;
+      deltaBG_Y = 0 - deltaBG_Y; // to be cartesian
       
-      angleGB = heading(deltaGB_X,deltaGB_Y);
+      angleBG = heading(deltaBG_X,deltaBG_Y);
             
       // get the angle G-positionHead (add angleRGB to angleGB)
-      angleGHead = angleGB + mAngleRGB;
+      angleBHead = angleBG + mAngleRBG;
       
-      if(angleGHead >= 360)
+      if(angleBHead >= 360)
 	{
-	  angleGHead -= 360;
+	  angleBHead -= 360;
 	}
       
       // find the distance GB
-      distanceGB = distance(Green_X, Green_Y, Blue_X, Blue_Y);
+      distanceBG = distance(Blue_X, Blue_Y, Green_X, Green_Y);
       // find the distance G to head position, given we know the hypotenuse and the angle GBHead.
-      double angleGBHead = mAngleRBG/2;
-      double sinGBH = sin(angleGBHead * 3.14159265 / 180);
-      distanceGHead = sinGBH * distanceGB;
-      FindEndVector(Green_X,Green_Y,angleGHead,distanceGHead,&tr->x_object,&tr->y_object);
+      double angleBGHead = mAngleBRG/2;
+      double sinBGH = sin(angleBGHead * 3.14159265 / 180);
+      distanceBHead = sinBGH * distanceBG;
+      FindEndVector(Blue_X,Blue_Y,angleBHead,distanceBHead,&tr->x_object,&tr->y_object);
       return;
     }
   
@@ -1007,61 +1004,61 @@ int tracking_interface_head_direction_from_red_green_blue_spots(struct tracking_
     }
 
   double angleHeadDirection = -1;
-  double deltaBR_X = 0;
-  double deltaBR_Y = 0;
-  double angleBR = 0;
+  double deltaGR_X = 0;
+  double deltaGR_Y = 0;
+  double angleGR = 0;
   
-  double deltaRG_X = 0;
-  double deltaRG_Y = 0;
-  double angleRG = 0;
+  double deltaRB_X = 0;
+  double deltaRB_Y = 0;
+  double angleRB = 0;
   
-  double deltaBG_X = 0;
-  double deltaBG_Y = 0;
-  double angleBG = 0;
+  double deltaGB_X = 0;
+  double deltaGB_Y = 0;
+  double angleGB = 0;
   
-  double angleGBR = 0;
+  double angleBGR = 0;
 
-  double estimatedAngleGBR = 60; // mean to be kept between calls
+  double estimatedAngleBGR = 60; // mean to be kept between calls
 
   // the coordinates are in Microsoft style... need to be cartesian.
   // if we got the 3 colored spots available
-  if (Red_X != -1 && Green_X != -1 && Blue_X != -1) 
+  if (Red_X != -1 && Blue_X != -1 && Green_X != -1) 
     {
       
       // find the angle BR
-      deltaBR_X = Red_X - Blue_X;
-      deltaBR_Y = Red_Y - Blue_Y;
-      deltaBR_Y = 0 - deltaBR_Y;
-      angleBR = heading(deltaBR_X,deltaBR_Y);
+      deltaGR_X = Red_X - Green_X;
+      deltaGR_Y = Red_Y - Green_Y;
+      deltaGR_Y = 0 - deltaGR_Y;
+      angleGR = heading(deltaGR_X,deltaGR_Y);
       
       // find the angle BG
-      deltaBG_X = Green_X - Blue_X;
-      deltaBG_Y = Green_Y - Blue_Y;
-      deltaBG_Y = 0 - deltaBG_Y;
-      angleBG = heading(deltaBG_X,deltaBG_Y);
+      deltaGB_X = Blue_X - Green_X;
+      deltaGB_Y = Blue_Y - Green_Y;
+      deltaGB_Y = 0 - deltaGB_Y;
+      angleGB = heading(deltaGB_X,deltaGB_Y);
             
       //find the angle GBR and the vector pointing east
-      if (angleBG >= angleBR)
+      if (angleGB >= angleGR)
 	{
-	  angleGBR = angleBG - angleBR;
+	  angleBGR = angleGB - angleGR;
 	}
-      if (angleBG < angleBR)
+      if (angleGB < angleGR)
 	{
-	  angleGBR = (angleBG + 360) - angleBR;
+	  angleBGR = (angleGB + 360) - angleGR;
 	}
       
-      if (angleGBR > 180) // this could happen if there is some reflexion on the wall of error
+      if (angleBGR > 180) // this could happen if there is some reflexion on the wall of error
 	// in detection of the green or red led
 	{
-	  angleGBR = estimatedAngleGBR;
+	  angleBGR = estimatedAngleBGR;
 	}
       else
 	{
-	  estimatedAngleGBR = angleGBR;  // set the estimate of angleGBR for samples where one LED is missing
+	  estimatedAngleBGR = angleBGR;  // set the estimate of angleGBR for samples where one LED is missing
 	}
       
       // 3) add GBR/2 to the BR angle 
-      tr->head_direction_object= angleBR + (angleGBR/2);
+      tr->head_direction_object= angleGR + (angleBGR/2);
       if (tr->head_direction_object >= 360)
 	{
 	  tr->head_direction_object -= 360;
@@ -1074,44 +1071,44 @@ int tracking_interface_head_direction_from_red_green_blue_spots(struct tracking_
   
   
   // if the red light is missing
-  if (Red_X == -1 && Green_X != -1 && Blue_X != -1)
+  if (Red_X == -1 && Blue_X != -1 && Green_X != -1)
     {
       // find the angle BG
-      deltaBG_X = Green_X - Blue_X;
-      deltaBG_Y = Green_Y - Blue_Y;
-      deltaBG_Y = 0 - deltaBG_Y;	// to work a la Descartes
-      angleBG = heading(deltaBG_X,deltaBG_Y);
+      deltaGB_X = Blue_X - Green_X;
+      deltaGB_Y = Blue_Y - Green_Y;
+      deltaGB_Y = 0 - deltaGB_Y;	// to work a la Descartes
+      angleGB = heading(deltaGB_X,deltaGB_Y);
 
       // substract half the angle GBR ( we can only estimate the angle since R is missing)
-      if (angleBG < estimatedAngleGBR/2)
+      if (angleGB < estimatedAngleBGR/2)
 	{
-	  tr->head_direction_object = (angleBG + 360) - (estimatedAngleGBR/2);
+	  tr->head_direction_object = (angleGB + 360) - (estimatedAngleBGR/2);
 	}
       else
 	{
-	  tr->head_direction_object = angleBG - (estimatedAngleGBR/2);
+	  tr->head_direction_object = angleGB - (estimatedAngleBGR/2);
 	}
       return 0;
     }
 	
 
   // if the green is missing
-  if (Red_X != -1 && Green_X == -1 && Blue_X != -1)
+  if (Red_X != -1 && Blue_X == -1 && Green_X != -1)
     {
       // find the angle BR
-      deltaBR_X = Red_X - Blue_X;
-      deltaBR_Y = Red_Y - Blue_Y;
-      deltaBR_Y = 0 - deltaBR_Y;
-      angleBR = heading(deltaBR_X,deltaBR_Y);
+      deltaGR_X = Red_X - Green_X;
+      deltaGR_Y = Red_Y - Green_Y;
+      deltaGR_Y = 0 - deltaGR_Y;
+      angleGR = heading(deltaGR_X,deltaGR_Y);
       
       // add half the angle GBR ( we can only estimate the angle since R is missing)
-      if (angleBR + (estimatedAngleGBR/2) > 359)
+      if (angleGR + (estimatedAngleBGR/2) > 359)
 	{
-	  tr->head_direction_object = (angleBR + estimatedAngleGBR/2) - 360;
+	  tr->head_direction_object = (angleGR + estimatedAngleBGR/2) - 360;
 	}
       else
 	{
-	  tr->head_direction_object = angleBR + (estimatedAngleGBR/2);
+	  tr->head_direction_object = angleGR + (estimatedAngleBGR/2);
 	}
       return 0;
     }
@@ -1119,28 +1116,27 @@ int tracking_interface_head_direction_from_red_green_blue_spots(struct tracking_
   //
   // if the blue is missing
   //
-  if (Blue_X == -1 && Red_X != -1 && Green_X != -1)
+  if (Green_X == -1 && Red_X != -1 && Blue_X != -1)
     {
       // find RG angle
-      deltaRG_X = Green_X - Red_X;
-      deltaRG_Y = Green_Y - Red_Y;
-      deltaRG_Y = 0 - deltaRG_Y;  // to be cartesian
-      angleRG = heading(deltaRG_X,deltaRG_Y);
+      deltaRB_X = Blue_X - Red_X;
+      deltaRB_Y = Blue_Y - Red_Y;
+      deltaRB_Y = 0 - deltaRB_Y;  // to be cartesian
+      angleRB = heading(deltaRB_X,deltaRB_Y);
       
       // remove 90 deg and if negative, add 360
-      if (angleRG < 90)
+      if (angleRB < 90)
 	{
-	  tr->head_direction_object = angleRG  + 360 - 90;
+	  tr->head_direction_object = angleRB  + 360 - 90;
 	}
       
       else
 	{
-	  tr->head_direction_object = angleRG - 90;
+	  tr->head_direction_object = angleRB - 90;
 	}
       
       return 0;
     }
-    
   return 0;
 }
 
