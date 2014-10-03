@@ -10,6 +10,7 @@ the Free Software Foundation, either version 3 of the License, or
 
 Requirements:
 
+libX11-devel
 gtk2-devel
 gstreamer1-devel
 gstreamer1-plugins-base-devel
