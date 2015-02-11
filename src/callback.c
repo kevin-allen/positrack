@@ -208,10 +208,15 @@ void start_video()
 #endif
       if(fw_inter.is_initialized!=1)
 	{
-	  firewire_camera_interface_init(&fw_inter);
-#ifdef DEBUG_CALLBACK
+	  if(firewire_camera_interface_init(&fw_inter)!=0)
+	    {
+	      fprintf(stderr,"problem with firewire_camera_interface_init\n");
+	      fprintf(stderr,"check that you have the right permission on /dev/fw0\n");
+	      return;
+	    }
+	  //#ifdef DEBUG_CALLBACK
 	  firewire_camera_interface_print_info(&fw_inter);
-#endif
+	  //#endif
 	}
       firewire_camera_interface_start_transmission(&fw_inter);
       // let the pipeline ask for new data via a signal to cb_need_data function

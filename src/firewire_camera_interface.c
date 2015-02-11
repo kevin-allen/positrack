@@ -154,18 +154,17 @@ int firewire_camera_interface_free(struct firewire_camera_interface* cam)
 #ifdef DEBUG_CAMERA
   fprintf(stderr,"firewire_camera_interface_free\n");
 #endif
-  if(cam->is_initialized==1)
+  if(cam->is_initialized!=1)
+    return 1;
+  dc1394_video_set_transmission(cam->camera, DC1394_OFF);
+  dc1394_capture_stop(cam->camera);
+  dc1394_camera_free(cam->camera);
+  if(app_flow.video_source==FIREWIRE_COLOR) 
     {
-      dc1394_video_set_transmission(cam->camera, DC1394_OFF);
-      dc1394_capture_stop(cam->camera);
-      dc1394_camera_free(cam->camera);
-      if(app_flow.video_source==FIREWIRE_COLOR) 
-	{
-	  free(cam->rgb_frame->image);
-	  free(cam->rgb_frame);
-	}
-      cam->is_initialized=0;
+      free(cam->rgb_frame->image);
+      free(cam->rgb_frame);
     }
+  cam->is_initialized=0;
   return 0;
 }
 
@@ -174,6 +173,8 @@ int firewire_camera_interface_start_transmission(struct firewire_camera_interfac
 #ifdef DEBUG_CAMERA
   fprintf(stderr,"firewire_camera_interface_start_transmission\n");
 #endif
+  if(cam->is_initialized!=1)
+    return 1;
   firewire_camera_interface_empty_buffer(cam); // to make sure we don't work with old buffers
   cam->err=dc1394_video_set_transmission(cam->camera, DC1394_ON);
   DC1394_ERR_CLN_RTN(cam->err,firewire_camera_interface_free(cam),"Could not start camera transmission");
@@ -187,6 +188,8 @@ int firewire_camera_interface_stop_transmission(struct firewire_camera_interface
 #ifdef DEBUG_CAMERA
   fprintf(stderr,"firewire_camera_interface_stop_transmission\n");
 #endif
+  if(cam->is_initialized!=1)
+    return 1;
   cam->err=dc1394_video_set_transmission(cam->camera, DC1394_OFF);
   DC1394_ERR_CLN_RTN(cam->err,firewire_camera_interface_free(cam),"Could not start camera transmission");
 
@@ -203,6 +206,8 @@ int firewire_camera_interface_enqueue(struct firewire_camera_interface* cam)
 #ifdef DEBUG_CAMERA
   fprintf(stderr,"firewire_camera_interface_enqueue\n");
 #endif
+  if(cam->is_initialized!=1)
+    return 1;
   cam->err=dc1394_capture_enqueue(cam->camera, cam->frame);
   DC1394_ERR_CLN_RTN(cam->err,firewire_camera_interface_free(cam),"Could not enqueue a frame");
 #ifdef DEBUG_CAMERA
@@ -216,6 +221,8 @@ int firewire_camera_interface_dequeue(struct firewire_camera_interface* cam)
 #ifdef DEBUG_CAMERA
   fprintf(stderr,"firewire_camera_interface_capture\n");
 #endif
+  if(cam->is_initialized!=1)
+    return 1;
   cam->err=dc1394_capture_dequeue(cam->camera, DC1394_CAPTURE_POLICY_WAIT, &cam->frame);
   DC1394_ERR_CLN_RTN(cam->err,firewire_camera_interface_free(cam),"Could not dequeue a frame");
   cam->err=dc1394_capture_enqueue(cam->camera, cam->frame);
@@ -231,6 +238,8 @@ int firewire_camera_interface_empty_buffer(struct firewire_camera_interface* cam
 #ifdef DEBUG_CAMERA
   fprintf(stderr,"firewire_camera_interface_empty_buffer\n");
 #endif
+  if(cam->is_initialized!=1)
+    return 1;
   int i = 0;
   // best to stop transmission to do that
   firewire_camera_interface_stop_transmission(cam);
@@ -255,6 +264,8 @@ int firewire_camera_interface_convert_to_RGB8(struct firewire_camera_interface* 
 #ifdef DEBUG_CAMERA
   fprintf(stderr,"firewire_camera_interface_convert_to_RGB8\n");
 #endif
+  if(cam->is_initialized!=1)
+    return 1;
 
   if(app_flow.video_source==FIREWIRE_COLOR)
     {
@@ -325,7 +336,9 @@ int firewire_camera_interface_print_info(struct firewire_camera_interface* cam)
 #ifdef DEBUG_CAMERA
   fprintf(stderr,"firewire_camera_interface_print_info\n");
 #endif
-  
+  if(cam->is_initialized!=1)
+    return 1;
+
   /* printf("video format: "); */
   /* firewire_camera_interface_print_format(cam->video_mode); */
   /* printf("frame rate: "); */

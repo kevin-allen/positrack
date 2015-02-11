@@ -23,3 +23,10 @@ autoreconf
 ./configure
 make
 make install (as root)
+
+To use:
+
+make sure the user have write permission on /dev/fw*
+chown user_name /dev/fw*
+if used with a comedi card, make sure you have write permission on /dev/comedi*
+chown user_name /dev/comedi*
