@@ -17,15 +17,15 @@ int stimulation_init(struct stimulation *stim)
   stim->input_data;
   stim->stimulation_count=0;
 
-  // these 5 variables should be set from a configuration file positrack.stimulation.config
+  // these 5 variables should be set from a configuration file
   stim->pulse_duration_ms=1;
   stim->pulse_frequency_Hz=200;
   stim->number_pulses_per_train=10;
   stim->refractory_period_train_ms=200;
-  stim->stimulation_intensity_volt=3;
-  stim->thread_sleep_ms=5;
+  stim->stimulation_intensity_volt=5;
+  stim->thread_sleep_ms=3; // between check for stimulation
+                           // should be less than time between tracking frames
   stim->thread_sleep_timespec=set_timespec_from_ms(stim->thread_sleep_ms);
-  
   stim->inter_pulse_duration_ms=1000/stim->pulse_frequency_Hz;
   stim->inter_pulse_duration=set_timespec_from_ms(stim->inter_pulse_duration_ms);
   stim->pulse_duration=set_timespec_from_ms(stim->pulse_duration_ms);

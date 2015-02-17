@@ -71,7 +71,7 @@ File with declarations of the main structures and functions used in positrack
 #define TRACKING_INTERFACE_MIN_DISTANCE_TWO_SPOTS 150
 
 #define TRACKED_OBJECT_BUFFER_LENGTH 432000 // 432000 should give 240 minutes at 30Hz.
-#define TRACKED_OBJECT_PULSE_DISTANCE 500 // distance to run before pulse is done
+#define TRACKED_OBJECT_PULSE_DISTANCE 2000 // distance to run before pulse is done
 
 #define STIMULATION_TIMER_MS 5 // number of ms betweek calls to stimulation_timer_update()
 
