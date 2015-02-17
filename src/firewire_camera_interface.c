@@ -59,132 +59,79 @@ int firewire_camera_interface_init(struct firewire_camera_interface* cam)
   cam->err=dc1394_video_get_supported_modes(cam->camera,&cam->video_modes);
   DC1394_ERR_CLN_RTN(cam->err,firewire_camera_interface_free(cam),"Can't get video modes");
   
-  if(app_flow.video_source==FIREWIRE_COLOR) 
+  fprintf(stderr,"camera has %d video modes\n",cam->video_modes.num);
+
+  int i;
+  for(i=0; i < cam->video_modes.num;i++)
     {
-      // select highest res mode:
-      int i;
-      for (i=cam->video_modes.num-1;i>=0;i--)
+      fprintf(stderr,"video mode:%d\n",cam->video_modes.modes[i]);
+    }
+
+  
+  // check if camera can do scalable mode with MONO8, which is 8bpp
+  for (i=cam->video_modes.num-1;i>=0;i--)
+    {
+      if (dc1394_is_video_mode_scalable(cam->video_modes.modes[i])) // get a scalable mode
 	{
-	  if (!dc1394_is_video_mode_scalable(cam->video_modes.modes[i]))
+	  dc1394_get_color_coding_from_video_mode(cam->camera,cam->video_modes.modes[i], &cam->coding);
+	  if (cam->coding==DC1394_COLOR_CODING_MONO8) // with MONO8 coding
 	    {
-	      dc1394_get_color_coding_from_video_mode(cam->camera,cam->video_modes.modes[i], &cam->coding);
-	      if (cam->coding==DC1394_COLOR_CODING_YUV422)
-		{
-		  cam->video_mode=cam->video_modes.modes[i];
-		  break;
-		}
+	      cam->video_mode=cam->video_modes.modes[i];
+	      printf("cam->video_mode: %d\n",cam->video_mode);
+	      break;
 	    }
 	}
-      if (i < 0)
-	{
-	  dc1394_log_error("DC1394_COLOR_CODING_YUV422 not supported");
-	  firewire_camera_interface_free(cam);
-	  return 1;
-	}
-
-      cam->err=dc1394_get_color_coding_from_video_mode(cam->camera, cam->video_mode,&cam->coding);
-      DC1394_ERR_CLN_RTN(cam->err,firewire_camera_interface_free(cam),"Could not get color coding");
-      
-      
-      // get highest framerate
-      cam->err=dc1394_video_get_supported_framerates(cam->camera,cam->video_mode,&cam->framerates);
-      DC1394_ERR_CLN_RTN(cam->err,firewire_camera_interface_free(cam),"Could not get framrates");
-      cam->framerate=cam->framerates.framerates[cam->framerates.num-1];
-      
-      // set capture
-      cam->err=dc1394_video_set_iso_speed(cam->camera, DC1394_ISO_SPEED_400);
-      DC1394_ERR_CLN_RTN(cam->err,firewire_camera_interface_free(cam),"Could not set iso speed");
-      cam->err=dc1394_video_set_mode(cam->camera, cam->video_mode);
-      DC1394_ERR_CLN_RTN(cam->err,firewire_camera_interface_free(cam),"Could not set video mode");
-      cam->err=dc1394_video_set_framerate(cam->camera, cam->framerate);
-      DC1394_ERR_CLN_RTN(cam->err,firewire_camera_interface_free(cam),"Could not set framerate");
-      cam->err=dc1394_capture_setup(cam->camera,cam->number_dms_buffers, DC1394_CAPTURE_FLAGS_DEFAULT);
-      DC1394_ERR_CLN_RTN(cam->err,firewire_camera_interface_free(cam),"Could not setup camera-\nmake sure that the video mode and framerate are\nsupported by your camera");
-      
-      // get the width and height of frame
-      dc1394_get_image_size_from_video_mode(cam->camera, cam->video_mode, &cam->width, &cam->height);
-      cam->num_pixels=cam->width*cam->height;
-      
-     
     }
-  
-  if(app_flow.video_source==FIREWIRE_BLACK_WHITE) 
+  if (i < 0)
     {
-      
-      // check if camera can do scalable mode with MONO8, which is 8bpp
-      int i;
-      for (i=cam->video_modes.num-1;i>=0;i--)
-	{
-	  if (dc1394_is_video_mode_scalable(cam->video_modes.modes[i])) // get a scalable mode
-	    {
-	      dc1394_get_color_coding_from_video_mode(cam->camera,cam->video_modes.modes[i], &cam->coding);
-	      if (cam->coding==DC1394_COLOR_CODING_MONO8) // with MONO8 coding
-		{
-		  cam->video_mode=cam->video_modes.modes[i];
-		  printf("cam->video_mode: %d\n",cam->video_mode);
-		  break;
-		}
-	    }
-	}
-      if (i < 0)
-	{
-	  dc1394_log_error("=DC1394_COLOR_CODING_MONO8 scalable is not supported");
-	  firewire_camera_interface_free(cam);
-	  return 1;
-	}
-
-      
-      cam->width=VIDEO_SOURCE_USB_WIDTH;
-      cam->height=VIDEO_SOURCE_USB_HEIGHT;
-      cam->num_pixels=cam->width*cam->height;
-      cam->framerate=VIDEO_SOURCE_USB_FRAMERATE;
-      // set the sampling rate, this is done via this, strangely enough (we have 8 bit per pixels, so one byte)
-      dc1394_format7_set_roi(cam->camera,
-			     cam->video_mode,
-			     cam->coding,
-			     3200, // why can't we change the packet size?
-			     VIDEO_SOURCE_SCALABLE_LEFT_POSITION,
-			     VIDEO_SOURCE_SCALABLE_TOP_POSITION,
-			     cam->width,
-			     cam->height);
-      DC1394_ERR_CLN_RTN(cam->err,firewire_camera_interface_free(cam),"Could not set video mode, color coding, frame rate, left, top, width, height for camera");
-      
-
-      int x,y;
-      float z;
-      long int xx;
-      dc1394_format7_get_image_size(cam->camera,cam->video_mode,&x,&y);
-      printf("get image size, x: %d, y: %d\n",x,y);
-      dc1394_format7_get_image_position(cam->camera,cam->video_mode,&x,&y);
-      printf("get image position, x: %d, y: %d\n",x,y);
-      dc1394_format7_get_packet_parameters(cam->camera,cam->video_mode,&x,&y);
-      printf("get packet parameters, min: %d, max: %d\n",x,y);
-      dc1394_format7_get_packet_size(cam->camera,cam->video_mode,&x);
-      printf("packet size: %d bytes\n",x);
-      dc1394_format7_get_recommended_packet_size(cam->camera,cam->video_mode,&x);
-      printf("recommended packet size: %d bytes\n",x);
-      dc1394_format7_get_packets_per_frame(cam->camera,cam->video_mode,&x);
-      printf("packets per frame: %d bytes\n",x);
-      dc1394_format7_get_data_depth(cam->camera,cam->video_mode,&x);
-      printf("depth of pixels: %d bits\n",x);
-      dc1394_format7_get_frame_interval(cam->camera,cam->video_mode,&z);
-      printf("time interval between frames: %f ms\n",z);
-      dc1394_format7_get_total_bytes(cam->camera,cam->video_mode,&xx);
-      printf("bytes per frame: %ld\n",xx);
-
-
-
-	    
-
-
-      
-      
-      
-      
-      cam->err=dc1394_capture_setup(cam->camera,cam->number_dms_buffers, DC1394_CAPTURE_FLAGS_DEFAULT);
-      DC1394_ERR_CLN_RTN(cam->err,firewire_camera_interface_free(cam),"Could not setup camera-\nmake sure that the video mode and framerate are\nsupported by your camera");
+      dc1394_log_error("=DC1394_COLOR_CODING_MONO8 scalable is not supported");
+      firewire_camera_interface_free(cam);
+      return 1;
     }
   
+  
+  cam->width=VIDEO_SOURCE_USB_WIDTH;
+  cam->height=VIDEO_SOURCE_USB_HEIGHT;
+  cam->num_pixels=cam->width*cam->height;
+  cam->framerate=VIDEO_SOURCE_USB_FRAMERATE;
+  // set the sampling rate, this is done via this, strangely enough (we have 8 bit per pixels, so one byte)
+  dc1394_format7_set_roi(cam->camera,
+			 cam->video_mode,
+			 cam->coding,
+			 3200, // why can't we change the packet size?
+			 VIDEO_SOURCE_SCALABLE_LEFT_POSITION,
+			 VIDEO_SOURCE_SCALABLE_TOP_POSITION,
+			 cam->width,
+			 cam->height);
+  DC1394_ERR_CLN_RTN(cam->err,firewire_camera_interface_free(cam),"Could not set video mode, color coding, frame rate, left, top, width, height for camera");
+  
+  
+  int x,y;
+  float z;
+  long int xx;
+  dc1394_format7_get_image_size(cam->camera,cam->video_mode,&x,&y);
+  printf("get image size, x: %d, y: %d\n",x,y);
+  dc1394_format7_get_image_position(cam->camera,cam->video_mode,&x,&y);
+  printf("get image position, x: %d, y: %d\n",x,y);
+  dc1394_format7_get_packet_parameters(cam->camera,cam->video_mode,&x,&y);
+  printf("get packet parameters, min: %d, max: %d\n",x,y);
+  dc1394_format7_get_packet_size(cam->camera,cam->video_mode,&x);
+  printf("packet size: %d bytes\n",x);
+  dc1394_format7_get_recommended_packet_size(cam->camera,cam->video_mode,&x);
+  printf("recommended packet size: %d bytes\n",x);
+  dc1394_format7_get_packets_per_frame(cam->camera,cam->video_mode,&x);
+  printf("packets per frame: %d bytes\n",x);
+  dc1394_format7_get_data_depth(cam->camera,cam->video_mode,&x);
+  printf("depth of pixels: %d bits\n",x);
+  dc1394_format7_get_frame_interval(cam->camera,cam->video_mode,&z);
+  printf("time interval between frames: %f ms\n",z);
+  dc1394_format7_get_total_bytes(cam->camera,cam->video_mode,&xx);
+  printf("bytes per frame: %ld\n",xx);
+  
+  
+  cam->err=dc1394_capture_setup(cam->camera,cam->number_dms_buffers, DC1394_CAPTURE_FLAGS_DEFAULT);
+  DC1394_ERR_CLN_RTN(cam->err,firewire_camera_interface_free(cam),"Could not setup camera-\nmake sure that the video mode and framerate are\nsupported by your camera");
+
   // allocate memory for the rgb frame
   if((cam->rgb_frame=calloc(1,sizeof(dc1394video_frame_t)) )==NULL)
     {
@@ -207,18 +154,17 @@ int firewire_camera_interface_free(struct firewire_camera_interface* cam)
 #ifdef DEBUG_CAMERA
   fprintf(stderr,"firewire_camera_interface_free\n");
 #endif
-  if(cam->is_initialized==1)
+  if(cam->is_initialized!=1)
+    return 1;
+  dc1394_video_set_transmission(cam->camera, DC1394_OFF);
+  dc1394_capture_stop(cam->camera);
+  dc1394_camera_free(cam->camera);
+  if(app_flow.video_source==FIREWIRE_COLOR) 
     {
-      dc1394_video_set_transmission(cam->camera, DC1394_OFF);
-      dc1394_capture_stop(cam->camera);
-      dc1394_camera_free(cam->camera);
-      if(app_flow.video_source==FIREWIRE_COLOR) 
-	{
-	  free(cam->rgb_frame->image);
-	  free(cam->rgb_frame);
-	}
-      cam->is_initialized=0;
+      free(cam->rgb_frame->image);
+      free(cam->rgb_frame);
     }
+  cam->is_initialized=0;
   return 0;
 }
 
@@ -227,6 +173,8 @@ int firewire_camera_interface_start_transmission(struct firewire_camera_interfac
 #ifdef DEBUG_CAMERA
   fprintf(stderr,"firewire_camera_interface_start_transmission\n");
 #endif
+  if(cam->is_initialized!=1)
+    return 1;
   firewire_camera_interface_empty_buffer(cam); // to make sure we don't work with old buffers
   cam->err=dc1394_video_set_transmission(cam->camera, DC1394_ON);
   DC1394_ERR_CLN_RTN(cam->err,firewire_camera_interface_free(cam),"Could not start camera transmission");
@@ -240,6 +188,8 @@ int firewire_camera_interface_stop_transmission(struct firewire_camera_interface
 #ifdef DEBUG_CAMERA
   fprintf(stderr,"firewire_camera_interface_stop_transmission\n");
 #endif
+  if(cam->is_initialized!=1)
+    return 1;
   cam->err=dc1394_video_set_transmission(cam->camera, DC1394_OFF);
   DC1394_ERR_CLN_RTN(cam->err,firewire_camera_interface_free(cam),"Could not start camera transmission");
 
@@ -256,6 +206,8 @@ int firewire_camera_interface_enqueue(struct firewire_camera_interface* cam)
 #ifdef DEBUG_CAMERA
   fprintf(stderr,"firewire_camera_interface_enqueue\n");
 #endif
+  if(cam->is_initialized!=1)
+    return 1;
   cam->err=dc1394_capture_enqueue(cam->camera, cam->frame);
   DC1394_ERR_CLN_RTN(cam->err,firewire_camera_interface_free(cam),"Could not enqueue a frame");
 #ifdef DEBUG_CAMERA
@@ -269,6 +221,8 @@ int firewire_camera_interface_dequeue(struct firewire_camera_interface* cam)
 #ifdef DEBUG_CAMERA
   fprintf(stderr,"firewire_camera_interface_capture\n");
 #endif
+  if(cam->is_initialized!=1)
+    return 1;
   cam->err=dc1394_capture_dequeue(cam->camera, DC1394_CAPTURE_POLICY_WAIT, &cam->frame);
   DC1394_ERR_CLN_RTN(cam->err,firewire_camera_interface_free(cam),"Could not dequeue a frame");
   cam->err=dc1394_capture_enqueue(cam->camera, cam->frame);
@@ -284,6 +238,8 @@ int firewire_camera_interface_empty_buffer(struct firewire_camera_interface* cam
 #ifdef DEBUG_CAMERA
   fprintf(stderr,"firewire_camera_interface_empty_buffer\n");
 #endif
+  if(cam->is_initialized!=1)
+    return 1;
   int i = 0;
   // best to stop transmission to do that
   firewire_camera_interface_stop_transmission(cam);
@@ -308,8 +264,21 @@ int firewire_camera_interface_convert_to_RGB8(struct firewire_camera_interface* 
 #ifdef DEBUG_CAMERA
   fprintf(stderr,"firewire_camera_interface_convert_to_RGB8\n");
 #endif
-  
-  cam->err=dc1394_convert_frames(cam->frame, cam->rgb_frame);
+  if(cam->is_initialized!=1)
+    return 1;
+
+  if(app_flow.video_source==FIREWIRE_COLOR)
+    {
+      cam->err=dc1394_debayer_frames(cam->frame,
+				     cam->rgb_frame,
+				     DC1394_BAYER_METHOD_BILINEAR);
+    }
+  if(app_flow.video_source==FIREWIRE_BLACK_WHITE)
+    {
+      cam->err=dc1394_convert_frames(cam->frame, cam->rgb_frame);
+    }
+
+
   DC1394_ERR_CLN_RTN(cam->err,firewire_camera_interface_free(cam),"Could not convert frame");
   
 #ifdef DEBUG_CAMERA
@@ -322,6 +291,10 @@ int firewire_camera_interface_convert_to_RGB8(struct firewire_camera_interface* 
     }
   return 0;
 }
+
+
+
+
 /* int firewire_camera_interface_get_lum(struct firewire_camera_interface* cam) */
 /* { */
 /*   /\*function to get lum array from cam-rgb_frame */
@@ -363,7 +336,9 @@ int firewire_camera_interface_print_info(struct firewire_camera_interface* cam)
 #ifdef DEBUG_CAMERA
   fprintf(stderr,"firewire_camera_interface_print_info\n");
 #endif
-  
+  if(cam->is_initialized!=1)
+    return 1;
+
   /* printf("video format: "); */
   /* firewire_camera_interface_print_format(cam->video_mode); */
   /* printf("frame rate: "); */

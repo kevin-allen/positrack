@@ -10,6 +10,7 @@ the Free Software Foundation, either version 3 of the License, or
 
 Requirements:
 
+libX11-devel
 gtk2-devel
 gstreamer1-devel
 gstreamer1-plugins-base-devel
@@ -22,3 +23,10 @@ autoreconf
 ./configure
 make
 make install (as root)
+
+To use:
+
+make sure the user have write permission on /dev/fw*
+chown user_name /dev/fw*
+if used with a comedi card, make sure you have write permission on /dev/comedi*
+chown user_name /dev/comedi*

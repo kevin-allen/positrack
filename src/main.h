@@ -62,8 +62,8 @@ File with declarations of the main structures and functions used in positrack
 #define TRACKING_INTERFACE_LUMINANCE_THRESHOLD 50
 #define TRACKING_INTERFACE_WIDTH 860
 #define TRACKING_INTERFACE_HEIGHT 860
-#define TRACKING_INTERFACE_MAX_NUMBER_SPOTS 2
-#define TRACKING_INTERFACE_MAX_NUMBER_SPOTS_CALLS 7
+#define TRACKING_INTERFACE_MAX_NUMBER_SPOTS 4 // was 2 before for black and white 2 spots detection
+#define TRACKING_INTERFACE_MAX_NUMBER_SPOTS_CALLS 6
 
 #define TRACKING_INTERFACE_MAX_MEAN_LUMINANCE_FOR_TRACKING 8/* 0 */
 #define TRACKING_INTERFACE_MAX_SPOT_SIZE 40000
@@ -87,7 +87,7 @@ File with declarations of the main structures and functions used in positrack
 
 //#define DEBUG_ACQ // to turn on debugging output for the comedi card
 //#define DEBUG_CAMERA // to turn on debugging for the camera
-//#define DEBUG_TRACKING // to turn on debugging for the tracking
+#define DEBUG_TRACKING // to turn on debugging for the tracking
 #define DEBUG_IMAGE // to turn on debugging for the image processing
 #define DEBUG_CALLBACK
 //#define DEBUG_TRACKED_OBJECT
@@ -97,14 +97,20 @@ File with declarations of the main structures and functions used in positrack
 /***********************************************************************************
  structure that holds all the gui widgets that we need to control during execution
 ***********************************************************************************/
+enum color{
+  RED = 1,
+  GREEN = 2,
+  BLUE = 3,
+  BLACK = 4
+};
 enum videosource {
-  USB_V4L2 = 1,
-  FIREWIRE_BLACK_WHITE = 2,
-  FIREWIRE_COLOR = 3
+  FIREWIRE_BLACK_WHITE = 1,
+  FIREWIRE_COLOR = 2
 };
 enum tracking_mode {
   ONE_WHITE_SPOT = 1,
-  TWO_WHITE_SPOTS = 2
+  TWO_WHITE_SPOTS = 2,
+  RED_GREEN_BLUE_SPOTS = 3
 };
 enum synchronization_mode {
   NONE = 1,
@@ -120,6 +126,7 @@ enum drawspots_mode {
   ONLY_USED_SPOTS = 3
 };
 enum drawobject_mode {
+  NO_DOT = 1,
   ONE_BLACK_DOT = 2
 };
 
@@ -159,7 +166,7 @@ struct all_widget
   GtkWidget *comedi_synchronization_radiobutton;
   GtkWidget *singlewhitespot_radiobutton;
   GtkWidget *twowhitespots_radiobutton;
-  GtkWidget *usbcamera_radiobutton;
+  GtkWidget *redgreenbluespots_radiobutton;
   GtkWidget *firewirecamerablackwhite_radiobutton;
   GtkWidget *firewirecameracolor_radiobutton;
   GtkWidget *videoplayback_checkbutton;
@@ -216,9 +223,6 @@ struct tracking_interface
   double luminance_threshold;
   double mean_luminance;
   double max_mean_luminance_for_tracking;
-  double mean_red;
-  double mean_blue;
-  double mean_green;
   double* lum; // pointer to the array containing the luminance of image, use double so that we can filter in place
   double* lum_tmp; // before smoothing
   int* spot; // pointer to an array used in the detection of spots, to flag the pixels
@@ -237,7 +241,19 @@ struct tracking_interface
   double* spot_mean_red;
   double* spot_mean_green;
   double* spot_mean_blue;
+  double* spot_red_score;
+  double* spot_green_score;
+  double* spot_blue_score;
+  int* spot_taken;
+  enum color* spot_color;
+  double* spot_distance_to_middle;
+  int irs; // index red spot
+  int igs; // index green spot
+  int ibs; // index blue spot
   int index_largest_spot;
+  double x_object;
+  double y_object;
+  double head_direction_object;
 };
 struct tracking_interface tr;
 
@@ -329,6 +345,7 @@ struct firewire_camera_interface
   dc1394framerate_t framerate;
   dc1394video_mode_t video_mode;
   dc1394color_coding_t coding;
+  dc1394color_codings_t codings;
   unsigned int width, height;
   unsigned int num_pixels;
   dc1394video_frame_t *frame;
@@ -513,6 +530,7 @@ int tracking_interface_get_luminance(struct tracking_interface* tr);
 int tracking_interface_get_mean_luminosity(struct tracking_interface* tr);
 int tracking_interface_tracking_one_bright_spot(struct tracking_interface* tr);
 int tracking_interface_tracking_two_bright_spots(struct tracking_interface* tr);
+int tracking_interface_tracking_red_green_blue_spots(struct tracking_interface* tr);
 int tracking_interface_find_spots_recursive(struct tracking_interface* tr);
 int tracking_interface_spot_summary(struct tracking_interface* tr);
 int tracking_interface_sort_spots(struct tracking_interface* tr);
@@ -524,6 +542,11 @@ int tracking_interface_print_luminance_array(struct tracking_interface* tr);
 int tracking_interface_print_spot_array(struct tracking_interface* tr);
 int tracking_interface_print_position_to_file(struct tracking_interface* tr);
 int tracking_interface_clear_spot_data(struct tracking_interface* tr);
+int tracking_interface_set_color_score(struct tracking_interface* tr);
+int tracking_interface_position_from_red_green_blue_spots(struct tracking_interface* tr);
+int tracking_interface_head_direction_from_red_green_blue_spots(struct tracking_interface* tr);
+int tracking_eliminate_duplicate_color(struct tracking_interface* tr);
+
 /********************************
 defined in tracked_object.c
 ********************************/
@@ -568,6 +591,6 @@ double distance(double x1, double y1, double x2, double y2);
 double heading (double delta_x, double delta_y);
 void smooth_double_gaussian(double* array,double* out, int x_size,int y_size, double smooth, double invalid);
 void gaussian_kernel(double* kernel,int x_size,int y_size, double standard_deviation);
-
+void FindEndVector(double start_x, double start_y, double angle, double length, double* end_x, double* end_y);
 // for stimulation
 int timespec_first_larger(struct timespec* t1, struct timespec* t2);
