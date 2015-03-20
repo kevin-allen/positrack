@@ -63,7 +63,7 @@ TESTING HEAD DIRECTION DETECTION WITH 2 WHITE SPOTS
 	We can rotate within 200 ms and see if the tracking program also get 180 deg in 200 ms.
 	Tested with bw firewire 800 camera running at 51 Hz.
 	Expect to get a delay of 0 to 26 ms to complete the rotation.
-	
+
 
 
 To build a small-big IR array
@@ -74,3 +74,5 @@ Power supply 5V
 3 leds, 2,2 kOhms
 1 led, 18 kOhms
 
+
+It would be great to have control of the shutter speed on the camera to optimize the background.
