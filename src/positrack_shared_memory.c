@@ -7,6 +7,9 @@ void psm_init(struct positrack_shared_memory* psm)
     {
       psm->id[i]=0; // set to invalid value
       psm->frame_no[i]=0;
+      psm->ts[i].tv_sec=0;
+      psm->ts[i].tv_nsec=0;
+      
     }
 
   if(psm->is_mutex_allocated==0)

@@ -18,6 +18,7 @@ File with declarations of the main structures and functions used in positrack
 
 
 ****************************************************************/
+
 #include <stdio.h>
 #include <fcntl.h> // for file operations
 #include <string.h>
@@ -43,8 +44,6 @@ File with declarations of the main structures and functions used in positrack
 #include <comedilib.h> // for the driver API
 #include <pthread.h> // to be able to create threads
 #include <glib.h>
-
-
 #include <stdio.h>
 #include <errno.h>
 #include <sys/types.h>
@@ -94,13 +93,15 @@ File with declarations of the main structures and functions used in positrack
 #define COMEDI_DEVICE_BASELINE_VOLT 0.0
 #define COMEDI_DEVICE_TTL_VOLT 3.0
 
+
 // variable used for the shared memory with other processes
 #define POSITRACKSHARE "/tmppositrackshare" 
 #define POSITRACKSHARENUMFRAMES 100
 
+
 //#define DEBUG_ACQ // to turn on debugging output for the comedi card
 //#define DEBUG_CAMERA // to turn on debugging for the camera
-#define DEBUG_TRACKING // to turn on debugging for the tracking
+//#define DEBUG_TRACKING // to turn on debugging for the tracking
 //#define DEBUG_IMAGE // to turn on debugging for the image processing
 //#define DEBUG_CALLBACK
 //#define DEBUG_TRACKED_OBJECT
@@ -190,6 +191,7 @@ struct all_widget
   int timeout_id;
 };
 struct all_widget widgets; //defines a structure named widgets of the all_widget type
+
 
 
 struct positrack_shared_memory
@@ -636,3 +638,5 @@ int timespec_first_larger(struct timespec* t1, struct timespec* t2);
 void psm_add_frame(struct positrack_shared_memory* psm, unsigned long int fid, struct timespec fts);
 void psm_init(struct positrack_shared_memory* psm);
 void psm_free(struct positrack_shared_memory* psm);
+
+

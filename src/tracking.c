@@ -123,8 +123,6 @@ int tracking_interface_init(struct tracking_interface* tr)
   // set up the shared memory for other processes ///
   ///////////////////////////////////////////////////
   tr->psm_size=sizeof(struct positrack_shared_memory);
-
-  
   tr->psm_des=shm_open(POSITRACKSHARE, O_CREAT | O_RDWR | O_TRUNC,0600);
   if(tr->psm_des ==-1)
     {
@@ -136,7 +134,6 @@ int tracking_interface_init(struct tracking_interface* tr)
       fprintf(stderr, "problem with ftruncate\n");
       return -1;
     }
-
   tr->psm = (struct positrack_shared_memory*) mmap(0, tr->psm_size, PROT_READ | PROT_WRITE, MAP_SHARED, tr->psm_des, 0);
   if (tr->psm == MAP_FAILED) 
     {
@@ -156,6 +153,17 @@ int tracking_interface_free(struct tracking_interface* tr)
       return 0;
     }
   psm_free(tr->psm);
+
+  //shm_unlink(POSITRACKSHARE);
+  
+  // unmap the shared memory
+  if(munmap(tr->psm, tr->psm_size) == -1) 
+    {
+      fprintf(stderr, "tr->psm munmapping failed\n");
+      return -1;
+    }
+
+ 
   
   free(tr->lum);
   free(tr->lum_tmp);
@@ -214,7 +222,7 @@ gboolean tracking()
 
   // update shared memory
   clock_gettime(CLOCK_REALTIME, &tr.time_now); // timestamp the arrival of the buffer
-  psm_add_frame(tr.psm, tr.number_frames_tracked,tr.time_now);
+  psm_add_frame(tr.psm, tr.number_frames_tracked+1,tr.time_now);
   
   
   if(microsecond_from_timespec(&tr.waiting_buffer_duration)/1000>INTERVAL_BETWEEN_TRACKING_CALLS_MS/2) 
