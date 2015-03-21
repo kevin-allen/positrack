@@ -117,6 +117,35 @@ int tracking_interface_init(struct tracking_interface* tr)
       fprintf(stderr, "problem allocating memory for tr->positive_pixel_y\n");
       return -1;
     }
+
+
+  ///////////////////////////////////////////////////
+  // set up the shared memory for other processes ///
+  ///////////////////////////////////////////////////
+  tr->psm_size=sizeof(struct positrack_shared_memory);
+
+  
+  tr->psm_des=shm_open(POSITRACKSHARE, O_CREAT | O_RDWR | O_TRUNC,0600);
+  if(tr->psm_des ==-1)
+    {
+      fprintf(stderr, "problem with shm_open\n");
+      return -1;
+    }
+  if (ftruncate(tr->psm_des,tr->psm_size) == -1)
+    {
+      fprintf(stderr, "problem with ftruncate\n");
+      return -1;
+    }
+
+  tr->psm = (struct positrack_shared_memory*) mmap(0, tr->psm_size, PROT_READ | PROT_WRITE, MAP_SHARED, tr->psm_des, 0);
+  if (tr->psm == MAP_FAILED) 
+    {
+      fprintf(stderr, "tr->psm mapping failed\n");
+      return -1;
+    }
+
+
+  
   tr->is_initialized=1;
   return 0;
 }
@@ -126,6 +155,8 @@ int tracking_interface_free(struct tracking_interface* tr)
     { // nothing to do
       return 0;
     }
+  psm_free(tr->psm);
+  
   free(tr->lum);
   free(tr->lum_tmp);
   free(tr->spot);
@@ -180,6 +211,12 @@ gboolean tracking()
       tr.number_frames_tracked=0;
       return FALSE;
     }
+
+  // update shared memory
+  clock_gettime(CLOCK_REALTIME, &tr.time_now); // timestamp the arrival of the buffer
+  psm_add_frame(tr.psm, tr.number_frames_tracked,tr.time_now);
+  
+  
   if(microsecond_from_timespec(&tr.waiting_buffer_duration)/1000>INTERVAL_BETWEEN_TRACKING_CALLS_MS/2) 
     { // we are waiting a long time for frames, will ignore the next tick
       // to give time for buffer to arrive without having the thread
