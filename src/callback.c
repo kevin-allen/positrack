@@ -280,7 +280,10 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
     }
   tracked_object_init(&tob);
   tr.number_frames_tracked=0;
-  
+
+  // initialize the shared memory, so that the old frames are all set to 0
+  psm_init(tr.psm);
+
   if(app_flow.synch_mode==COMEDI||app_flow.pulse_valid_position==ON||app_flow.pulse_distance==ON)
     {
       if(comedi_dev_init(&comedi_device, "/dev/comedi0")!=0)

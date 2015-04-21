@@ -18,6 +18,7 @@ File with declarations of the main structures and functions used in positrack
 
 
 ****************************************************************/
+
 #include <stdio.h>
 #include <fcntl.h> // for file operations
 #include <string.h>
@@ -43,6 +44,13 @@ File with declarations of the main structures and functions used in positrack
 #include <comedilib.h> // for the driver API
 #include <pthread.h> // to be able to create threads
 #include <glib.h>
+#include <stdio.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+
+
 
 #define _FILE_OFFSET_BITS 64 // to have files larger than 2GB
 #define NSEC_PER_SEC (1000000000) // The number of nsecs per sec
@@ -85,11 +93,17 @@ File with declarations of the main structures and functions used in positrack
 #define COMEDI_DEVICE_BASELINE_VOLT 0.0
 #define COMEDI_DEVICE_TTL_VOLT 3.0
 
+
+// variable used for the shared memory with other processes
+#define POSITRACKSHARE "/tmppositrackshare" 
+#define POSITRACKSHARENUMFRAMES 100
+
+
 //#define DEBUG_ACQ // to turn on debugging output for the comedi card
 //#define DEBUG_CAMERA // to turn on debugging for the camera
-#define DEBUG_TRACKING // to turn on debugging for the tracking
-#define DEBUG_IMAGE // to turn on debugging for the image processing
-#define DEBUG_CALLBACK
+//#define DEBUG_TRACKING // to turn on debugging for the tracking
+//#define DEBUG_IMAGE // to turn on debugging for the image processing
+//#define DEBUG_CALLBACK
 //#define DEBUG_TRACKED_OBJECT
 //#define CAPS "video/x-raw, format=RGB, framerate=30/1 width=160, pixel-aspect-ratio=1/1"
 
@@ -179,6 +193,24 @@ struct all_widget
 struct all_widget widgets; //defines a structure named widgets of the all_widget type
 
 
+
+struct positrack_shared_memory
+{
+  int numframes;
+  unsigned long int id [POSITRACKSHARENUMFRAMES]; // internal to this object, first valid = 1, id 0 is invalid
+  unsigned long int frame_no [POSITRACKSHARENUMFRAMES]; // from tracking system, frame sequence number
+  struct timespec ts [POSITRACKSHARENUMFRAMES];
+  pthread_mutexattr_t attrmutex;
+  int is_mutex_allocated;
+  pthread_mutex_t pmutex;  
+};
+
+  
+
+
+
+
+
 struct tracking_interface
 {
   // the tracking interface job is to find the spots or
@@ -197,6 +229,12 @@ struct tracking_interface
   int min_spot_size;
   int number_spots;
   double max_distance_two_spots;
+
+  struct positrack_shared_memory* psm; // to share memory with other processes
+  int psm_size;
+  int psm_des;
+
+  
   struct timespec current_buffer_time;
   struct timespec previous_buffer_time;
   struct timespec inter_buffer_duration;
@@ -219,7 +257,7 @@ struct tracking_interface
   GstCaps *caps, *pad_caps;
   GstPad *pad;
   int number_of_pixels;
-  int number_frames_tracked;
+  unsigned long int number_frames_tracked;
   double luminance_threshold;
   double mean_luminance;
   double max_mean_luminance_for_tracking;
@@ -594,3 +632,11 @@ void gaussian_kernel(double* kernel,int x_size,int y_size, double standard_devia
 void FindEndVector(double start_x, double start_y, double angle, double length, double* end_x, double* end_y);
 // for stimulation
 int timespec_first_larger(struct timespec* t1, struct timespec* t2);
+
+
+// defined in positrack_shared_memory.c
+void psm_add_frame(struct positrack_shared_memory* psm, unsigned long int fid, struct timespec fts);
+void psm_init(struct positrack_shared_memory* psm);
+void psm_free(struct positrack_shared_memory* psm);
+
+
