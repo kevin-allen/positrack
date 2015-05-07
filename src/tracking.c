@@ -357,8 +357,12 @@ int tracking_interface_print_position_to_file(struct tracking_interface* tr)
     }
   if(app_flow.trk_mode==ONE_WHITE_SPOT)
     {
-      // surely we need to implement this at some point
-      //fprintf(rec_file_data.fp,"%.2lf %.2lf %.2lf %d %.2lf %.2lf\n",-1.0,-1.0,-1.0,0,-1.0,-1.0);
+      
+      fprintf(rec_file_data.fp,"%d %d %.2lf %.2lf\n",
+	      (int)((tr->tracking_time_duration.tv_sec*1000)+(tr->tracking_time_duration.tv_nsec/1000000.0)),
+	      tob.n,
+	      tob.x[tob.n-1],
+	      tob.y[tob.n-1]);
     }
 
   if(app_flow.trk_mode==RED_GREEN_BLUE_SPOTS)
@@ -529,6 +533,11 @@ int tracking_interface_tracking_one_bright_spot(struct tracking_interface* tr)
       g_printerr("mean_luminance (%lf) is too high for tracking\n",tr->mean_luminance);
       tr->number_spots=0;
       tr->number_positive_pixels=0;
+      tracked_object_update_position(&tob,
+				     -1.0,
+				     -1.0,
+				     -1.0,
+				     microsecond_from_timespec(&tr->inter_buffer_duration));
       return 0;
     }
   
