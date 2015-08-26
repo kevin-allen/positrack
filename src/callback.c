@@ -90,6 +90,7 @@ int init_window()
   rec_file_data.is_open=0;
   printf("%s\n",rec_file_data.directory);
 
+
   return 0;
 }
 
