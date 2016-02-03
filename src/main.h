@@ -78,7 +78,7 @@ File with declarations of the main structures and functions used in positrack
 #define TRACKING_INTERFACE_MIN_SPOT_SIZE 10
 #define TRACKING_INTERFACE_MIN_DISTANCE_TWO_SPOTS 150
 
-#define TRACKED_OBJECT_BUFFER_LENGTH 432000 // 432000 should give 240 minutes at 30Hz.
+#define TRACKED_OBJECT_BUFFER_LENGTH 1500000 // 1500000 should give 500 minutes at 50Hz.
 #define TRACKED_OBJECT_PULSE_DISTANCE 500 // distance to run before pulse is done
 
 #define STIMULATION_TIMER_MS 5 // number of ms betweek calls to stimulation_timer_update()
@@ -105,6 +105,7 @@ File with declarations of the main structures and functions used in positrack
 //#define DEBUG_IMAGE // to turn on debugging for the image processing
 //#define DEBUG_CALLBACK
 //#define DEBUG_TRACKED_OBJECT
+#define DEBUG_SHARE
 //#define CAPS "video/x-raw, format=RGB, framerate=30/1 width=160, pixel-aspect-ratio=1/1"
 
 
@@ -200,12 +201,14 @@ struct positrack_shared_memory
   unsigned long int id [POSITRACKSHARENUMFRAMES]; // internal to this object, first valid = 1, id 0 is invalid
   unsigned long int frame_no [POSITRACKSHARENUMFRAMES]; // from tracking system, frame sequence number
   struct timespec ts [POSITRACKSHARENUMFRAMES];
+  double x[POSITRACKSHARENUMFRAMES]; // position x
+  double y[POSITRACKSHARENUMFRAMES]; // position y
+  double hd[POSITRACKSHARENUMFRAMES]; // head direction
   pthread_mutexattr_t attrmutex;
   int is_mutex_allocated;
   pthread_mutex_t pmutex;  
 };
 
-  
 
 
 
@@ -635,7 +638,7 @@ int timespec_first_larger(struct timespec* t1, struct timespec* t2);
 
 
 // defined in positrack_shared_memory.c
-void psm_add_frame(struct positrack_shared_memory* psm, unsigned long int fid, struct timespec fts);
+void psm_add_frame(struct positrack_shared_memory* psm, unsigned long int fid, struct timespec fts, double x, double y, double hd);
 void psm_init(struct positrack_shared_memory* psm);
 void psm_free(struct positrack_shared_memory* psm);
 

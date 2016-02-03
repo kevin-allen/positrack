@@ -122,6 +122,7 @@ int tracking_interface_init(struct tracking_interface* tr)
   ///////////////////////////////////////////////////
   // set up the shared memory for other processes ///
   ///////////////////////////////////////////////////
+  shm_unlink(POSITRACKSHARE); // just in case
   tr->psm_size=sizeof(struct positrack_shared_memory);
   tr->psm_des=shm_open(POSITRACKSHARE, O_CREAT | O_RDWR | O_TRUNC,0600);
   if(tr->psm_des ==-1)
@@ -140,8 +141,6 @@ int tracking_interface_init(struct tracking_interface* tr)
       fprintf(stderr, "tr->psm mapping failed\n");
       return -1;
     }
-
-
   
   tr->is_initialized=1;
   return 0;
@@ -154,7 +153,6 @@ int tracking_interface_free(struct tracking_interface* tr)
     }
   psm_free(tr->psm);
 
-  //shm_unlink(POSITRACKSHARE);
   
   // unmap the shared memory
   if(munmap(tr->psm, tr->psm_size) == -1) 
@@ -162,9 +160,9 @@ int tracking_interface_free(struct tracking_interface* tr)
       fprintf(stderr, "tr->psm munmapping failed\n");
       return -1;
     }
-
- 
+  shm_unlink(POSITRACKSHARE);
   
+
   free(tr->lum);
   free(tr->lum_tmp);
   free(tr->spot);
@@ -220,9 +218,9 @@ gboolean tracking()
       return FALSE;
     }
 
-  // update shared memory
+  
   clock_gettime(CLOCK_REALTIME, &tr.time_now); // timestamp the arrival of the buffer
-  psm_add_frame(tr.psm, tr.number_frames_tracked+1,tr.time_now);
+  
   
   
   if(microsecond_from_timespec(&tr.waiting_buffer_duration)/1000>INTERVAL_BETWEEN_TRACKING_CALLS_MS/2) 
@@ -299,6 +297,14 @@ gboolean tracking()
 			  comedi_device.aref,
 			  comedi_device.comedi_baseline);
     }
+
+
+  // update shared memory
+  psm_add_frame(tr.psm, tr.number_frames_tracked+1,tr.time_now,
+		tob.x[tob.n-1],
+		tob.y[tob.n-1],
+		tob.head_direction[tob.n-1]);
+  
   // print the data to a file
   tracking_interface_print_position_to_file(&tr);
 
@@ -335,6 +341,7 @@ int tracking_interface_print_position_to_file(struct tracking_interface* tr)
 
   if(tob.n<=0)
     {
+      fprintf(stderr,"tracking_interface_print_position_to_file()\n");
       fprintf(stderr,"try to save position data but tob.n <=0\n");
       return -1;
     }

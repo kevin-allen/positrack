@@ -67,7 +67,7 @@ int init_window()
 
   // show a nice icon
   char* icon_file_name;
-  file_name = "radar_icon.png";
+  file_name = "radar-icon.png";
   icon_file_name=g_strdup_printf("%s/%s",DATADIR,file_name);
   gtk_window_set_icon(GTK_WINDOW(widgets.window), create_pixbuf(icon_file_name));
 
@@ -300,14 +300,16 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
       stimulation_start_stimulation(&stim);
     }
 
-  widgets.tracking_running=1;
+ 
   
   if(recording_file_data_open_file()!=0)
     {
       g_printerr("recording_file_data_open_file() did not return 0\n");
+      
       return;
     }
 
+   widgets.tracking_running=1;
   // clear drawing area before starting new trial
   tracking_interface_clear_drawingarea(&tr);
 
@@ -406,6 +408,7 @@ void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
   if(widgets.tracking_running==1)
     {
       widgets.tracking_running=0; // making tracking function to return FALSE */
+      psm_init(tr.psm);
       tracked_object_free(&tob);
       if(app_flow.pulse_distance==ON)
 	{ // stop the stimulating thread that will pulse when stimulation_flag is set
