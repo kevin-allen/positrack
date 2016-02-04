@@ -77,7 +77,8 @@ File with declarations of the main structures and functions used in positrack
 #define TRACKING_INTERFACE_MAX_MEAN_LUMINANCE_FOR_TRACKING 8/* 0 */
 #define TRACKING_INTERFACE_MAX_SPOT_SIZE 40000
 #define TRACKING_INTERFACE_MIN_SPOT_SIZE 10
-#define TRACKING_INTERFACE_MIN_DISTANCE_TWO_SPOTS 150
+#define TRACKING_INTERFACE_MIN_DISTANCE_TWO_SPOTS 190 // for patrick spinning table
+//#define TRACKING_INTERFACE_MIN_DISTANCE_TWO_SPOTS 150 // for open field
 
 #define TRACKED_OBJECT_BUFFER_LENGTH 1500000 // 1500000 should give 500 minutes at 50Hz.
 #define TRACKED_OBJECT_PULSE_DISTANCE 500 // distance to run before pulse is done

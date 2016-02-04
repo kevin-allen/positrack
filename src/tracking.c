@@ -649,6 +649,12 @@ int tracking_interface_tracking_two_bright_spots(struct tracking_interface* tr)
   // check if the two spots are within reasonable distance
   if(distance(tr->spot_mean_x[0],tr->spot_mean_y[0],tr->spot_mean_x[1],tr->spot_mean_y[1])>tr->max_distance_two_spots)
     {
+#ifdef DEBUG_TRACKING
+      g_printerr("distance between the two spots ( %lf ) is larger than  %lf\n",
+		 distance(tr->spot_mean_x[0],tr->spot_mean_y[0],tr->spot_mean_x[1],tr->spot_mean_y[1]),
+		 tr->max_distance_two_spots);
+#endif
+      
       tracked_object_update_position(&tob,
 				     -1.0,
 				     -1.0,
