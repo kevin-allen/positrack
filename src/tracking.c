@@ -117,6 +117,31 @@ int tracking_interface_init(struct tracking_interface* tr)
       fprintf(stderr, "problem allocating memory for tr->positive_pixel_y\n");
       return -1;
     }
+
+
+  ///////////////////////////////////////////////////
+  // set up the shared memory for other processes ///
+  ///////////////////////////////////////////////////
+  shm_unlink(POSITRACKSHARE); // just in case
+  tr->psm_size=sizeof(struct positrack_shared_memory);
+  tr->psm_des=shm_open(POSITRACKSHARE, O_CREAT | O_RDWR | O_TRUNC,0600);
+  if(tr->psm_des ==-1)
+    {
+      fprintf(stderr, "problem with shm_open\n");
+      return -1;
+    }
+  if (ftruncate(tr->psm_des,tr->psm_size) == -1)
+    {
+      fprintf(stderr, "problem with ftruncate\n");
+      return -1;
+    }
+  tr->psm = (struct positrack_shared_memory*) mmap(0, tr->psm_size, PROT_READ | PROT_WRITE, MAP_SHARED, tr->psm_des, 0);
+  if (tr->psm == MAP_FAILED) 
+    {
+      fprintf(stderr, "tr->psm mapping failed\n");
+      return -1;
+    }
+  
   tr->is_initialized=1;
   return 0;
 }
@@ -126,6 +151,18 @@ int tracking_interface_free(struct tracking_interface* tr)
     { // nothing to do
       return 0;
     }
+  psm_free(tr->psm);
+
+  
+  // unmap the shared memory
+  if(munmap(tr->psm, tr->psm_size) == -1) 
+    {
+      fprintf(stderr, "tr->psm munmapping failed\n");
+      return -1;
+    }
+  shm_unlink(POSITRACKSHARE);
+  
+
   free(tr->lum);
   free(tr->lum_tmp);
   free(tr->spot);
@@ -180,6 +217,12 @@ gboolean tracking()
       tr.number_frames_tracked=0;
       return FALSE;
     }
+
+  
+  clock_gettime(CLOCK_REALTIME, &tr.time_now); // timestamp the arrival of the buffer
+  
+  
+  
   if(microsecond_from_timespec(&tr.waiting_buffer_duration)/1000>INTERVAL_BETWEEN_TRACKING_CALLS_MS/2) 
     { // we are waiting a long time for frames, will ignore the next tick
       // to give time for buffer to arrive without having the thread
@@ -254,6 +297,14 @@ gboolean tracking()
 			  comedi_device.aref,
 			  comedi_device.comedi_baseline);
     }
+
+
+  // update shared memory
+  psm_add_frame(tr.psm, tr.number_frames_tracked+1,tr.time_now,
+		tob.x[tob.n-1],
+		tob.y[tob.n-1],
+		tob.head_direction[tob.n-1]);
+  
   // print the data to a file
   tracking_interface_print_position_to_file(&tr);
 
@@ -290,6 +341,7 @@ int tracking_interface_print_position_to_file(struct tracking_interface* tr)
 
   if(tob.n<=0)
     {
+      fprintf(stderr,"tracking_interface_print_position_to_file()\n");
       fprintf(stderr,"try to save position data but tob.n <=0\n");
       return -1;
     }
@@ -312,8 +364,12 @@ int tracking_interface_print_position_to_file(struct tracking_interface* tr)
     }
   if(app_flow.trk_mode==ONE_WHITE_SPOT)
     {
-      // surely we need to implement this at some point
-      //fprintf(rec_file_data.fp,"%.2lf %.2lf %.2lf %d %.2lf %.2lf\n",-1.0,-1.0,-1.0,0,-1.0,-1.0);
+      
+      fprintf(rec_file_data.fp,"%d %d %.2lf %.2lf\n",
+	      (int)((tr->tracking_time_duration.tv_sec*1000)+(tr->tracking_time_duration.tv_nsec/1000000.0)),
+	      tob.n,
+	      tob.x[tob.n-1],
+	      tob.y[tob.n-1]);
     }
 
   if(app_flow.trk_mode==RED_GREEN_BLUE_SPOTS)
@@ -484,6 +540,11 @@ int tracking_interface_tracking_one_bright_spot(struct tracking_interface* tr)
       g_printerr("mean_luminance (%lf) is too high for tracking\n",tr->mean_luminance);
       tr->number_spots=0;
       tr->number_positive_pixels=0;
+      tracked_object_update_position(&tob,
+				     -1.0,
+				     -1.0,
+				     -1.0,
+				     microsecond_from_timespec(&tr->inter_buffer_duration));
       return 0;
     }
   
@@ -588,6 +649,12 @@ int tracking_interface_tracking_two_bright_spots(struct tracking_interface* tr)
   // check if the two spots are within reasonable distance
   if(distance(tr->spot_mean_x[0],tr->spot_mean_y[0],tr->spot_mean_x[1],tr->spot_mean_y[1])>tr->max_distance_two_spots)
     {
+#ifdef DEBUG_TRACKING
+      g_printerr("distance between the two spots ( %lf ) is larger than  %lf\n",
+		 distance(tr->spot_mean_x[0],tr->spot_mean_y[0],tr->spot_mean_x[1],tr->spot_mean_y[1]),
+		 tr->max_distance_two_spots);
+#endif
+      
       tracked_object_update_position(&tob,
 				     -1.0,
 				     -1.0,

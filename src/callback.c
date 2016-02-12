@@ -90,6 +90,7 @@ int init_window()
   rec_file_data.is_open=0;
   printf("%s\n",rec_file_data.directory);
 
+
   return 0;
 }
 
@@ -280,7 +281,10 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
     }
   tracked_object_init(&tob);
   tr.number_frames_tracked=0;
-  
+
+  // initialize the shared memory, so that the old frames are all set to 0
+  psm_init(tr.psm);
+
   if(app_flow.synch_mode==COMEDI||app_flow.pulse_valid_position==ON||app_flow.pulse_distance==ON)
     {
       if(comedi_dev_init(&comedi_device, "/dev/comedi0")!=0)
@@ -296,14 +300,16 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
       stimulation_start_stimulation(&stim);
     }
 
-  widgets.tracking_running=1;
+ 
   
   if(recording_file_data_open_file()!=0)
     {
       g_printerr("recording_file_data_open_file() did not return 0\n");
+      
       return;
     }
 
+   widgets.tracking_running=1;
   // clear drawing area before starting new trial
   tracking_interface_clear_drawingarea(&tr);
 
@@ -328,12 +334,27 @@ int recording_file_data_open_file()
   gchar * str1;
   gchar * str2;
   gchar * str3;
-
-  
+  char syear[10];
+  char smonth[10];
+  char sday[10];
+  char sdate[255];
+  time_t t = time(0);   // get time now
+  struct tm * now = localtime( & t );
+  sprintf(syear,"%d",now->tm_year+1900);
+  if((now->tm_mon+1)<10)
+    sprintf(smonth,"0%d",now->tm_mon+1);
+  else
+    sprintf(smonth,"%d",now->tm_mon+1);
+  if(now->tm_mday<10)
+    sprintf(sday,"%0d",now->tm_mday);
+  else
+    sprintf(sday,"%d",now->tm_mday);
+  sprintf(sdate,"%s%s%s",sday,smonth,syear);
+    
   str=gtk_entry_get_text(GTK_ENTRY(widgets.filebaseentry));
   str1=g_strdup_printf("%02d",gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widgets.trialnospinbutton)));
   str2=".positrack";
-  rec_file_data.file_name=g_strdup_printf("%s_%s%s",str,str1,str2);
+  rec_file_data.file_name=g_strdup_printf("%s-%s_%s%s",str,sdate,str1,str2);
 
   // check if the file already exist and warn the user if so
   struct stat st;
@@ -387,6 +408,7 @@ void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
   if(widgets.tracking_running==1)
     {
       widgets.tracking_running=0; // making tracking function to return FALSE */
+      psm_init(tr.psm);
       tracked_object_free(&tob);
       if(app_flow.pulse_distance==ON)
 	{ // stop the stimulating thread that will pulse when stimulation_flag is set

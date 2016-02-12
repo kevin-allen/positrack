@@ -79,6 +79,19 @@ int tracked_object_update_position(struct tracked_object* tob,double x, double y
   fprintf(stderr,"tracked_object_update_position\n");
 #endif
 
+  // buffer is unfortunately full
+  // get back to beginning
+  if(tob->n>=TRACKED_OBJECT_BUFFER_LENGTH)
+    {
+      fprintf(stderr,"tracked_object_update_position\n");
+      fprintf(stderr,"tob->n >= TRACKED_OBJECT_BUFFER_LENGTH\n");
+      fprintf(stderr,"setting tob->n =0\n");
+      tob->n=0;
+      tob->position_invalid=0;
+      tob->head_direction_invalid=0;
+      tob->travelled_distance=0;
+    }
+
   tob->x[tob->n]=x;
   tob->y[tob->n]=y;
   tob->head_direction[tob->n]=head_direction;
@@ -137,16 +150,6 @@ int tracked_object_update_position(struct tracked_object* tob,double x, double y
 	  tob->head_direction[tob->n]);
 #endif
   tob->n++;
-  
-  // buffer is unfortunately full
-  // get back to beginning
-  if(tob->n>=TRACKED_OBJECT_BUFFER_LENGTH)
-    {
-      tob->n=0;
-      tob->position_invalid=0;
-      tob->head_direction_invalid=0;
-      tob->travelled_distance=0;
-    }
   return 0;
 }
 
