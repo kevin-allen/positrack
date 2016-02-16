@@ -396,10 +396,60 @@ int recording_file_data_close_file()
 {
   // get the name for the tracking file
   if(rec_file_data.is_open==1)
-  fclose(rec_file_data.fp);
+    {
+
+      //any unwritten data should be written
+      if(fflush(rec_file_data.fp)!=0)
+      	{
+      	  fprintf(stderr, "problem with fflush() in recording_file_data_close_file()\n");
+      	}
+
+      // close the file
+      if(fclose(rec_file_data.fp)!=0)
+	{
+	  fprintf(stderr,"error with fclose %s in recording_file_data_close_file()\n",rec_file_data.file_name);
+	  return -1;
+	}
+
+      // reopen as an input file
+      rec_file_data.fp=fopen(rec_file_data.file_name,"r");
+      if (rec_file_data.fp==NULL)
+	{
+	  fprintf(stderr,"error opening %s in recording_file_data_close_file()\n",rec_file_data.file_name);
+	  return -1;
+	}
+      
+      
+      // check that the file length is equal to the number of frames tracked
+      unsigned long newline_count=0;
+      int c;
+      while( (c=fgetc(rec_file_data.fp)) != EOF){
+      	if(c=='\n')
+      	  newline_count++;
+      }
+
+
+      // close the file
+      if(fclose(rec_file_data.fp)!=0)
+	{
+	  fprintf(stderr,"error with second fclose %s in recording_file_data_close_file()\n",rec_file_data.file_name);
+	  return -1;
+	}
+
+      if(newline_count!=tr.number_frames_tracked)
+	{
+	  fprintf(stderr, "Problem with the length of the file\n");
+	  fprintf(stderr, "Number of new lines in %s: %lu \n",rec_file_data.file_name,newline_count);
+	  fprintf(stderr, "Number of frame in tracking structure: %lu \n",tr.number_frames_tracked);
+	  return -1;
+	}
+      else
+	{
+	  fprintf(stderr, "Number of new lines in %s: %lu \n",rec_file_data.file_name,newline_count);
+	  fprintf(stderr, "Number of frame in tracking structure: %lu \n",tr.number_frames_tracked);
+	}
+    }  
 }
-
-
 
 
 void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
@@ -408,16 +458,18 @@ void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
   if(widgets.tracking_running==1)
     {
       widgets.tracking_running=0; // making tracking function to return FALSE */
+      usleep(100000); // let things die down before cleaning resources
+
       psm_init(tr.psm);
+      recording_file_data_close_file();
       tracked_object_free(&tob);
       if(app_flow.pulse_distance==ON)
 	{ // stop the stimulating thread that will pulse when stimulation_flag is set
 	  stimulation_stop_stimulation(&stim);
 	}
-            
       if(app_flow.synch_mode==COMEDI||app_flow.pulse_valid_position==ON||app_flow.pulse_distance==ON)
 	comedi_dev_free(&comedi_device);
-      recording_file_data_close_file();
+      
       index=gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widgets.trialnospinbutton));
       index++; 
       gtk_spin_button_set_value(GTK_SPIN_BUTTON(widgets.trialnospinbutton),(gdouble)index);
