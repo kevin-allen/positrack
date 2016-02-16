@@ -80,13 +80,9 @@ File with declarations of the main structures and functions used in positrack
 #define TRACKING_INTERFACE_MIN_DISTANCE_TWO_SPOTS 190 // for patrick spinning table
 //#define TRACKING_INTERFACE_MIN_DISTANCE_TWO_SPOTS 150 // for open field
 
-<<<<<<< HEAD
-#define TRACKED_OBJECT_BUFFER_LENGTH 432000 // 432000 should give 240 minutes at 30Hz.
-#define TRACKED_OBJECT_PULSE_DISTANCE 2000 // distance to run before pulse is done
-=======
 #define TRACKED_OBJECT_BUFFER_LENGTH 1500000 // 1500000 should give 500 minutes at 50Hz.
 #define TRACKED_OBJECT_PULSE_DISTANCE 500 // distance to run before pulse is done
->>>>>>> 397438e83278442f813d8b4abe0e62961c2d967d
+
 
 #define STIMULATION_TIMER_MS 5 // number of ms betweek calls to stimulation_timer_update()
 
@@ -106,13 +102,13 @@ File with declarations of the main structures and functions used in positrack
 #define POSITRACKSHARENUMFRAMES 100
 
 
-//#define DEBUG_ACQ // to turn on debugging output for the comedi card
+#define DEBUG_ACQ // to turn on debugging output for the comedi card
 //#define DEBUG_CAMERA // to turn on debugging for the camera
 //#define DEBUG_TRACKING // to turn on debugging for the tracking
 //#define DEBUG_IMAGE // to turn on debugging for the image processing
 //#define DEBUG_CALLBACK
 //#define DEBUG_TRACKED_OBJECT
-#define DEBUG_SHARE
+//#define DEBUG_SHARE
 //#define CAPS "video/x-raw, format=RGB, framerate=30/1 width=160, pixel-aspect-ratio=1/1"
 
 
