@@ -306,7 +306,11 @@ gboolean tracking()
 		tob.head_direction[tob.n-1]);
   
   // print the data to a file
-  tracking_interface_print_position_to_file(&tr);
+  if(tracking_interface_print_position_to_file(&tr)!=0)
+    {
+      g_printerr("tracking(), tracking_interface_print_position_to_file() did not return 0\n");
+      return FALSE;
+    }
 
   clock_gettime(CLOCK_REALTIME, &tr.end_frame_tracking_time); // get the time we start tracking
   tr.frame_tracking_time_duration=diff(&tr.start_frame_tracking_time,&tr.end_frame_tracking_time);
@@ -391,6 +395,7 @@ int tracking_interface_print_position_to_file(struct tracking_interface* tr)
 	      tr->spot_mean_x[tr->ibs],
 	      tr->spot_mean_y[tr->ibs]);
     }
+  return 0;
 }
 
 int tracking_interface_get_buffer(struct tracking_interface* tr)
