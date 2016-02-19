@@ -215,7 +215,7 @@ gboolean tracking()
     {
       g_printerr("tracking(), tracking_interface_get_buffer() did not return 0\n");
       tr.number_frames_tracked=0;
-      return FALSE;
+      return FALSE; // stop recording
     }
 
   
@@ -223,7 +223,7 @@ gboolean tracking()
   
   
   
-  if(microsecond_from_timespec(&tr.waiting_buffer_duration)/1000>INTERVAL_BETWEEN_TRACKING_CALLS_MS/2) 
+  if(microsecond_from_timespec(&tr.waiting_buffer_duration)/1000>INTERVAL_BETWEEN_TRACKING_CALLS_MS/1.5) 
     { // we are waiting a long time for frames, will ignore the next tick
       // to give time for buffer to arrive without having the thread
       // beinng stuck waiting and slowing down the gui
