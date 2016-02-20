@@ -223,6 +223,7 @@ struct tracking_interface
   // whatever is in the image frame that is used to
   // find location of tracked object and update tracked_object structure
   int is_initialized;
+  int is_in_tracking_function;
   int interval_between_tracking_calls_ms;
   gint width;
   gint height;

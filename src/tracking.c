@@ -10,6 +10,7 @@ change the camera without having to rewrite too much
 int tracking_interface_init(struct tracking_interface* tr)
 {
   tr->skip_next_tick=0;
+  tr->is_in_tracking_function=0;
   tr->number_frames_tracked=0;
   tr->width=TRACKING_INTERFACE_WIDTH;
   tr->height=TRACKING_INTERFACE_HEIGHT;
@@ -193,11 +194,17 @@ gboolean tracking()
 #ifdef DEBUG_TRACKING
   g_printerr("tracking(), tr.number_frames_tracked: %d\n",tr.number_frames_tracked);
 #endif
+  if(tr.is_in_tracking_function==1){ // prevent two threads running this code at the same time
+    return TRUE;
+  }
+  tr.is_in_tracking_function=1;
+  
   if(tr.number_frames_tracked==0)
     clock_gettime(CLOCK_REALTIME, &tr.start_tracking_time); // get the time we start tracking
   if(widgets.tracking_running!=1)
     {
       tr.number_frames_tracked=0;
+      tr.is_in_tracking_function=0;
       return FALSE; // returning false will stop the loop
     }
 
@@ -205,6 +212,7 @@ gboolean tracking()
     { // usefull with camera that changes their sampling rate
       // without asking us
       tr.skip_next_tick=0;
+      tr.is_in_tracking_function=0;
       return TRUE;
     }
 
@@ -215,6 +223,7 @@ gboolean tracking()
     {
       g_printerr("tracking(), tracking_interface_get_buffer() did not return 0\n");
       tr.number_frames_tracked=0;
+      tr.is_in_tracking_function=0;
       return FALSE; // stop recording
     }
 
@@ -249,6 +258,7 @@ gboolean tracking()
     {
       g_printerr("tracking(), tracking_interface_valid_buffer() did not return 0\n");
       tr.number_frames_tracked=0;
+      tr.is_in_tracking_function=0;
       return FALSE;
     }
   tracking_interface_clear_spot_data(&tr);
@@ -259,6 +269,7 @@ gboolean tracking()
 	{ // find spots, choose one, update tracking object
 	  g_printerr("tracking(), tracking_interface_tracking_one_bright_spot() did not return 0\n");
 	  tr.number_frames_tracked=0;
+	  tr.is_in_tracking_function=0;
 	  return FALSE;
 	}
     }
@@ -268,6 +279,7 @@ gboolean tracking()
 	{
 	  g_printerr("tracking(), tracking_interface_tracking_two_bright_spots() did not return 0\n");
 	  tr.number_frames_tracked=0;
+	  tr.is_in_tracking_function=0;
 	  return FALSE;
 	}
     }
@@ -277,6 +289,7 @@ gboolean tracking()
 	{
 	  g_printerr("tracking(), tracking_interface_tracking_red_green_blue_spots() did not return 0\n");
 	  tr.number_frames_tracked=0;
+	  tr.is_in_tracking_function=0;
 	  return FALSE;
 	}
     }
@@ -309,6 +322,8 @@ gboolean tracking()
   if(tracking_interface_print_position_to_file(&tr)!=0)
     {
       g_printerr("tracking(), tracking_interface_print_position_to_file() did not return 0\n");
+      tr.number_frames_tracked=0;
+      tr.is_in_tracking_function=0;
       return FALSE;
     }
 
@@ -337,6 +352,7 @@ gboolean tracking()
 			comedi_device.comedi_baseline);
     }
     tr.number_frames_tracked++;
+    tr.is_in_tracking_function=0;
   return TRUE;
 }
 

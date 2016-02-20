@@ -215,9 +215,9 @@ void start_video()
 	      fprintf(stderr,"check that you have the right permission on /dev/fw0\n");
 	      return;
 	    }
-	  //#ifdef DEBUG_CALLBACK
+	  #ifdef DEBUG_CALLBACK
 	  firewire_camera_interface_print_info(&fw_inter);
-	  //#endif
+	  #endif
 	}
       firewire_camera_interface_start_transmission(&fw_inter);
       // let the pipeline ask for new data via a signal to cb_need_data function
@@ -290,6 +290,7 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
       if(comedi_dev_init(&comedi_device, "/dev/comedi0")!=0)
 	{
 	  g_printerr("Problem creating the comedi device\n\n");
+	  
 	  return;
 	}
     }
@@ -300,7 +301,6 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
       stimulation_start_stimulation(&stim);
     }
 
- 
   
   if(recording_file_data_open_file()!=0)
     {

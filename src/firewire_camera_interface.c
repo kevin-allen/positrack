@@ -58,17 +58,17 @@ int firewire_camera_interface_init(struct firewire_camera_interface* cam)
   // get video modes:
   cam->err=dc1394_video_get_supported_modes(cam->camera,&cam->video_modes);
   DC1394_ERR_CLN_RTN(cam->err,firewire_camera_interface_free(cam),"Can't get video modes");
-  
-  fprintf(stderr,"camera has %d video modes\n",cam->video_modes.num);
-
   int i;
+  #ifdef DEBUG_CAMERA
+  fprintf(stderr,"camera has %d video modes\n",cam->video_modes.num);
   for(i=0; i < cam->video_modes.num;i++)
     {
       fprintf(stderr,"video mode:%d\n",cam->video_modes.modes[i]);
     }
-
+  #endif
   
   // check if camera can do scalable mode with MONO8, which is 8bpp
+ 
   for (i=cam->video_modes.num-1;i>=0;i--)
     {
       if (dc1394_is_video_mode_scalable(cam->video_modes.modes[i])) // get a scalable mode
@@ -77,7 +77,9 @@ int firewire_camera_interface_init(struct firewire_camera_interface* cam)
 	  if (cam->coding==DC1394_COLOR_CODING_MONO8) // with MONO8 coding
 	    {
 	      cam->video_mode=cam->video_modes.modes[i];
+	      #ifdef DEBUG_CAMERA
 	      printf("cam->video_mode: %d\n",cam->video_mode);
+	      #endif
 	      break;
 	    }
 	}
@@ -109,6 +111,8 @@ int firewire_camera_interface_init(struct firewire_camera_interface* cam)
   int x,y;
   float z;
   long int xx;
+  #ifdef DEBUG_CAMERA
+
   dc1394_format7_get_image_size(cam->camera,cam->video_mode,&x,&y);
   printf("get image size, x: %d, y: %d\n",x,y);
   dc1394_format7_get_image_position(cam->camera,cam->video_mode,&x,&y);
@@ -127,6 +131,8 @@ int firewire_camera_interface_init(struct firewire_camera_interface* cam)
   printf("time interval between frames: %f ms\n",z);
   dc1394_format7_get_total_bytes(cam->camera,cam->video_mode,&xx);
   printf("bytes per frame: %ld\n",xx);
+
+  #endif
   
   
   cam->err=dc1394_capture_setup(cam->camera,cam->number_dms_buffers, DC1394_CAPTURE_FLAGS_DEFAULT);
