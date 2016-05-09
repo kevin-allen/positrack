@@ -341,21 +341,28 @@ int recording_file_data_open_file()
   time_t t = time(0);   // get time now
   struct tm * now = localtime( & t );
   sprintf(syear,"%d",now->tm_year+1900);
+
   if((now->tm_mon+1)<10)
     sprintf(smonth,"0%d",now->tm_mon+1);
   else
     sprintf(smonth,"%d",now->tm_mon+1);
   if(now->tm_mday<10)
-    sprintf(sday,"%0d",now->tm_mday);
+    sprintf(sday,"0%d",now->tm_mday);
   else
     sprintf(sday,"%d",now->tm_mday);
+  
   sprintf(sdate,"%s%s%s",sday,smonth,syear);
-    
+  fprintf(stderr,"date: %s\n",sdate);
+  
+
+  
   str=gtk_entry_get_text(GTK_ENTRY(widgets.filebaseentry));
   str1=g_strdup_printf("%02d",gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widgets.trialnospinbutton)));
   str2=".positrack";
   rec_file_data.file_name=g_strdup_printf("%s-%s_%s%s",str,sdate,str1,str2);
 
+  
+  
   // check if the file already exist and warn the user if so
   struct stat st;
   if(stat(g_strdup_printf("%s",rec_file_data.file_name),&st) == 0)
