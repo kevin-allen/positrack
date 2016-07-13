@@ -465,10 +465,10 @@ void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
   if(widgets.tracking_running==1)
     {
       widgets.tracking_running=0; // making tracking function to return FALSE */
-      usleep(100000); // let things die down before cleaning resources
-
+      usleep(200000); // let things die down before cleaning resources
       psm_init(tr.psm);
       recording_file_data_close_file();
+      usleep(200000);
       tracked_object_free(&tob);
       if(app_flow.pulse_distance==ON)
 	{ // stop the stimulating thread that will pulse when stimulation_flag is set
@@ -484,10 +484,6 @@ void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
       widgets.statusbar_context_id=gtk_statusbar_get_context_id(GTK_STATUSBAR(widgets.statusbar),"tracking");
       gtk_statusbar_remove(GTK_STATUSBAR(widgets.statusbar),widgets.statusbar_context_id,widgets.statusbar_message_id);
       stop_video();
-
-
- 
-
 
     }
 }
