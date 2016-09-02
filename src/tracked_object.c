@@ -15,11 +15,9 @@ int tracked_object_init(struct tracked_object *tob)
   tob->percentage_position_invalid_total=0;
   tob->percentage_position_invalid_last_100=0;
   tob->travelled_distance=0;
-  tob->last_pulsed_distance=0;
   tob->samples_per_seconds=0;
   tob->buffer_length=TRACKED_OBJECT_BUFFER_LENGTH; 
   tob->pixels_per_cm=-1.0;
-  tob->number_pulses=0;
   double* x; // given by traking_interface
   double* y; // given by tracking interface
   double* head_direction; // given by tracking interface
@@ -123,19 +121,6 @@ int tracked_object_update_position(struct tracked_object* tob,double x, double y
       //tob->speed[tob->n]=tob->sample_distance/((double)frame_duration_us/1000000);
     }
   
-  if(app_flow.pulse_distance==ON)
-    {
-      if(tob->travelled_distance-tob->last_pulsed_distance>TRACKED_OBJECT_PULSE_DISTANCE)
-	{
-	  stim.stimulation_flag=1;
-	  tob->last_pulsed_distance=tob->travelled_distance;
-	  tob->number_pulses++;
-	}
-      else
-	{
-	  stim.stimulation_flag=0;
-	}
-    }
   
   if(app_flow.drawo_mode==ONE_BLACK_DOT)
     {
@@ -214,11 +199,6 @@ int tracked_object_display_path_variables(struct tracked_object* tob)
   cairo_show_text (cr, g_strdup_printf("Distance: %.2lf",tob->travelled_distance));
   cairo_move_to(cr,0,30);
   cairo_show_text (cr, g_strdup_printf("Duration: %d sec",(int)tr.tracking_time_duration_all.tv_sec));
-  if(app_flow.pulse_distance==ON)
-    {
-      cairo_move_to(cr,0,45);
-      cairo_show_text (cr, g_strdup_printf("Pulses: %d ",tob->number_pulses));
-    }
   return 0;
 }
 

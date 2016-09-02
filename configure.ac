@@ -21,12 +21,11 @@ PKG_CHECK_MODULES([cairo], [cairo])
 AC_SEARCH_LIBS([clock_gettime],[rt])
 AC_SEARCH_LIBS([pthread_create],[pthread])
 AC_SEARCH_LIBS([sqrt],[m])
-AC_SEARCH_LIBS([comedi_open],[libcomedi]) # not working
 AC_SEARCH_LIBS([raw1394_new_handle],[raw1394]) 
 AC_SEARCH_LIBS([raw1394_new_handle],[raw1394]) 
 AC_SEARCH_LIBS([dc1394_camera_enumerate],[dc1394]) #libdc1394-devel
 AM_PATH_GTK_2_0([2.10.0],,AC_MSG_ERROR([Gtk+ 2.10.0 or higher required.]))
-AC_CHECK_HEADERS(stdlib.h string.h sys/time.h unistd.h comedi.h comedilib.h libraw1394/raw1394.h dc1394/dc1394.h)
+AC_CHECK_HEADERS(stdlib.h string.h sys/time.h unistd.h libraw1394/raw1394.h dc1394/dc1394.h)
 AC_FUNC_MALLOC
 AC_CHECK_FUNCS([clock_gettime])
 AC_CHECK_FUNCS([memset])

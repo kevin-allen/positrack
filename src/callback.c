@@ -56,7 +56,7 @@ int init_window()
 
   // radio buttons
   widgets.no_synchronization_radiobutton= GTK_WIDGET (gtk_builder_get_object (builder, "no_synchronizationradiobutton"));  
-  widgets.comedi_synchronization_radiobutton= GTK_WIDGET (gtk_builder_get_object (builder, "comedi_synchronizationradiobutton"));  
+  widgets.parallel_port_synchronization_radiobutton= GTK_WIDGET (gtk_builder_get_object (builder, "parallel_port_synchronizationradiobutton"));  
   widgets.singlewhitespot_radiobutton= GTK_WIDGET (gtk_builder_get_object (builder, "singlewhitespot_radiobutton"));  
   widgets.twowhitespots_radiobutton=GTK_WIDGET (gtk_builder_get_object (builder, "twowhitespots_radiobutton"));  
   widgets.redgreenbluespots_radiobutton=GTK_WIDGET (gtk_builder_get_object (builder, "redgreenbluespots_radiobutton"));  
@@ -285,20 +285,16 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
   // initialize the shared memory, so that the old frames are all set to 0
   psm_init(tr.psm);
 
-  if(app_flow.synch_mode==COMEDI||app_flow.pulse_valid_position==ON||app_flow.pulse_distance==ON)
+  if(app_flow.synch_mode==PARALLEL_PORT||app_flow.pulse_valid_position==ON)
     {
+      /*
       if(comedi_dev_init(&comedi_device, "/dev/comedi0")!=0)
 	{
 	  g_printerr("Problem creating the comedi device\n\n");
 	  
 	  return;
 	}
-    }
-
-  if(app_flow.pulse_distance==ON)
-    { // start the stimulating thread that will pulse when stimulation_flag is set
-      stimulation_init(&stim);
-      stimulation_start_stimulation(&stim);
+      */
     }
 
   
@@ -470,12 +466,10 @@ void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
       recording_file_data_close_file();
       usleep(200000);
       tracked_object_free(&tob);
-      if(app_flow.pulse_distance==ON)
-	{ // stop the stimulating thread that will pulse when stimulation_flag is set
-	  stimulation_stop_stimulation(&stim);
-	}
-      if(app_flow.synch_mode==COMEDI||app_flow.pulse_valid_position==ON||app_flow.pulse_distance==ON)
-	comedi_dev_free(&comedi_device);
+
+      if(app_flow.synch_mode==PARALLEL_PORT||app_flow.pulse_valid_position==ON){
+	//comedi_dev_free(&comedi_device);
+      }
       
       index=gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widgets.trialnospinbutton));
       index++; 
@@ -513,10 +507,10 @@ void on_no_synchronizationradiobutton_toggled(GtkObject *object, gpointer user_d
       app_flow.synch_mode=NONE;
       g_printerr ("no synch.\n"); 
     }
-  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.comedi_synchronization_radiobutton))==TRUE)
+  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.parallel_port_synchronization_radiobutton))==TRUE)
     {
-      app_flow.synch_mode=COMEDI;
-      g_printerr ("comedi synch.\n"); 
+      app_flow.synch_mode=PARALLEL_PORT;
+      g_printerr ("parallel_port synch.\n"); 
     }
 }
 void on_singlewhitespot_radiobutton_toggled(GtkObject *object, gpointer user_data)
@@ -571,24 +565,22 @@ void on_videoplayback_checkbutton_toggled(GtkObject *object, gpointer user_data)
 
 void main_app_print_example_config_file(struct main_app_flow* app_flow)
 {
-  fprintf(stderr,"\nChoose one option per line for:\n\nvideosource\ntracking_mode\nsynchronization_mode\nvideoplayback_mode\ndrawspot_mode\ndrawobject_mode\npulse_valid_position\npulse_distance\n");
+  fprintf(stderr,"\nChoose one option per line for:\n\nvideosource\ntracking_mode\nsynchronization_mode\nvideoplayback_mode\ndrawspot_mode\ndrawobject_mode\npulse_valid_position\n");
   fprintf(stderr,"\nYour options on each line are\n\n");
   fprintf(stderr,"FIREWIRE_BLACK_WHITE FIREWIRE_COLOR\n");
   fprintf(stderr,"ONE_WHITE_SPOT TWO_WHITE_SPOTS RED_GREEN_BLUE_SPOTS\n");
-  fprintf(stderr,"NONE COMEDI\n");
+  fprintf(stderr,"NONE PARALLEL_PORT\n");
   fprintf(stderr,"ON OFF\n");
   fprintf(stderr,"NO ALL ONLY_USED_SPOTS\n");
   fprintf(stderr,"ONE_BLACK_DOT NO_DOT\n");
   fprintf(stderr,"ON OFF\n");
-  fprintf(stderr,"ON OFF\n");
   fprintf(stderr,"\nAn example is\n\n");
   fprintf(stderr,"FIREWIRE_BLACK_WHITE\n");
   fprintf(stderr,"ONE_WHITE_SPOT\n");
-  fprintf(stderr,"COMEDI\n");
+  fprintf(stderr,"PARALLEL_PORT\n");
   fprintf(stderr,"ON\n");
   fprintf(stderr,"ONLY_USED_SPOTS\n");
   fprintf(stderr,"ONE_BLACK_DOT\n");
-  fprintf(stderr,"ON\n");
   fprintf(stderr,"OFF\n");
 }
 int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
@@ -609,7 +601,6 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
   drawspot_mode
   drawobject_mode
   pulse_valid_position
-  pulse_distance
 
   example of file:
   FIREWIRE_COLOR
@@ -619,7 +610,7 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
   ONLY_USED_SPOTS
   ONE_BLACK_DOT 
   ON
-  OFF
+
   ***********************************************/
   // check if config file is in the directory
   gchar* config_directory_name;
@@ -643,7 +634,6 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
   char drawspots_mode[255];
   char drawobject_mode[255];
   char pulsevalid_position[255];
-  char pulse_distance[255];
   int i,ret;
 
   // read variables from file
@@ -696,12 +686,6 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
       main_app_print_example_config_file(app_flow);
       return -1;
     }
-  if(fscanf(fp,"%s",&pulse_distance)!=1)
-    {
-      fprintf(stderr,"problem reading pulse_distance from %s\n",config_file_name);
-      main_app_print_example_config_file(app_flow);
-      return -1;
-    }
 
   fclose(fp); 
   
@@ -748,9 +732,9 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
       app_flow->synch_mode=NONE;
       printf("synchronization mode: %s\n",synchronization_mode);
     }
-  else if (strcmp(synchronization_mode, "COMEDI") == 0) 
+  else if (strcmp(synchronization_mode, "PARALLEL_PORT") == 0) 
     {
-      app_flow->synch_mode=COMEDI;
+      app_flow->synch_mode=PARALLEL_PORT;
       printf("synchronization mode: %s\n",synchronization_mode);
     }
   else
@@ -830,23 +814,6 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
       return -1;
     }
 
-  if (strcmp(pulse_distance, "ON") == 0) 
-    {
-      app_flow->pulse_distance=ON;
-      printf("pulse_distance mode: %s\n",pulse_distance);
-    }
-  else if (strcmp(pulse_distance, "OFF") == 0) 
-    {
-      app_flow->pulse_distance=OFF;
-      printf("pulse_distance mode: %s\n",pulse_distance);
-    }
-  else
-    {
-      fprintf(stderr,"value of pulse_distance in %s is not recognized: %s\n",config_file_name,pulse_distance);
-      main_app_print_example_config_file(app_flow);
-      return -1;
-    }
-
 
   return 0;
 }
@@ -871,8 +838,8 @@ void main_app_flow_set_gui(struct main_app_flow* app_flow)
   //sychronization_mode
   if(app_flow->synch_mode==NONE)
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widgets.no_synchronization_radiobutton),TRUE);
-  if(app_flow->synch_mode==COMEDI)
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widgets.comedi_synchronization_radiobutton),TRUE);
+  if(app_flow->synch_mode==PARALLEL_PORT)
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widgets.parallel_port_synchronization_radiobutton),TRUE);
   //videoplayback_mode
   if(app_flow->playback_mode==ON)
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widgets.videoplayback_checkbutton), TRUE);
@@ -916,10 +883,10 @@ void main_app_flow_get_setting_from_gui(struct main_app_flow* app_flow)
       app_flow->synch_mode=NONE;
       g_printerr ("no synch.\n"); 
     }
-  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.comedi_synchronization_radiobutton))==TRUE)
+  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.parallel_port_synchronization_radiobutton))==TRUE)
     {
-      app_flow->synch_mode=COMEDI;
-      g_printerr ("comedi synch.\n"); 
+      app_flow->synch_mode=PARALLEL_PORT;
+      g_printerr ("parallel_port synch.\n"); 
     }
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.videoplayback_checkbutton))==TRUE)
     {
