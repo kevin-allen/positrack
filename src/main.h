@@ -20,6 +20,11 @@ File with declarations of the main structures and functions used in positrack
 
 ****************************************************************/
 
+
+
+
+
+
 #include <stdio.h>
 #include <fcntl.h> // for file operations
 #include <string.h>
@@ -49,12 +54,15 @@ File with declarations of the main structures and functions used in positrack
 #include <sys/mman.h>
 #include <sys/stat.h>
 
+#include <sys/ioctl.h>
+#include <linux/parport.h>
+#include <linux/ppdev.h>
 
 
 #define _FILE_OFFSET_BITS 64 // to have files larger than 2GB
 #define NSEC_PER_SEC (1000000000) // The number of nsecs per sec
 
-#define INTERVAL_BETWEEN_TRACKING_CALLS_MS  17 //  20  // if this is too close to frame rate, then larger 
+#define INTERVAL_BETWEEN_TRACKING_CALLS_MS 15 // 17 //  20  // if this is too close to frame rate, then larger 
                                                // jitter in inter frame intervals
 #define TIMEOUT_FOR_CAPTURE_MS 20 // time before the timeout try to get a new frame
 #define FIREWIRE_CAMERA_INTERFACE_NUMBER_OF_FRAMES_IN_RING_BUFFER 10
@@ -69,7 +77,7 @@ File with declarations of the main structures and functions used in positrack
 #define TRACKING_INTERFACE_WIDTH 860
 #define TRACKING_INTERFACE_HEIGHT 860
 #define TRACKING_INTERFACE_MAX_NUMBER_SPOTS 4 // was 2 before for black and white 2 spots detection
-#define TRACKING_INTERFACE_MAX_NUMBER_SPOTS_CALLS 6
+#define TRACKING_INTERFACE_MAX_NUMBER_SPOTS_CALLS 5 // was 6 before changed because of slow computers
 
 #define TRACKING_INTERFACE_MAX_MEAN_LUMINANCE_FOR_TRACKING 8/* 0 */
 #define TRACKING_INTERFACE_MAX_SPOT_SIZE 40000
@@ -85,6 +93,7 @@ File with declarations of the main structures and functions used in positrack
 #define POSITRACKSHARE "/tmppositrackshare" 
 #define POSITRACKSHARENUMFRAMES 100
 
+#define PARALLELPORTFILE "/dev/parport0"
 
 //#define DEBUG_ACQ // to turn on debugging output for the comedi card
 //#define DEBUG_CAMERA // to turn on debugging for the camera
@@ -178,6 +187,13 @@ struct all_widget
   int timeout_id;
 };
 struct all_widget widgets; //defines a structure named widgets of the all_widget type
+
+struct parallel_port
+{
+  int parportfd;
+};
+struct parallel_port parap;
+
 
 
 

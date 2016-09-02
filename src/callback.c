@@ -287,16 +287,35 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
 
   if(app_flow.synch_mode==PARALLEL_PORT||app_flow.pulse_valid_position==ON)
     {
-      /*
-      if(comedi_dev_init(&comedi_device, "/dev/comedi0")!=0)
-	{
-	  g_printerr("Problem creating the comedi device\n\n");
-	  
-	  return;
-	}
-      */
-    }
+      parap.parportfd = open(PARALLELPORTFILE, O_RDWR);
+      if (parap.parportfd == -1){
+        g_printerr("Error opening the parallel port file %s\n",PARALLELPORTFILE);
+        return;
+      }
+      if(ioctl(parap.parportfd,PPCLAIM,NULL)){
+	g_printerr("Error claiming the parallel port\n");
+	close(parap.parportfd);
+	return;
+      }
+      
+      int mode = IEEE1284_MODE_BYTE; //  to transmit eight bits at a time
+      if (ioctl (parap.parportfd, PPSETMODE, &mode)) {
+        g_printerr("Error setting the parallel port mode\n");
+	ioctl(parap.parportfd, PPRELEASE);
+        close (parap.parportfd);
+        return 1;
+      }
 
+      // Set data pins to output
+      int dir = 0x00;
+      if (ioctl(parap.parportfd, PPDATADIR, &dir))
+	{
+	  g_printerr("Could not set parallel port direction");
+	  ioctl(parap.parportfd, PPRELEASE);
+	  close(parap.parportfd);
+	  return 1;
+	}
+    }
   
   if(recording_file_data_open_file()!=0)
     {
@@ -323,6 +342,38 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
 #endif
   
 }
+
+
+void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
+{
+  int index;
+  if(widgets.tracking_running==1)
+    {
+      widgets.tracking_running=0; // making tracking function to return FALSE */
+      usleep(200000); // let things die down before cleaning resources
+      psm_init(tr.psm);
+      recording_file_data_close_file();
+      usleep(200000);
+      tracked_object_free(&tob);
+
+      if(app_flow.synch_mode==PARALLEL_PORT||app_flow.pulse_valid_position==ON){
+	ioctl(parap.parportfd,PPRELEASE);
+	close(parap.parportfd);
+      }
+      
+      index=gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widgets.trialnospinbutton));
+      index++; 
+      gtk_spin_button_set_value(GTK_SPIN_BUTTON(widgets.trialnospinbutton),(gdouble)index);
+      usleep(100000);
+      widgets.statusbar_context_id=gtk_statusbar_get_context_id(GTK_STATUSBAR(widgets.statusbar),"tracking");
+      gtk_statusbar_remove(GTK_STATUSBAR(widgets.statusbar),widgets.statusbar_context_id,widgets.statusbar_message_id);
+      stop_video();
+
+    }
+}
+
+
+
 int recording_file_data_open_file()
 {
   // get the name for the tracking file
@@ -454,33 +505,6 @@ int recording_file_data_close_file()
     }  
 }
 
-
-void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
-{
-  int index;
-  if(widgets.tracking_running==1)
-    {
-      widgets.tracking_running=0; // making tracking function to return FALSE */
-      usleep(200000); // let things die down before cleaning resources
-      psm_init(tr.psm);
-      recording_file_data_close_file();
-      usleep(200000);
-      tracked_object_free(&tob);
-
-      if(app_flow.synch_mode==PARALLEL_PORT||app_flow.pulse_valid_position==ON){
-	//comedi_dev_free(&comedi_device);
-      }
-      
-      index=gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widgets.trialnospinbutton));
-      index++; 
-      gtk_spin_button_set_value(GTK_SPIN_BUTTON(widgets.trialnospinbutton),(gdouble)index);
-      usleep(100000);
-      widgets.statusbar_context_id=gtk_statusbar_get_context_id(GTK_STATUSBAR(widgets.statusbar),"tracking");
-      gtk_statusbar_remove(GTK_STATUSBAR(widgets.statusbar),widgets.statusbar_context_id,widgets.statusbar_message_id);
-      stop_video();
-
-    }
-}
 
 
 void save_pixbuf_to_file()
