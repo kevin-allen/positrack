@@ -201,6 +201,9 @@ gboolean tracking()
   
   if(tr.number_frames_tracked==0)
     clock_gettime(CLOCK_REALTIME, &tr.start_tracking_time); // get the time we start tracking
+
+
+
   if(widgets.tracking_running!=1)
     {
       tr.number_frames_tracked=0;
@@ -310,7 +313,7 @@ gboolean tracking()
       return FALSE;
     }
 
-  clock_gettime(CLOCK_REALTIME, &tr.end_frame_tracking_time); // get the time we start tracking
+  clock_gettime(CLOCK_REALTIME, &tr.end_frame_tracking_time); // get the time we stop tracking
   tr.frame_tracking_time_duration=diff(&tr.start_frame_tracking_time,&tr.end_frame_tracking_time);
   
 #ifdef DEBUG_TRACKING 
@@ -347,8 +350,9 @@ int tracking_interface_print_position_to_file(struct tracking_interface* tr)
   // save data to the file
   if(app_flow.trk_mode==TWO_WHITE_SPOTS)
     {
-      fprintf(rec_file_data.fp,"%d %d %.2lf %.2lf %.2lf %d %d %.2lf %.2lf %d %.2lf %.2lf\n",
+      fprintf(rec_file_data.fp,"%d %llu %d %.2lf %.2lf %.2lf %d %d %.2lf %.2lf %d %.2lf %.2lf\n",
 	      (int)((tr->tracking_time_duration.tv_sec*1000)+(tr->tracking_time_duration.tv_nsec/1000000.0)),
+	      (fw_inter.frame->timestamp - tr->start_tracking_time_all_64)/1000,
 	      tob.n,
 	      tob.x[tob.n-1],
 	      tob.y[tob.n-1],
@@ -364,8 +368,9 @@ int tracking_interface_print_position_to_file(struct tracking_interface* tr)
   if(app_flow.trk_mode==ONE_WHITE_SPOT)
     {
       
-      fprintf(rec_file_data.fp,"%d %d %.2lf %.2lf\n",
+      fprintf(rec_file_data.fp,"%d %llu %d %.2lf %.2lf\n",
 	      (int)((tr->tracking_time_duration.tv_sec*1000)+(tr->tracking_time_duration.tv_nsec/1000000.0)),
+	      (fw_inter.frame->timestamp - tr->start_tracking_time_all_64)/1000,
 	      tob.n,
 	      tob.x[tob.n-1],
 	      tob.y[tob.n-1]);
@@ -373,8 +378,9 @@ int tracking_interface_print_position_to_file(struct tracking_interface* tr)
 
   if(app_flow.trk_mode==RED_GREEN_BLUE_SPOTS)
     {
-      fprintf(rec_file_data.fp,"%d %d %.2lf %.2lf %.2lf %d %d %.2lf %.2lf %d %.2lf %.2lf %d %.2lf %.2lf \n",
+      fprintf(rec_file_data.fp,"%d %llu %d %.2lf %.2lf %.2lf %d %d %.2lf %.2lf %d %.2lf %.2lf %d %.2lf %.2lf \n",
 	      (int)((tr->tracking_time_duration.tv_sec*1000)+(tr->tracking_time_duration.tv_nsec/1000000.0)),
+	      (fw_inter.frame->timestamp - tr->start_tracking_time_all_64)/1000,
 	      tob.n,
 	      tob.x[tob.n-1],
 	      tob.y[tob.n-1],
@@ -417,8 +423,7 @@ int tracking_interface_firewire_get_buffer(struct tracking_interface* tr)
   //get the time of buffer
   tr->previous_buffer_time=tr->current_buffer_time;
   clock_gettime(CLOCK_REALTIME, &tr->current_buffer_time); // get the time we got the frame
-  // tr->current_buffer_time.tv_nsec=fw_inter.frame->timestamp*1000; // dc1394video_frame_t-> timestamp is in ms this does not work
-  //tr->current_buffer_time.tv_nsec=0;
+  
   if(tr->number_frames_tracked==0)
     tr->previous_buffer_time=tr->current_buffer_time;// we want to set previous buffer time to current buffer time
 #ifdef DEBUG_TRACKING
@@ -521,7 +526,7 @@ int tracking_interface_print_spot_array(struct tracking_interface* tr)
   int x,y;
   for (x=0;x<tr->width;x++)
     for(y=0;y<tr->height;y++)
-      printf("1 %d %d %lf\n",x,tr->height-y,tr->spot[(y*tr->width)+x]);
+      printf("1 %d %d %d\n",x,tr->height-y,tr->spot[(y*tr->width)+x]);
 }
 
 int tracking_interface_tracking_one_bright_spot(struct tracking_interface* tr)

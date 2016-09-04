@@ -1,0 +1,6 @@
+# udev rules file for all firewire matches.
+# This file allows udev to change the mode to 666 (all read/write)
+# for any firewire devices.
+#
+
+SUBSYSTEM=="firewire", MODE="0666"

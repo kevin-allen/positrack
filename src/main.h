@@ -60,9 +60,9 @@ File with declarations of the main structures and functions used in positrack
 
 
 #define _FILE_OFFSET_BITS 64 // to have files larger than 2GB
-#define NSEC_PER_SEC (1000000000) // The number of nsecs per sec
+#define NSEC_PER_SEC 1000000000L
 
-#define INTERVAL_BETWEEN_TRACKING_CALLS_MS 15 // 17 //  20  // if this is too close to frame rate, then larger 
+#define INTERVAL_BETWEEN_TRACKING_CALLS_MS 17 //  20  // if this is too close to frame rate, then larger 
                                                // jitter in inter frame intervals
 #define TIMEOUT_FOR_CAPTURE_MS 20 // time before the timeout try to get a new frame
 #define FIREWIRE_CAMERA_INTERFACE_NUMBER_OF_FRAMES_IN_RING_BUFFER 10
@@ -246,6 +246,7 @@ struct tracking_interface
   struct timespec end_tracking_time; // for a sample
   struct timespec tracking_time_duration; // for a sample
   struct timespec start_tracking_time_all; // for all samples
+  uint64_t start_tracking_time_all_64;
   struct timespec time_now; // for all samples
   struct timespec tracking_time_duration_all; // for all samples
 
@@ -357,6 +358,8 @@ struct firewire_camera_interface
   dc1394_t * d;
   dc1394camera_list_t *list;
   dc1394error_t err;
+  
+
 };
 struct firewire_camera_interface fw_inter;
 

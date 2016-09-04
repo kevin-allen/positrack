@@ -221,8 +221,7 @@ void start_video()
 	}
       firewire_camera_interface_start_transmission(&fw_inter);
       // let the pipeline ask for new data via a signal to cb_need_data function
-      
-      
+            
       if(gst_inter.loop==NULL)
 	{
 #ifdef DEBUG_CALLBACK
@@ -285,6 +284,7 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
   // initialize the shared memory, so that the old frames are all set to 0
   psm_init(tr.psm);
 
+  // set the parallel port for synchronization
   if(app_flow.synch_mode==PARALLEL_PORT||app_flow.pulse_valid_position==ON)
     {
       parap.parportfd = open(PARALLELPORTFILE, O_RDWR);
@@ -303,7 +303,7 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
         g_printerr("Error setting the parallel port mode\n");
 	ioctl(parap.parportfd, PPRELEASE);
         close (parap.parportfd);
-        return 1;
+        return;
       }
 
       // Set data pins to output
@@ -313,28 +313,30 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
 	  g_printerr("Could not set parallel port direction");
 	  ioctl(parap.parportfd, PPRELEASE);
 	  close(parap.parportfd);
-	  return 1;
+	  return;
 	}
     }
-  
+
+  // open .positrack file
   if(recording_file_data_open_file()!=0)
     {
       g_printerr("recording_file_data_open_file() did not return 0\n");
-      
       return;
     }
-
-   widgets.tracking_running=1;
+  
+  widgets.tracking_running=1;
   // clear drawing area before starting new trial
   tracking_interface_clear_drawingarea(&tr);
-
+  
   // set the statusbar to recording details
   const gchar *str;
   str=g_strdup_printf("Tracking in process, saving in %s",rec_file_data.file_name);
   widgets.statusbar_context_id=gtk_statusbar_get_context_id(GTK_STATUSBAR(widgets.statusbar),"tracking");
   widgets.statusbar_message_id=gtk_statusbar_push(GTK_STATUSBAR(widgets.statusbar),widgets.statusbar_context_id,str);
   
-  clock_gettime(CLOCK_REALTIME,&tr.start_tracking_time_all);  
+  clock_gettime(CLOCK_REALTIME,&tr.start_tracking_time_all);
+  tr.start_tracking_time_all_64=tr.start_tracking_time_all.tv_sec*1000000;
+  tr.start_tracking_time_all_64+=tr.start_tracking_time_all.tv_nsec/1000;
 
   g_timeout_add(tr.interval_between_tracking_calls_ms,tracking,user_data); // timer to trigger a tracking event
 #ifdef DEBUG_CALLBACK
@@ -368,7 +370,6 @@ void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
       widgets.statusbar_context_id=gtk_statusbar_get_context_id(GTK_STATUSBAR(widgets.statusbar),"tracking");
       gtk_statusbar_remove(GTK_STATUSBAR(widgets.statusbar),widgets.statusbar_context_id,widgets.statusbar_message_id);
       stop_video();
-
     }
 }
 
@@ -378,6 +379,7 @@ int recording_file_data_open_file()
 {
   // get the name for the tracking file
   const gchar *str;
+  gchar * str0;
   gchar * str1;
   gchar * str2;
   gchar * str3;
@@ -402,13 +404,14 @@ int recording_file_data_open_file()
   fprintf(stderr,"date: %s\n",sdate);
   
 
-  
+ 
   str=gtk_entry_get_text(GTK_ENTRY(widgets.filebaseentry));
+  str0=rec_file_data.directory;
   str1=g_strdup_printf("%02d",gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widgets.trialnospinbutton)));
   str2=".positrack";
-  rec_file_data.file_name=g_strdup_printf("%s-%s_%s%s",str,sdate,str1,str2);
+  rec_file_data.file_name=g_strdup_printf("%s%s-%s_%s%s",str0,str,sdate,str1,str2);
 
-  
+  printf("recording file name:%s\n",rec_file_data.file_name);
   
   // check if the file already exist and warn the user if so
   struct stat st;
