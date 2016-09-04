@@ -251,6 +251,7 @@ struct tracking_interface
   struct timespec tracking_time_duration_all; // for all samples
 
   struct timespec start_frame_tracking_time; // single frame
+  uint64_t start_frame_tracking_time_64;
   struct timespec end_frame_tracking_time; // single frame
   struct timespec frame_tracking_time_duration; // single frame
   struct timespec start_waiting_buffer_time;

@@ -199,10 +199,9 @@ gboolean tracking()
   }
   tr.is_in_tracking_function=1;
   
-  if(tr.number_frames_tracked==0)
+  if(tr.number_frames_tracked==0){
     clock_gettime(CLOCK_REALTIME, &tr.start_tracking_time); // get the time we start tracking
-
-
+   }
 
   if(widgets.tracking_running!=1)
     {
@@ -232,8 +231,7 @@ gboolean tracking()
 
   
   clock_gettime(CLOCK_REALTIME, &tr.time_now); // timestamp the arrival of the buffer
-  
-  
+  tr.tracking_time_duration=diff(&tr.start_tracking_time_all,&tr.time_now);
   
   if(microsecond_from_timespec(&tr.waiting_buffer_duration)/1000>INTERVAL_BETWEEN_TRACKING_CALLS_MS/1.5) 
     { // we are waiting a long time for frames, will ignore the next tick
@@ -250,8 +248,7 @@ gboolean tracking()
     }
   
   clock_gettime(CLOCK_REALTIME, &tr.start_frame_tracking_time); // get the time we start tracking
-  clock_gettime(CLOCK_REALTIME, &tr.end_tracking_time); // just to get the application timestamp of the frame
-  tr.tracking_time_duration=diff(&tr.start_tracking_time,&tr.end_tracking_time);
+  
 
   // check if the buffer contain a valid buffer
   if(tracking_interface_valid_buffer(&tr)!=0)
@@ -312,6 +309,10 @@ gboolean tracking()
       tr.is_in_tracking_function=0;
       return FALSE;
     }
+
+  
+  
+  
 
   clock_gettime(CLOCK_REALTIME, &tr.end_frame_tracking_time); // get the time we stop tracking
   tr.frame_tracking_time_duration=diff(&tr.start_frame_tracking_time,&tr.end_frame_tracking_time);
