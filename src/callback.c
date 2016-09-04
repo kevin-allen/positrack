@@ -81,14 +81,14 @@ int init_window()
   // show the main window
   gtk_widget_show (widgets.window);      
 
-
+  
   // set the home directory as the default directory
   struct passwd *p;
   char *username=getenv("USER");
   p=getpwnam(username);
   rec_file_data.directory=strcat(p->pw_dir,"/");
   rec_file_data.is_open=0;
-  printf("%s\n",rec_file_data.directory);
+  printf("data directory:%s\n",rec_file_data.directory);
 
 
   return 0;
