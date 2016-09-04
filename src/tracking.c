@@ -239,14 +239,11 @@ gboolean tracking()
       // usefull with usb cameras that changes sampling without letting us know
       tr.skip_next_tick=1;
     }
-  if(app_flow.synch_mode==COMEDI)
+  if(app_flow.synch_mode==PARALLEL_PORT)
     {
-      comedi_data_write(comedi_device.comedi_dev,
-			comedi_device.subdevice_analog_output,
-			COMEDI_DEVICE_SYNCH_ANALOG_OUTPUT,
-			comedi_device.range_set_output,
-			comedi_device.aref,
-			comedi_device.comedi_ttl);
+      // set the first pin of parallel port to high
+      char dataH = 0x01;
+      ioctl(parap.parportfd,PPWDATA, &dataH);
     }
   
   clock_gettime(CLOCK_REALTIME, &tr.start_frame_tracking_time); // get the time we start tracking
@@ -295,20 +292,6 @@ gboolean tracking()
     }
   if(app_flow.pulse_valid_position==ON)
     {
-      if(tob.last_valid==1)
-	comedi_data_write(comedi_device.comedi_dev,
-			  comedi_device.subdevice_analog_output,
-			  COMEDI_DEVICE_VALID_POSITION_ANALOG_OUTPUT,
-			  comedi_device.range_set_output,
-			  comedi_device.aref,
-			  comedi_device.comedi_ttl);
-      else
-	comedi_data_write(comedi_device.comedi_dev,
-			  comedi_device.subdevice_analog_output,
-			  COMEDI_DEVICE_VALID_POSITION_ANALOG_OUTPUT,
-			  comedi_device.range_set_output,
-			  comedi_device.aref,
-			  comedi_device.comedi_baseline);
     }
 
 
@@ -342,14 +325,10 @@ gboolean tracking()
  #endif
   
   /* // synchronization pulse goes down here */
-  if(app_flow.synch_mode==COMEDI)
+  if(app_flow.synch_mode==PARALLEL_PORT)
     {
-      comedi_data_write(comedi_device.comedi_dev,
-			comedi_device.subdevice_analog_output,
-			COMEDI_DEVICE_SYNCH_ANALOG_OUTPUT,
-			comedi_device.range_set_output,
-			comedi_device.aref,
-			comedi_device.comedi_baseline);
+      char dataL = 0x00;
+      ioctl(parap.parportfd,PPWDATA, &dataL);
     }
     tr.number_frames_tracked++;
     tr.is_in_tracking_function=0;

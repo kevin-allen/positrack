@@ -270,8 +270,8 @@ You should have received a copy of the GNU General Public License along with gac
               </packing>
             </child>
             <child>
-              <object class="GtkRadioButton" id="comedi_synchronizationradiobutton">
-                <property name="label" translatable="yes">Synchronization via digital output of Comedi-supported card</property>
+              <object class="GtkRadioButton" id="parallel_port_synchronizationradiobutton">
+                <property name="label" translatable="yes">Synchronization via a parallel port</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">False</property>

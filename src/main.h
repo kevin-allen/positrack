@@ -20,6 +20,11 @@ File with declarations of the main structures and functions used in positrack
 
 ****************************************************************/
 
+
+
+
+
+
 #include <stdio.h>
 #include <fcntl.h> // for file operations
 #include <string.h>
@@ -41,8 +46,6 @@ File with declarations of the main structures and functions used in positrack
 #include <gdk/gdkx.h>  // for GDK_WINDOW_XID
 #include <gst/video/videooverlay.h>
 #include <gst/app/gstappsink.h>
-#include <comedi.h> // for the driver
-#include <comedilib.h> // for the driver API
 #include <pthread.h> // to be able to create threads
 #include <glib.h>
 #include <stdio.h>
@@ -51,14 +54,16 @@ File with declarations of the main structures and functions used in positrack
 #include <sys/mman.h>
 #include <sys/stat.h>
 
+#include <sys/ioctl.h>
+#include <linux/parport.h>
+#include <linux/ppdev.h>
 
 
 #define _FILE_OFFSET_BITS 64 // to have files larger than 2GB
 #define NSEC_PER_SEC (1000000000) // The number of nsecs per sec
 
-#define INTERVAL_BETWEEN_TRACKING_CALLS_MS  17 //  20  // if this is too close to frame rate, then larger 
+#define INTERVAL_BETWEEN_TRACKING_CALLS_MS 15 // 17 //  20  // if this is too close to frame rate, then larger 
                                                // jitter in inter frame intervals
-#define COMEDI_INTERFACE_MAX_DEVICES 2
 #define TIMEOUT_FOR_CAPTURE_MS 20 // time before the timeout try to get a new frame
 #define FIREWIRE_CAMERA_INTERFACE_NUMBER_OF_FRAMES_IN_RING_BUFFER 10
 
@@ -72,7 +77,7 @@ File with declarations of the main structures and functions used in positrack
 #define TRACKING_INTERFACE_WIDTH 860
 #define TRACKING_INTERFACE_HEIGHT 860
 #define TRACKING_INTERFACE_MAX_NUMBER_SPOTS 4 // was 2 before for black and white 2 spots detection
-#define TRACKING_INTERFACE_MAX_NUMBER_SPOTS_CALLS 6
+#define TRACKING_INTERFACE_MAX_NUMBER_SPOTS_CALLS 5 // was 6 before changed because of slow computers
 
 #define TRACKING_INTERFACE_MAX_MEAN_LUMINANCE_FOR_TRACKING 8/* 0 */
 #define TRACKING_INTERFACE_MAX_SPOT_SIZE 40000
@@ -84,23 +89,11 @@ File with declarations of the main structures and functions used in positrack
 #define TRACKED_OBJECT_PULSE_DISTANCE 500 // distance to run before pulse is done
 
 
-#define STIMULATION_TIMER_MS 5 // number of ms betweek calls to stimulation_timer_update()
-
-#define MAX_BUFFER_LENGTH 100000 // buffer length for each comedi_dev
-#define DEFAULT_SAMPLING_RATE 20000
-#define MAX_SAMPLING_RATE 48000
-#define COMEDI_DEVICE_MAX_CHANNELS 32
-#define COMEDI_DEVICE_SYNCH_ANALOG_OUTPUT 0
-#define COMEDI_DEVICE_VALID_POSITION_ANALOG_OUTPUT 1
-#define COMEDI_DEVICE_STIMULATION_ANALOG_OUTPUT 1
-#define COMEDI_DEVICE_BASELINE_VOLT 0.0
-#define COMEDI_DEVICE_TTL_VOLT 3.0
-
-
 // variable used for the shared memory with other processes
 #define POSITRACKSHARE "/tmppositrackshare" 
 #define POSITRACKSHARENUMFRAMES 100
 
+#define PARALLELPORTFILE "/dev/parport0"
 
 //#define DEBUG_ACQ // to turn on debugging output for the comedi card
 //#define DEBUG_CAMERA // to turn on debugging for the camera
@@ -132,7 +125,7 @@ enum tracking_mode {
 };
 enum synchronization_mode {
   NONE = 1,
-  COMEDI = 2
+  PARALLEL_PORT = 2
 };
 enum on_off {
   ON = 1,
@@ -159,7 +152,6 @@ struct main_app_flow
   enum drawspots_mode draws_mode;
   enum drawobject_mode drawo_mode;
   enum on_off pulse_valid_position;
-  enum on_off pulse_distance;
 };
 struct main_app_flow app_flow;
 
@@ -181,7 +173,7 @@ struct all_widget
   GtkWidget *trialnospinbutton; // index following filebase for file name
   GtkWidget *statusbar; // index following filebase for file name
   GtkWidget *no_synchronization_radiobutton;
-  GtkWidget *comedi_synchronization_radiobutton;
+  GtkWidget *parallel_port_synchronization_radiobutton;
   GtkWidget *singlewhitespot_radiobutton;
   GtkWidget *twowhitespots_radiobutton;
   GtkWidget *redgreenbluespots_radiobutton;
@@ -195,6 +187,13 @@ struct all_widget
   int timeout_id;
 };
 struct all_widget widgets; //defines a structure named widgets of the all_widget type
+
+struct parallel_port
+{
+  int parportfd;
+};
+struct parallel_port parap;
+
 
 
 
@@ -211,9 +210,6 @@ struct positrack_shared_memory
   int is_mutex_allocated;
   pthread_mutex_t pmutex;  
 };
-
-
-
 
 
 
@@ -312,42 +308,6 @@ struct recording_file_data
 };
 struct recording_file_data rec_file_data;
 
-struct stimulation
-{
-  int is_stimulating;
-  int stimulation_thread_running;
-  int stimulation_flag; // stimulate when == 1
-  double baseline_volt; // for ttl pulse
-  lsampl_t comedi_intensity;
-  lsampl_t comedi_baseline;
-  lsampl_t input_data;
-  int stimulation_count;
-  struct timespec time_last_stimulation;
-  struct timespec time_now;
-  struct timespec elapsed_last_stimulation;
-  struct timespec inter_pulse_duration; // for train stimulation    
-  struct timespec pulse_duration;
-  struct timespec duration_refractory_period;
-  double trial_duration_sec;
-  double pulse_duration_ms;
-  double pulse_frequency_Hz;
-  int number_pulses_per_train;
-  double refractory_period_train_ms;
-  double inter_pulse_duration_ms;
-  double  stimulation_intensity_volt; 
-  double end_to_start_pulse_ms; // for the train stimulation
-  struct timespec time_beginning_trial;
-  struct timespec elapsed_beginning_trial;
-  struct timespec req;
-  double thread_sleep_ms;
-  struct timespec thread_sleep_timespec;
-
-
-};
-struct stimulation stim;
-pthread_t stimulation_thread;
-int stimulation_thread_id;
-
 struct tracked_object
 {
   // the tracked object is the subject being tracked
@@ -365,7 +325,6 @@ struct tracked_object
   double percentage_position_invalid_total;
   double percentage_position_invalid_last_100;
   double travelled_distance;
-  double last_pulsed_distance;
   double sample_distance;
   double samples_per_seconds;
   int buffer_length;
@@ -426,47 +385,6 @@ struct gst_interface
   int usb_v4l2_pipeline_built;
 };
 struct gst_interface gst_inter;
-
-struct comedi_dev
-{
-  comedi_t *comedi_dev; // device itself
-  char *file_name; // file name for access to device
-  const char *name; // name of the card
-  const char *driver; // name of the comedi driver
-  int number_of_subdevices;
-  int subdevice_analog_input; // id of analog input subdev
-  int subdevice_analog_output; // id of analog output subdev
-  int number_channels_analog_input;
-  int number_channels_analog_output;
-  int maxdata_input;
-  int maxdata_output;
-  int range_set_input; // index of the selected range
-  int number_ranges_input;
-  comedi_range ** range_input_array; // pointer to all the possible ranges on the card
-  int range_set_output;
-  int number_ranges_output;
-  comedi_range ** range_output_array;
-  double voltage_max_input;
-  double voltage_max_output;
-  int aref;
-  int buffer_size;
-  sampl_t buffer_data[MAX_BUFFER_LENGTH];
-  sampl_t* pointer_buffer_data; // to accomodate for incomplete read sample
-  int read_bytes;
-  int samples_read;
-  int data_point_out_of_samples; // because read operation returns incomplete samples
-  long int cumulative_samples_read;
-  comedi_cmd command;
-  unsigned int channel_list[COMEDI_DEVICE_MAX_CHANNELS]; // channel number for the comedi side
-  int number_sampled_channels; // variable to be able to sample twice same channel on each sampling
-  int is_acquiring;
-  lsampl_t comedi_baseline;
-  lsampl_t comedi_ttl;
-  lsampl_t comedi_ttl_stimulation;
-  int is_initialized;
-
-};
-struct comedi_dev comedi_device;
 
 GtkBuilder *builder; // to build the interface from glade
 gchar* trk_file_name; // directory + file name from gui
@@ -602,14 +520,6 @@ int tracked_object_draw_object(struct tracked_object* tob);
 int tracked_object_display_path_variables(struct tracked_object* tob);
 int recording_file_data_open_file();
 
-/********************************
-defined in stimulation.c
-********************************/
-int stimulation_init(struct stimulation *stim);
-int stimulation_start_stimulation(struct stimulation* stim);
-int stimulation_stop_stimulation(struct stimulation* stim);
-void * stimulation_thread_function(void * stimulation_inter);
-int stimulation_stimulate(struct stimulation* stim);
 		
 int find_max_index(int num_data,double* data);	
 int find_max_index_int(int num_data,int* data);	   

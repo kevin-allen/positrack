@@ -140,13 +140,6 @@ int main (int argc, char *argv[])
       return -1;
     }
 
-  if(app_flow.pulse_valid_position==ON && app_flow.pulse_distance==ON)
-    {
-      g_printerr("pulse_valid_position and pulse_distance are both ON\n");
-      g_printerr("only one of them should be ON\n");
-      return -1;
-    }
-
   main_app_flow_set_gui(&app_flow);
   
 
