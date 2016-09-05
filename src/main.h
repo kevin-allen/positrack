@@ -20,11 +20,6 @@ File with declarations of the main structures and functions used in positrack
 
 ****************************************************************/
 
-
-
-
-
-
 #include <stdio.h>
 #include <fcntl.h> // for file operations
 #include <string.h>

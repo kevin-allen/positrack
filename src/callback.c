@@ -500,10 +500,11 @@ int recording_file_data_close_file()
 	  return -1;
 	}
 
-      if(newline_count!=tr.number_frames_tracked)
+      if(newline_count!=tr.number_frames_tracked+1)
 	{
+	  fprintf(stderr, "***********************************\n");
 	  fprintf(stderr, "Problem with the length of the file\n");
-	  fprintf(stderr, "Number of new lines in %s: %lu \n",rec_file_data.file_name,newline_count);
+	  fprintf(stderr, "Number of new lines in %s (including header): %lu \n",rec_file_data.file_name,newline_count);
 	  fprintf(stderr, "Number of frame in tracking structure: %lu \n",tr.number_frames_tracked);
 	  return -1;
 	}
