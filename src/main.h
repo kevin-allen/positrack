@@ -53,7 +53,7 @@ File with declarations of the main structures and functions used in positrack
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
-
+#include <inttypes.h>
 #include <sys/ioctl.h>
 #include <linux/parport.h>
 #include <linux/ppdev.h>
@@ -79,9 +79,9 @@ File with declarations of the main structures and functions used in positrack
 #define TRACKING_INTERFACE_MAX_NUMBER_SPOTS 4 // was 2 before for black and white 2 spots detection
 #define TRACKING_INTERFACE_MAX_NUMBER_SPOTS_CALLS 5 // was 6 before changed because of slow computers
 
-#define TRACKING_INTERFACE_MAX_MEAN_LUMINANCE_FOR_TRACKING 8/* 0 */
+#define TRACKING_INTERFACE_MAX_MEAN_LUMINANCE_FOR_TRACKING 11/* 0 */
 #define TRACKING_INTERFACE_MAX_SPOT_SIZE 40000
-#define TRACKING_INTERFACE_MIN_SPOT_SIZE 10
+#define TRACKING_INTERFACE_MIN_SPOT_SIZE 20 // this was 10 but was worried about false positive
 #define TRACKING_INTERFACE_MIN_DISTANCE_TWO_SPOTS 190 // for patrick spinning table
 //#define TRACKING_INTERFACE_MIN_DISTANCE_TWO_SPOTS 150 // for open field
 
@@ -190,7 +190,8 @@ struct all_widget widgets; //defines a structure named widgets of the all_widget
 
 struct parallel_port
 {
-  int parportfd;
+  int parportfd; // file 
+  unsigned char val; // value in the port
 };
 struct parallel_port parap;
 
@@ -561,3 +562,4 @@ void psm_init(struct positrack_shared_memory* psm);
 void psm_free(struct positrack_shared_memory* psm);
 
 
+void set_parallel_port(char pin, int value);

@@ -287,6 +287,7 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
   // set the parallel port for synchronization
   if(app_flow.synch_mode==PARALLEL_PORT||app_flow.pulse_valid_position==ON)
     {
+      parap.val=0;
       parap.parportfd = open(PARALLELPORTFILE, O_RDWR);
       if (parap.parportfd == -1){
         g_printerr("Error opening the parallel port file %s\n",PARALLELPORTFILE);
@@ -315,6 +316,12 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
 	  close(parap.parportfd);
 	  return;
 	}
+
+      // Set the port to 0
+      char low=0;
+      ioctl(parap.parportfd,PPWDATA, &low);
+
+
     }
 
   // open .positrack file

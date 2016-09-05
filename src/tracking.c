@@ -228,10 +228,6 @@ gboolean tracking()
       tr.is_in_tracking_function=0;
       return FALSE; // stop recording
     }
-
-  
-  clock_gettime(CLOCK_REALTIME, &tr.time_now); // timestamp the arrival of the buffer
-  tr.tracking_time_duration=diff(&tr.start_tracking_time_all,&tr.time_now);
   
   if(microsecond_from_timespec(&tr.waiting_buffer_duration)/1000>INTERVAL_BETWEEN_TRACKING_CALLS_MS/1.5) 
     { // we are waiting a long time for frames, will ignore the next tick
@@ -243,13 +239,14 @@ gboolean tracking()
   if(app_flow.synch_mode==PARALLEL_PORT)
     {
       // set the first pin of parallel port to high
-      char dataH = 0x01;
-      ioctl(parap.parportfd,PPWDATA, &dataH);
+      set_parallel_port(0,1); // pin 0 high
     }
+
+  clock_gettime(CLOCK_REALTIME, &tr.time_now); // timestamp the ttl signal
+  tr.tracking_time_duration=diff(&tr.start_tracking_time_all,&tr.time_now); // time of ttl signal relative to start of tracking process
   
   clock_gettime(CLOCK_REALTIME, &tr.start_frame_tracking_time); // get the time we start tracking
   
-
   // check if the buffer contain a valid buffer
   if(tracking_interface_valid_buffer(&tr)!=0)
     {
@@ -292,8 +289,11 @@ gboolean tracking()
     }
   if(app_flow.pulse_valid_position==ON)
     {
+      if(tob.x[tob.n-1]==-1.0)
+	set_parallel_port(1,0); // pin 1 low
+      else
+	set_parallel_port(1,1); // pin 1 high
     }
-
 
   // update shared memory
   psm_add_frame(tr.psm, tr.number_frames_tracked+1,tr.time_now,
@@ -311,9 +311,6 @@ gboolean tracking()
     }
 
   
-  
-  
-
   clock_gettime(CLOCK_REALTIME, &tr.end_frame_tracking_time); // get the time we stop tracking
   tr.frame_tracking_time_duration=diff(&tr.start_frame_tracking_time,&tr.end_frame_tracking_time);
   
@@ -331,8 +328,7 @@ gboolean tracking()
   /* // synchronization pulse goes down here */
   if(app_flow.synch_mode==PARALLEL_PORT)
     {
-      char dataL = 0x00;
-      ioctl(parap.parportfd,PPWDATA, &dataL);
+      set_parallel_port(0,0); // pin 0 low
     }
     tr.number_frames_tracked++;
     tr.is_in_tracking_function=0;
@@ -351,10 +347,16 @@ int tracking_interface_print_position_to_file(struct tracking_interface* tr)
   // save data to the file
   if(app_flow.trk_mode==TWO_WHITE_SPOTS)
     {
-      fprintf(rec_file_data.fp,"%d %llu %d %.2lf %.2lf %.2lf %d %d %.2lf %.2lf %d %.2lf %.2lf\n",
-	      (int)((tr->tracking_time_duration.tv_sec*1000)+(tr->tracking_time_duration.tv_nsec/1000000.0)),
-	      (fw_inter.frame->timestamp - tr->start_tracking_time_all_64)/1000,
+      if(tob.n==1) // header
+	{
+	  fprintf(rec_file_data.fp,"no capTime startProcTime procDuration x y hd nSpots nPixSpot1 xSpot1 ySpot1 nPixSpot2 xSpot2 ySpot2\n");
+	}
+      
+      fprintf(rec_file_data.fp,"%d %"PRIu64" %d %d %.2lf %.2lf %.2lf %d %d %.2lf %.2lf %d %.2lf %.2lf\n",
 	      tob.n,
+	      (fw_inter.frame->timestamp - tr->start_tracking_time_all_64)/1000, // time of capture
+	      (int)((tr->tracking_time_duration.tv_sec*1000)+(tr->tracking_time_duration.tv_nsec/1000000.0)), // time of ttl up
+	      (int)((tr->frame_tracking_time_duration.tv_sec*1000)+(tr->frame_tracking_time_duration.tv_nsec/1000000.0)), // duration of frame processing
 	      tob.x[tob.n-1],
 	      tob.y[tob.n-1],
 	      tob.head_direction[tob.n-1],
@@ -368,21 +370,35 @@ int tracking_interface_print_position_to_file(struct tracking_interface* tr)
     }
   if(app_flow.trk_mode==ONE_WHITE_SPOT)
     {
-      
-      fprintf(rec_file_data.fp,"%d %llu %d %.2lf %.2lf\n",
-	      (int)((tr->tracking_time_duration.tv_sec*1000)+(tr->tracking_time_duration.tv_nsec/1000000.0)),
-	      (fw_inter.frame->timestamp - tr->start_tracking_time_all_64)/1000,
+      if(tob.n==1) // header
+	{
+	  fprintf(rec_file_data.fp,"no capTime startProcTime procDuration x y nSpots\n");
+	}
+
+ 
+      fprintf(rec_file_data.fp,"%d %"PRIu64" %d %d %.2lf %.2lf %d\n",
 	      tob.n,
+	      (fw_inter.frame->timestamp - tr->start_tracking_time_all_64)/1000, // time of capture
+	      (int)((tr->tracking_time_duration.tv_sec*1000)+(tr->tracking_time_duration.tv_nsec/1000000.0)), // time of ttl up
+	      (int)((tr->frame_tracking_time_duration.tv_sec*1000)+(tr->frame_tracking_time_duration.tv_nsec/1000000.0)), // duration of frame processing
 	      tob.x[tob.n-1],
-	      tob.y[tob.n-1]);
+	      tob.y[tob.n-1],
+	      tr->number_spots);
     }
 
   if(app_flow.trk_mode==RED_GREEN_BLUE_SPOTS)
     {
-      fprintf(rec_file_data.fp,"%d %llu %d %.2lf %.2lf %.2lf %d %d %.2lf %.2lf %d %.2lf %.2lf %d %.2lf %.2lf \n",
-	      (int)((tr->tracking_time_duration.tv_sec*1000)+(tr->tracking_time_duration.tv_nsec/1000000.0)),
-	      (fw_inter.frame->timestamp - tr->start_tracking_time_all_64)/1000,
+
+      if(tob.n==1) // header
+	{
+	  fprintf(rec_file_data.fp,"no capTime startProcTime procDuration x y hd nSpots nPixSpotRed xSpotRed ySpotRed nPixSpotGreen xSpotGreen ySpotGreen nPixSpotBlue xSpotBlue ySpotBlue\n");
+	}
+      
+      fprintf(rec_file_data.fp,"%d %"PRIu64" %d %d %.2lf %.2lf %.2lf %d %d %.2lf %.2lf %d %.2lf %.2lf %d %.2lf %.2lf \n",
 	      tob.n,
+      	      (fw_inter.frame->timestamp - tr->start_tracking_time_all_64)/1000, // time of capture
+	      (int)((tr->tracking_time_duration.tv_sec*1000)+(tr->tracking_time_duration.tv_nsec/1000000.0)), // time of ttl up
+	      (int)((tr->frame_tracking_time_duration.tv_sec*1000)+(tr->frame_tracking_time_duration.tv_nsec/1000000.0)), // duration of frame processing
 	      tob.x[tob.n-1],
 	      tob.y[tob.n-1],
 	      tob.head_direction[tob.n-1],

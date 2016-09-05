@@ -1,78 +1,21 @@
-Initial notes when started the positrack project
+TESTING SYNCHRONIZATION, 05.09.2016
 
-Features:
+This was done with positrack using the parallel port.
 
-1) runs on linux
-2) use IEEE 1394 interface because it is fast and used by many high-end cameras.
-3) Linux has built in drivers for IEEE 1394.
-3) libdc1394 is the library that provides a complete high level application programming interface (API) for developers (me) who wish to control IEEE 1394 based cameras
-    it seems to be the most popular,  has lesser GNU licence.
-4) Use Gtk as visual interface (can steel code from kacq), same licence, will be programmed with glade and look similar to the previous tracking program running on windows
-5) Use autotools to configure and install, still code from kacq
-6) Use comedi to send synchronization pulse to electrophysiological recording setups.
-7) Eventually, the tracking software will be able to interact with other computers via comedi (e.g., for stimulation based on mouse position).
-8) infra-red could be done with a monochrome firewire camera from imagesource.
-9) Use gstreamer for video playback and to get the video from usb webcam.
-10) Save tracking data to a text file (anyone can read a text file).
+Methods:
+      Delays in detecting a flashing LED
+      Arduino to flash an LED (500ms on / 500ms off) in the field of view of the camera.
+      The 3V pulse powering the LED is splitted and fed into ktan, sampling rate 20 kHz.
+      Tracking at ~50 Hz with firewire camera 800.
+      Tracking software send set output pulse to 3 V if LED detected, to 0 V if no detection.
+      Detect the difference in 0-3 V transition for LED and tracking during a 1 hour recording.
 
+Results: 
+      Output positrack file is same length as the number of ttl pusles indicating start of frame processing.
+      Difference between frame timestamp and start frame processing is around 20 ms, the exact value is saved in the positrack file.
+      The delay between the led turn on and the led detected is between 34 and 60 ms. This delay is explained by the processing time of each frame (10-23 ms) and the delay between frame timestamp and the reception of frame in RAM (20-21 ms). The remaining ms are most likely due to capture time (4-20 ms). 
 
-
-TESTING SYNCHRONIZATION
-       Delays in detecting a flashing LED
-       Arduino to flash an LED (1000ms on / 1002ms off) in the field of view of the camera.
-       The 5V pulse powering the LED is splitted and fed into kacq, sampling rate 20 kHz.
-       Tracking at 30 Hz with firewire camera.
-       Tracking software send set output pulse to 5 V if LED detected, to 0 V if no detection.
-       Detect the difference in 0-5 V transition for LED and tracking during a 1 hour recording.
-       Results: 
-       There is a delay between 38 to 70 ms (one inter frame interval (33 ms) + tracking time (5 ms))
-
-       With new bw camera firewire 800 running at 51 Hz + tracking time 5 ms,
-       The delay is between 28 to 52 ms (most between 28 and 48 ms), 
-       Offline, we remove 20 ms for one frame and 6 for processing, we get a delay between 0 to 26 ms.
-       
-
-conclusion:  Real-time analysis will be delayed by approximately one frame + processing time.
+Conclusion:  Real-time analysis is delayed by approximately 34 to 60 ms.
 	     When this is an important factor, use high sampling rate to minimize the delay.
-	     For off-line analysis, the delay is between 0 and 26 ms.
-	     To do better than that, we would need the exact timestamp of capture from the camera.
-       	     The disparition of LED takes longer. I suspect that the pixels have a memory of being bright.
-	     
-
-limitation: The anticipatory firing activity of cells in the ADTN is 23 ms. We won't be able to see it with this setup.
-	    That could work if we select a very short field of view and go to approximately 90 Hz. The prediced delay would 
-	    be between 0 and 16 ms.
-
-
-TESTING HEAD DIRECTION DETECTION WITH 2 WHITE SPOTS
-	Arduino with two arrays of ir LEDs 
-            x1
-         x2 
-      x3    y9
-   x4          y8  
- x5               y7
-   x6                y6
-      x7                y5
-	 x8          y4
-	   x9	  y3
-               y2
-            y1
-	    
-	The idea is to simulate a 180 degree turns by powering output lines 1 to 9 on the arduino.
-	A positive pulse will be sent from the arduino for the duration of the rotation 
-	We can rotate within 200 ms and see if the tracking program also get 180 deg in 200 ms.
-	Tested with bw firewire 800 camera running at 51 Hz.
-	Expect to get a delay of 0 to 26 ms to complete the rotation.
-
-
-
-To build a small-big IR array
-Farnell 1716707
-OFL-3102:LED 3mm Round Inf rot 940nm
-For low reflection on the walls
-Power supply 5V
-3 leds, 2,2 kOhms
-1 led, 18 kOhms
-
-
-It would be great to have control of the shutter speed on the camera to optimize the background.
+	     For off-line analysis, use the time of the raising phase of ttl (frame in RAM) and subtract the difference between time in RAM and frame timestamp.
+	     frame time = time ttl in ram - timestamp frame.
