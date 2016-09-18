@@ -113,7 +113,7 @@ int control_shared_memory_interface_init(struct control_shared_memory_interface*
   // set default values
   csmi->pcsm->start_tracking=0;
   csmi->pcsm->stop_tracking=0;
-  csmi->timer = gtk_timeout_add(500, sharedMemoryTimerCallback, NULL);
+  csmi->timer = g_timeout_add(500, sharedMemoryTimerCallback, NULL);
   return 0;
 }
 
@@ -125,7 +125,7 @@ int control_shared_memory_interface_free(struct control_shared_memory_interface*
   g_printerr("control_shared_memory_interface_free()\n");
   #endif
 
-  gtk_timeout_remove (csmi->timer);
+  g_source_remove(csmi->timer);
 
  if(csmi->pcsm->is_mutex_allocated==1)
     {

@@ -191,14 +191,12 @@ gint sharedMemoryTimerCallback (gpointer data)
       fprintf(stderr,"start tracking\n");
       on_playtrackingmenuitem_activate(NULL,NULL);
       start_video(); // void function
-      return 1;
     }
   if(csmi.pcsm->stop_tracking==1)
     {
       csmi.pcsm->stop_tracking=0;
       fprintf(stderr,"stop tracking\n");
       on_stoptrackingmenuitem_activate(NULL,NULL);
-      return 1;
     }
   return 1;
 }
@@ -302,6 +300,14 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
       g_printerr("Tracking already underway, from on_playtrackingmenuitem_activate()\n");
       return;
     }
+
+  // open .positrack file
+  if(recording_file_data_open_file()!=0)
+    {
+      g_printerr("recording_file_data_open_file() did not return 0\n");
+      return;
+    }
+  
   tracked_object_init(&tob);
   tr.number_frames_tracked=0;
 
@@ -344,15 +350,6 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
       // Set the port to 0
       char low=0;
       ioctl(parap.parportfd,PPWDATA, &low);
-
-
-    }
-
-  // open .positrack file
-  if(recording_file_data_open_file()!=0)
-    {
-      g_printerr("recording_file_data_open_file() did not return 0\n");
-      return;
     }
 
   widgets.tracking_running=1;

@@ -95,9 +95,9 @@ File with declarations of the main structures and functions used in positrack
 //#define DEBUG_CAMERA // to turn on debugging for the camera
 //#define DEBUG_TRACKING // to turn on debugging for the tracking
 //#define DEBUG_IMAGE // to turn on debugging for the image processing
-#define DEBUG_CALLBACK
+//#define DEBUG_CALLBACK
 //#define DEBUG_TRACKED_OBJECT
-#define DEBUG_SHARE
+//#define DEBUG_SHARE
 //#define CAPS "video/x-raw, format=RGB, framerate=30/1 width=160, pixel-aspect-ratio=1/1"
 
 
