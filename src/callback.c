@@ -102,12 +102,12 @@ void on_quitmenuitem_activate(GtkObject *object, gpointer user_data)
   g_printerr("on_quitmenuitem_activate\n");
   widgets.video_running=0;
   widgets.tracking_running=0;
-  gst_interface_delete_firewire_pipeline(&gst_inter);
-  firewire_camera_interface_free(&fw_inter);
   if(gst_inter.loop!=NULL)
     {
       g_main_loop_quit(gst_inter.loop);
     }
+  gst_interface_delete_firewire_pipeline(&gst_inter);
+  firewire_camera_interface_free(&fw_inter);
   tracking_interface_free(&tr);
   control_shared_memory_interface_free(&csmi);
   gtk_main_quit();
@@ -167,16 +167,15 @@ void on_window_destroy (GtkObject *object, gpointer user_data)
   widgets.video_running=0;
   widgets.tracking_running=0;
   fprintf(stderr,"on_window_destroy()\n");
-  gst_interface_delete_firewire_pipeline(&gst_inter);
-  firewire_camera_interface_free(&fw_inter);
   fprintf(stderr,"about g_main_loop_quit\n");
   if(gst_inter.loop!=NULL)
     {
       g_main_loop_quit(gst_inter.loop);
     }
   fprintf(stderr,"g_main_loop_quit done\n");
+  gst_interface_delete_firewire_pipeline(&gst_inter);
+  firewire_camera_interface_free(&fw_inter);
   tracking_interface_free(&tr);
-
   control_shared_memory_interface_free(&csmi);
 
   fprintf(stderr,"about gtk main quit\n");
@@ -184,20 +183,23 @@ void on_window_destroy (GtkObject *object, gpointer user_data)
 } 
 gint sharedMemoryTimerCallback (gpointer data)
 {
-  fprintf(stderr,"csmi.pcsm ****: %d %d\n",csmi.pcsm->start_tracking, csmi.pcsm->stop_tracking);
+  #ifdef DEBUG_CALLBACK
+  fprintf(stderr,"***** csmi.pcsm : %d %d ******\n",csmi.pcsm->start_tracking, csmi.pcsm->stop_tracking);
+  #endif
   if(csmi.pcsm->start_tracking==1)
     {
       csmi.pcsm->start_tracking=0;
-      fprintf(stderr,"start tracking\n");
       on_playtrackingmenuitem_activate(NULL,NULL);
       start_video(); // void function
     }
   if(csmi.pcsm->stop_tracking==1)
     {
       csmi.pcsm->stop_tracking=0;
-      fprintf(stderr,"stop tracking\n");
       on_stoptrackingmenuitem_activate(NULL,NULL);
     }
+  #ifdef DEBUG_CALLBACK
+  fprintf(stderr,"***** leaving *****\n");
+  #endif
   return 1;
 }
 
@@ -214,7 +216,6 @@ void start_video()
 #ifdef DEBUG_CALLBACK
   fprintf(stderr,"start_video()\n");
 #endif
-
   // start the video capture and show it in the gui  
   if(widgets.video_running==0) // flag to know if already runs */
     {
@@ -258,14 +259,31 @@ void start_video()
 #ifdef DEBUG_CALLBACK
 	  fprintf(stderr,"run g_main_loop\n");
 #endif
-	  g_main_loop_run(gst_inter.loop); // flow will stay here until the loop is quit
+
+	  // need to run the g_main_loop (gst_inter.loop), but this will stall this thread if called
+	  // directly, will try to call it with a timer
+	  int timer = g_timeout_add(1, start_gst_inter_loop, NULL);
+	  
+	  //	  g_main_loop_run(gst_inter.loop); // flow will stay here until the loop is quit
 	}
       else
 	{
 	  gst_element_set_state (gst_inter.pipeline, GST_STATE_PLAYING);
 	}
     }
+
+#ifdef DEBUG_CALLBACK
+  fprintf(stderr,"leaving start_video\n");
+#endif
+  
 }
+gint start_gst_inter_loop(gpointer data)
+{
+  g_main_loop_run(gst_inter.loop); // flow will stay here until the loop is quit
+  return 0;
+}
+
+
 void on_stopvideomenuitem_activate(GtkObject *object, gpointer user_data)
 {
   stop_video();
@@ -604,16 +622,22 @@ void on_firewirecamerablackwhite_radiobutton_toggled(GtkObject *object, gpointer
 }
 void on_videoplayback_checkbutton_toggled(GtkObject *object, gpointer user_data)
 {
-  g_printerr ("playback toggled.\n"); 
+  #ifdef DEBUG_CALLBACK
+  g_printerr ("playback toggled.\n");
+  #endif
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.videoplayback_checkbutton))==TRUE)
     {
       app_flow.playback_mode=ON;
-      g_printerr ("playback on.\n"); 
+      #ifdef DEBUG_CALLBACK
+      g_printerr ("playback on.\n");
+      #endif
     }
   else
     {
       app_flow.playback_mode=OFF;
-      g_printerr ("playback off.\n"); 
+      #ifdef DEBUG_CALLBACK
+      g_printerr ("playback off.\n");
+      #endif
     }
 }
 

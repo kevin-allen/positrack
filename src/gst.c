@@ -31,8 +31,8 @@ static gboolean bus_call (GstBus *bus, GstMessage *msg, gpointer data)
 
 int gst_interface_build_firewire_pipeline(struct gst_interface* gst_inter)
 {
-  g_printerr("build firewire pipeline\n"); 
-
+  
+  //g_printerr("build firewire pipeline\n"); 
   gst_inter->pipeline=gst_pipeline_new ("pipeline");
   if(gst_inter->pipeline==NULL)
     {

@@ -580,5 +580,6 @@ void psm_free(struct positrack_shared_memory* psm);
 int control_shared_memory_interface_init(struct control_shared_memory_interface* csmi);
 int control_shared_memory_interface_free(struct control_shared_memory_interface* csmi);
 
+gint start_gst_inter_loop(gpointer data);
 
 void set_parallel_port(char pin, int value);

@@ -76,9 +76,10 @@ int control_shared_memory_interface_init(struct control_shared_memory_interface*
 { // used to start and stop tracking
   #ifdef DEBUG_SHARE
   g_printerr("control_shared_memory_interface_init()\n");
+  fprintf(stderr, "shm_unlink:%s\n",POSITRACKCONTROLSHARE);
   #endif
 
-  fprintf(stderr, "shm_unlink:%s\n",POSITRACKCONTROLSHARE);
+
   shm_unlink(POSITRACKCONTROLSHARE); // just in case
   csmi->size=sizeof(struct positrack_control_shared_memory);
   csmi->des=shm_open(POSITRACKCONTROLSHARE, O_CREAT | O_RDWR | O_TRUNC,0600);
@@ -87,7 +88,6 @@ int control_shared_memory_interface_init(struct control_shared_memory_interface*
       fprintf(stderr, "problem with shm_open\n");
       return -1;
     }
-  fprintf(stderr, "des: %d, size: %d\n",csmi->des, csmi->size);
   if (ftruncate(csmi->des,csmi->size) == -1)
     {
       fprintf(stderr, "problem with ftruncate\n");
