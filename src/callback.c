@@ -90,7 +90,9 @@ int init_window()
   rec_file_data.is_open=0;
   printf("data directory:%s\n",rec_file_data.directory);
 
-
+  // set the shared memory interface to control tracking
+  control_shared_memory_interface_init(&csmi);
+    
   return 0;
 }
 
@@ -107,6 +109,7 @@ void on_quitmenuitem_activate(GtkObject *object, gpointer user_data)
       g_main_loop_quit(gst_inter.loop);
     }
   tracking_interface_free(&tr);
+  control_shared_memory_interface_free(&csmi);
   gtk_main_quit();
 }
 void on_videosourceitem_activate(GtkObject *object, gpointer user_data)
@@ -173,9 +176,32 @@ void on_window_destroy (GtkObject *object, gpointer user_data)
     }
   fprintf(stderr,"g_main_loop_quit done\n");
   tracking_interface_free(&tr);
+
+  control_shared_memory_interface_free(&csmi);
+
   fprintf(stderr,"about gtk main quit\n");
   gtk_main_quit();
 } 
+gint sharedMemoryTimerCallback (gpointer data)
+{
+  fprintf(stderr,"csmi.pcsm ****: %d %d\n",csmi.pcsm->start_tracking, csmi.pcsm->stop_tracking);
+  if(csmi.pcsm->start_tracking==1)
+    {
+      csmi.pcsm->start_tracking=0;
+      fprintf(stderr,"start tracking\n");
+      on_playtrackingmenuitem_activate(NULL,NULL);
+      start_video(); // void function
+      return 1;
+    }
+  if(csmi.pcsm->stop_tracking==1)
+    {
+      csmi.pcsm->stop_tracking=0;
+      fprintf(stderr,"stop tracking\n");
+      on_stoptrackingmenuitem_activate(NULL,NULL);
+      return 1;
+    }
+  return 1;
+}
 
 void on_playvideomenuitem_activate(GtkObject *object, gpointer user_data)
 {
@@ -195,7 +221,6 @@ void start_video()
   if(widgets.video_running==0) // flag to know if already runs */
     {
       widgets.video_running=1;
-
       
 #ifdef DEBUG_CALLBACK
       fprintf(stderr,"gst_interface_build_firewire_pipeline() call\n");
@@ -231,7 +256,6 @@ void start_video()
 #ifdef DEBUG_CALLBACK
 	  fprintf(stderr,"set play state\n");
 #endif
-	  
 	  gst_element_set_state (gst_inter.pipeline, GST_STATE_PLAYING);
 #ifdef DEBUG_CALLBACK
 	  fprintf(stderr,"run g_main_loop\n");
@@ -330,7 +354,7 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
       g_printerr("recording_file_data_open_file() did not return 0\n");
       return;
     }
-  
+
   widgets.tracking_running=1;
   // clear drawing area before starting new trial
   tracking_interface_clear_drawingarea(&tr);
@@ -345,13 +369,13 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
   tr.start_tracking_time_all_64=tr.start_tracking_time_all.tv_sec*1000000;
   tr.start_tracking_time_all_64+=tr.start_tracking_time_all.tv_nsec/1000;
 
-  g_timeout_add(tr.interval_between_tracking_calls_ms,tracking,user_data); // timer to trigger a tracking event
+  g_timeout_add(tr.interval_between_tracking_calls_ms,tracking,NULL); // timer to trigger a tracking event
+
 #ifdef DEBUG_CALLBACK
   g_printerr("leaving playtrackingmenuitem_activate, tracking_running: %d\n",widgets.tracking_running);
 #endif
   
 }
-
 
 void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
 {
@@ -360,16 +384,14 @@ void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
     {
       widgets.tracking_running=0; // making tracking function to return FALSE */
       usleep(200000); // let things die down before cleaning resources
-      psm_init(tr.psm);
+      psm_free(tr.psm); // was init, changed to free?
       recording_file_data_close_file();
       usleep(200000);
       tracked_object_free(&tob);
-
       if(app_flow.synch_mode==PARALLEL_PORT||app_flow.pulse_valid_position==ON){
 	ioctl(parap.parportfd,PPRELEASE);
 	close(parap.parportfd);
       }
-      
       index=gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widgets.trialnospinbutton));
       index++; 
       gtk_spin_button_set_value(GTK_SPIN_BUTTON(widgets.trialnospinbutton),(gdouble)index);

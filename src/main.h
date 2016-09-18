@@ -85,7 +85,8 @@ File with declarations of the main structures and functions used in positrack
 
 
 // variable used for the shared memory with other processes
-#define POSITRACKSHARE "/tmppositrackshare" 
+#define POSITRACKSHARE "/tmppositrackshare"
+#define POSITRACKCONTROLSHARE "/tmppositrackcontrolshare" 
 #define POSITRACKSHARENUMFRAMES 100
 
 #define PARALLELPORTFILE "/dev/parport0"
@@ -94,9 +95,9 @@ File with declarations of the main structures and functions used in positrack
 //#define DEBUG_CAMERA // to turn on debugging for the camera
 //#define DEBUG_TRACKING // to turn on debugging for the tracking
 //#define DEBUG_IMAGE // to turn on debugging for the image processing
-//#define DEBUG_CALLBACK
+#define DEBUG_CALLBACK
 //#define DEBUG_TRACKED_OBJECT
-//#define DEBUG_SHARE
+#define DEBUG_SHARE
 //#define CAPS "video/x-raw, format=RGB, framerate=30/1 width=160, pixel-aspect-ratio=1/1"
 
 
@@ -193,6 +194,26 @@ struct parallel_port parap;
 
 
 
+/// to control the tracking from other programs
+struct positrack_control_shared_memory
+{
+  int start_tracking;
+  int stop_tracking;
+  pthread_mutexattr_t attrmutex;
+  int is_mutex_allocated;
+  pthread_mutex_t pmutex;
+};
+/// the main interface
+struct control_shared_memory_interface
+{
+  struct positrack_control_shared_memory* pcsm;
+  int size;
+  int des;
+  int timer;
+};
+struct control_shared_memory_interface csmi;
+
+
 struct positrack_shared_memory
 {
   int numframes;
@@ -233,7 +254,6 @@ struct tracking_interface
   int psm_size;
   int psm_des;
 
-  
   struct timespec current_buffer_time;
   struct timespec previous_buffer_time;
   struct timespec inter_buffer_duration;
@@ -430,6 +450,7 @@ void on_usbcamera_radiobutton_toggled(GtkObject *object, gpointer user_data);
 void on_videoplayback_checkbutton_toggled(GtkObject *object, gpointer user_data);
 GdkPixbuf *create_pixbuf(const gchar * filename);
 
+gint sharedMemoryTimerCallback (gpointer data); // shared memory timer
 
 void main_app_flow_get_setting_from_gui(struct main_app_flow* app_flow);
 int main_app_set_default_from_config_file(struct main_app_flow* app_flow);
@@ -555,6 +576,9 @@ int timespec_first_larger(struct timespec* t1, struct timespec* t2);
 void psm_add_frame(struct positrack_shared_memory* psm, unsigned long int fid, struct timespec fts, double x, double y, double hd);
 void psm_init(struct positrack_shared_memory* psm);
 void psm_free(struct positrack_shared_memory* psm);
+
+int control_shared_memory_interface_init(struct control_shared_memory_interface* csmi);
+int control_shared_memory_interface_free(struct control_shared_memory_interface* csmi);
 
 
 void set_parallel_port(char pin, int value);

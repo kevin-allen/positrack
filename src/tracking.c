@@ -531,6 +531,49 @@ int tracking_interface_valid_buffer(struct tracking_interface* tr)
 
   return 0;
 }
+int tracking_interface_get_luminosity(struct tracking_interface* tr)
+{
+#ifdef DEBUG_TRACKING
+  g_printerr("tracking_interface_get_luminosity()\n");
+#endif
+
+  int i;
+  guint length;
+  tr->pixels=gdk_pixbuf_get_pixels_with_length(tr->pixbuf,&length);
+  for(i=0; i<tr->number_of_pixels;i++) 
+    { 
+      tr->p = tr->pixels+i*tr->n_channels; // 3 chars per sample
+      tr->lum[i]=(tr->p[0]+tr->p[1]+tr->p[2])/3.0;
+      
+      // this line below is to get rid of burn out pixels on the firewire camera with if filter
+      // but we get rid of the center of led which is not good
+      // but pixels above threashold be far from max
+      if(tr->lum[i]==255)tr->lum[i]=150;
+    }
+  
+  //smooth_double_gaussian(tr->lum_tmp,tr->lum, tr->width, tr->height,0.3,-1); // sadly, this is too slow
+  // might be worth trying out how a 2d fourier transform would be ???
+  // would be nice if that work so that we only look at led-like shapes 
+
+#ifdef DEBUG_TRACKING
+  g_printerr("tracking_interface_get_luminosity() done\n");
+#endif
+  return 0;
+}
+
+int tracking_interface_get_mean_luminance(struct tracking_interface* tr)
+{
+#ifdef DEBUG_TRACKING
+  g_printerr("tracking_interface_get_mean_luminance()\n");
+#endif
+  tr->mean_luminance=mean(tr->number_of_pixels,tr->lum,-1.0);
+#ifdef DEBUG_TRACKING
+  g_printerr("tracking_interface_get_mean_luminance() done\n");
+#endif
+
+  return 0;
+}
+
 int tracking_interface_print_luminance_array(struct tracking_interface* tr)
 {
   int x,y;
@@ -878,7 +921,7 @@ int tracking_interface_position_from_red_green_blue_spots(struct tracking_interf
       // get the midpoint x between the two points
       tr->x_object= (Red_X + Blue_X)/2.0;
       tr->y_object= (Red_Y + Blue_Y)/2.0;
-      return;
+      return 0;
     }
   
   // if green light is missing
@@ -887,7 +930,7 @@ int tracking_interface_position_from_red_green_blue_spots(struct tracking_interf
       // get the midpoint x between the two points
       tr->x_object = (Red_X + Blue_X)/2.0;
       tr->y_object = (Red_Y + Blue_Y)/2.0;
-      return;
+      return 0;
     }
   
   // if blue is missing
@@ -912,7 +955,7 @@ int tracking_interface_position_from_red_green_blue_spots(struct tracking_interf
       // degree * PI / 180
       distanceRHead = sinRGH * distanceRG;
       FindEndVector(Red_X,Red_Y,angleRHead,distanceRHead,&tr->x_object,&tr->y_object);
-      return;
+      return 0;
     }
 
   // if red is missing
@@ -936,7 +979,7 @@ int tracking_interface_position_from_red_green_blue_spots(struct tracking_interf
       double sinBGH = sin(angleBGHead * 3.14159265 / 180);
       distanceBHead = sinBGH * distanceBG;
       FindEndVector(Blue_X,Blue_Y,angleBHead,distanceBHead,&tr->x_object,&tr->y_object);
-      return;
+      return 0; 
     }
   
   return 0;
@@ -1295,48 +1338,6 @@ int tracking_interface_draw_all_spots_xy(struct tracking_interface* tr)
   cairo_surface_destroy(buffer_surface);
 
   
-}
-int tracking_interface_get_luminosity(struct tracking_interface* tr)
-{
-#ifdef DEBUG_TRACKING
-  g_printerr("tracking_interface_get_luminosity()\n");
-#endif
-
-  int i;
-  guint length;
-  tr->pixels=gdk_pixbuf_get_pixels_with_length(tr->pixbuf,&length);
-  for(i=0; i<tr->number_of_pixels;i++) 
-    { 
-      tr->p = tr->pixels+i*tr->n_channels; // 3 chars per sample
-      tr->lum[i]=(tr->p[0]+tr->p[1]+tr->p[2])/3.0;
-      
-      // this line below is to get rid of burn out pixels on the firewire camera with if filter
-      // but we get rid of the center of led which is not good
-      // but pixels above threashold be far from max
-      if(tr->lum[i]==255)tr->lum[i]=150;
-    }
-  
-  //smooth_double_gaussian(tr->lum_tmp,tr->lum, tr->width, tr->height,0.3,-1); // sadly, this is too slow
-  // might be worth trying out how a 2d fourier transform would be ???
-  // would be nice if that work so that we only look at led-like shapes 
-
-#ifdef DEBUG_TRACKING
-  g_printerr("tracking_interface_get_luminosity() done\n");
-#endif
-  return 0;
-}
-
-int tracking_interface_get_mean_luminance(struct tracking_interface* tr)
-{
-#ifdef DEBUG_TRACKING
-  g_printerr("tracking_interface_get_mean_luminance()\n");
-#endif
-  tr->mean_luminance=mean(tr->number_of_pixels,tr->lum,-1.0);
-#ifdef DEBUG_TRACKING
-  g_printerr("tracking_interface_get_mean_luminance() done\n");
-#endif
-
-  return 0;
 }
 
 

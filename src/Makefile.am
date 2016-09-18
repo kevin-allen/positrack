@@ -1,8 +1,14 @@
-bin_PROGRAMS = positrack
+bin_PROGRAMS = positrack positrackStartStop
+
 positrack_SOURCES = callback.c positrack_shared_memory.c tracked_object.c tracking.c firewire_camera_interface.c main.h parallel_port.c gst.c main.c ../config.h
 positrack_CPPFLAGS = @GTK_CFLAGS@ @GSTREAMER_CFLAGS@ @GSTREAMER_BASE_CFLAGS@ @GSTREAMER_PLUGINS_BASE_CFLAGS@ @GSTREAMER_VIDEO_CFLAGS@ @GSTREAMER_APP_CFLAGS@  -DDATADIR='"$(datadir)"'
 positrack_LDADD = @GTK_LIBS@ @GSTREAMER_LIBS@ @GSTREAMER_BASE_LIBS@ @GSTREAMER_PLUGINS_BASE_LIBS@ @GSTREAMER_VIDEO_LIBS@ -lgstapp-1.0 -lrt
 positrack_LDFLAGS= -export-dynamic -Wall 
+
+positrackStartStop_SOURCES = positrackStartStop.c ../config.h
+positrackStartStop_LDADD = -lrt
+positrackStartStop_LDFLAGS= -Wall
+
 
 xmldir = $(datadir)
 dist_xml_DATA = positrack_sed.glade

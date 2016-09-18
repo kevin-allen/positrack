@@ -1,6 +1,6 @@
 # Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.64)
-AC_INIT([positrack],[0.2],[http://savannah.nongnu.org/projects/positrack/],[positrack.0.2.tar.gz],[http://savannah.nongnu.org/projects/positrack])
+AC_INIT([positrack],[0.2],[https://github.com/kevin-allen/positrack/issues],[positrack.0.2.tar.gz],[https://github.com/kevin-allen/positrack])
 AC_COPYRIGHT([Copyright (C) 2011 Kevin Allen])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([src/firewire_camera_interface.c])

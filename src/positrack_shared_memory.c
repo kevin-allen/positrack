@@ -72,3 +72,72 @@ void psm_add_frame(struct positrack_shared_memory* psm, unsigned long int frame_
   pthread_mutex_unlock(&psm->pmutex);
 }
 
+int control_shared_memory_interface_init(struct control_shared_memory_interface* csmi)
+{ // used to start and stop tracking
+  #ifdef DEBUG_SHARE
+  g_printerr("control_shared_memory_interface_init()\n");
+  #endif
+
+  fprintf(stderr, "shm_unlink:%s\n",POSITRACKCONTROLSHARE);
+  shm_unlink(POSITRACKCONTROLSHARE); // just in case
+  csmi->size=sizeof(struct positrack_control_shared_memory);
+  csmi->des=shm_open(POSITRACKCONTROLSHARE, O_CREAT | O_RDWR | O_TRUNC,0600);
+  if(csmi->des ==-1)
+    {
+      fprintf(stderr, "problem with shm_open\n");
+      return -1;
+    }
+  fprintf(stderr, "des: %d, size: %d\n",csmi->des, csmi->size);
+  if (ftruncate(csmi->des,csmi->size) == -1)
+    {
+      fprintf(stderr, "problem with ftruncate\n");
+      return -1;
+    }
+  csmi->pcsm = (struct positrack_control_shared_memory*) mmap(0, csmi->size, PROT_READ | PROT_WRITE, MAP_SHARED, csmi->des, 0);
+  if (csmi->pcsm == MAP_FAILED) 
+    {
+      fprintf(stderr, "csmi->pcsm mapping failed\n");
+      return -1;
+    }
+    
+  if(csmi->pcsm->is_mutex_allocated==0)
+    {
+      /* Initialise attribute to mutex. */
+      pthread_mutexattr_init(&csmi->pcsm->attrmutex);
+      pthread_mutexattr_setpshared(&csmi->pcsm->attrmutex, PTHREAD_PROCESS_SHARED);
+      /* Initialise mutex. */
+      pthread_mutex_init(&csmi->pcsm->pmutex, &csmi->pcsm->attrmutex);
+      csmi->pcsm->is_mutex_allocated=1;
+    }
+
+  // set default values
+  csmi->pcsm->start_tracking=0;
+  csmi->pcsm->stop_tracking=0;
+  csmi->timer = gtk_timeout_add(500, sharedMemoryTimerCallback, NULL);
+  return 0;
+}
+
+
+
+int control_shared_memory_interface_free(struct control_shared_memory_interface* csmi)
+{ // used to start and stop tracking
+  #ifdef DEBUG_SHARE
+  g_printerr("control_shared_memory_interface_free()\n");
+  #endif
+
+  gtk_timeout_remove (csmi->timer);
+
+ if(csmi->pcsm->is_mutex_allocated==1)
+    {
+      pthread_mutex_destroy(&csmi->pcsm->pmutex);
+      pthread_mutexattr_destroy(&csmi->pcsm->attrmutex); 
+    }
+
+ if(munmap(csmi->pcsm, csmi->size) == -1) 
+    {
+      fprintf(stderr, "csmi->pcsm munmapping failed\n");
+      return -1;
+    }
+  shm_unlink(POSITRACKCONTROLSHARE);
+  return 0;
+}
