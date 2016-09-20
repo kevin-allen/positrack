@@ -450,6 +450,8 @@ void on_usbcamera_radiobutton_toggled(GtkObject *object, gpointer user_data);
 void on_videoplayback_checkbutton_toggled(GtkObject *object, gpointer user_data);
 GdkPixbuf *create_pixbuf(const gchar * filename);
 
+void set_default_file_base_entry();
+
 gint sharedMemoryTimerCallback (gpointer data); // shared memory timer
 
 void main_app_flow_get_setting_from_gui(struct main_app_flow* app_flow);

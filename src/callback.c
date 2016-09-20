@@ -89,11 +89,59 @@ int init_window()
   rec_file_data.directory=strcat(p->pw_dir,"/");
   rec_file_data.is_open=0;
   printf("data directory:%s\n",rec_file_data.directory);
-
+  set_default_file_base_entry();
+  
   // set the shared memory interface to control tracking
   control_shared_memory_interface_init(&csmi);
     
   return 0;
+}
+
+
+void set_default_file_base_entry()
+{
+
+  gchar* config_file_name="positrack.file.base";
+  gchar* config_directory_name;
+  char input[255];
+  // the home directory as the default directory
+  struct passwd *p;
+  char *username=getenv("USER");
+  p=getpwnam(username);
+  config_directory_name=strcat(p->pw_dir,"/");
+  config_file_name=g_strconcat(config_directory_name,config_file_name,NULL);
+
+  // check for positrack.file.base file
+  FILE* fp;
+  size_t len = 0;
+  ssize_t read;
+ 
+  fprintf(stderr,"config_file_name:%s\n",config_file_name);
+  // read variables from file
+  fp = fopen(config_file_name, "r");
+  if (fp == NULL)
+    {
+      fprintf(stderr,"%s can't be opened\n",config_file_name);
+      gtk_entry_set_text(GTK_ENTRY(widgets.filebaseentry),"dino1");
+      return;
+    }
+
+  fprintf(stderr,"about to read\n");
+  
+  if(fscanf(fp,"%s",&input)!=1)
+    {
+      fprintf(stderr,"problem reading from %s\n",config_file_name);
+      gtk_entry_set_text(GTK_ENTRY(widgets.filebaseentry),"dino1");
+      return;
+    }
+
+  fprintf(stderr,"value read is %s\n",input);
+  // set file entry base to value of input
+  gtk_entry_set_text(GTK_ENTRY(widgets.filebaseentry),input);
+  
+  
+  fclose(fp);   
+  return;
 }
 
 // when click the quitmenuitem
