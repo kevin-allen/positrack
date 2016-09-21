@@ -490,7 +490,6 @@ int recording_file_data_open_file()
   time_t t = time(0);   // get time now
   struct tm * now = localtime( & t );
   sprintf(syear,"%d",now->tm_year+1900);
-
   if((now->tm_mon+1)<10)
     sprintf(smonth,"0%d",now->tm_mon+1);
   else
@@ -501,8 +500,9 @@ int recording_file_data_open_file()
     sprintf(sday,"%d",now->tm_mday);
   
   sprintf(sdate,"%s%s%s",sday,smonth,syear);
+  #ifdef DEBUG_CALLBACK
   fprintf(stderr,"date: %s\n",sdate);
-  
+  #endif
 
  
   str=gtk_entry_get_text(GTK_ENTRY(widgets.filebaseentry));

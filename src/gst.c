@@ -94,13 +94,13 @@ int gst_interface_delete_firewire_pipeline(struct gst_interface* gst_inter)
 {
   if(gst_inter->firewire_pipeline_built==1)
     {
-      printf("delete_firewire_pipeline\n");
+      // printf("delete_firewire_pipeline\n");
       gst_element_set_state(gst_inter->pipeline, GST_STATE_NULL);
-      printf("set_state null done\n");
+      // printf("set_state null done\n");
       gst_object_unref(GST_OBJECT(gst_inter->pipeline));
-      printf("set_unref done\n");
+      //printf("set_unref done\n");
       gst_inter->firewire_pipeline_built=0;
-      printf("delete_firewire_pipeline done\n");
+      //printf("delete_firewire_pipeline done\n");
     }
   return 0;
 }
@@ -117,7 +117,8 @@ static void cb_need_data (GstElement *appsrc,
 
   if(app_flow.playback_mode==OFF)
     {
-      fprintf(stderr,"app_flow.playback_mode==OFF\n");
+      
+      // fprintf(stderr,"app_flow.playback_mode==OFF\n");
       return;
     }
 
