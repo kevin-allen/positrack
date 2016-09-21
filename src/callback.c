@@ -88,7 +88,9 @@ int init_window()
   p=getpwnam(username);
   rec_file_data.directory=strcat(p->pw_dir,"/");
   rec_file_data.is_open=0;
+  #ifdef DEBUG_CALLBACK
   printf("data directory:%s\n",rec_file_data.directory);
+  #endif
   set_default_file_base_entry();
   
   // set the shared memory interface to control tracking
@@ -115,8 +117,9 @@ void set_default_file_base_entry()
   FILE* fp;
   size_t len = 0;
   ssize_t read;
- 
+#ifdef DEBUG_CALLBACK
   fprintf(stderr,"config_file_name:%s\n",config_file_name);
+#endif
   // read variables from file
   fp = fopen(config_file_name, "r");
   if (fp == NULL)
@@ -126,7 +129,6 @@ void set_default_file_base_entry()
       return;
     }
 
-  fprintf(stderr,"about to read\n");
   
   if(fscanf(fp,"%s",&input)!=1)
     {
@@ -135,7 +137,6 @@ void set_default_file_base_entry()
       return;
     }
 
-  fprintf(stderr,"value read is %s\n",input);
   // set file entry base to value of input
   gtk_entry_set_text(GTK_ENTRY(widgets.filebaseentry),input);
   
@@ -147,7 +148,9 @@ void set_default_file_base_entry()
 // when click the quitmenuitem
 void on_quitmenuitem_activate(GtkObject *object, gpointer user_data)
 {
+#ifdef DEBUG_CALLBACK
   g_printerr("on_quitmenuitem_activate\n");
+#endif
   widgets.video_running=0;
   widgets.tracking_running=0;
   if(gst_inter.loop!=NULL)
@@ -214,19 +217,24 @@ void on_window_destroy (GtkObject *object, gpointer user_data)
 {
   widgets.video_running=0;
   widgets.tracking_running=0;
+#ifdef DEBUG_CALLBACK
   fprintf(stderr,"on_window_destroy()\n");
   fprintf(stderr,"about g_main_loop_quit\n");
+#endif
   if(gst_inter.loop!=NULL)
     {
       g_main_loop_quit(gst_inter.loop);
     }
+#ifdef DEBUG_CALLBACK
   fprintf(stderr,"g_main_loop_quit done\n");
+#endif
   gst_interface_delete_firewire_pipeline(&gst_inter);
   firewire_camera_interface_free(&fw_inter);
   tracking_interface_free(&tr);
   control_shared_memory_interface_free(&csmi);
-
+#ifdef DEBUG_CALLBACK
   fprintf(stderr,"about gtk main quit\n");
+#endif
   gtk_main_quit();
 } 
 gint sharedMemoryTimerCallback (gpointer data)
@@ -503,8 +511,9 @@ int recording_file_data_open_file()
   str2=".positrack";
   rec_file_data.file_name=g_strdup_printf("%s%s-%s_%s%s",str0,str,sdate,str1,str2);
 
+  #ifdef DEBUG_CALLBACK
   printf("recording file name:%s\n",rec_file_data.file_name);
-  
+  #endif
   // check if the file already exist and warn the user if so
   struct stat st;
   if(stat(g_strdup_printf("%s",rec_file_data.file_name),&st) == 0)
@@ -621,51 +630,71 @@ void on_aboutmenuitem_activate(GtkObject *object, gpointer user_data)
 }
 void on_no_synchronizationradiobutton_toggled(GtkObject *object, gpointer user_data)
 {
-  g_printerr ("on_no_synch toggled.\n"); 
+  #ifdef DEBUG_CALLBACK
+  g_printerr ("on_no_synch toggled.\n");
+  #endif
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.no_synchronization_radiobutton))==TRUE)
     {
       app_flow.synch_mode=NONE;
-      g_printerr ("no synch.\n"); 
+      #ifdef DEBUG_CALLBACK
+      g_printerr ("no synch.\n");
+      #endif
     }
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.parallel_port_synchronization_radiobutton))==TRUE)
     {
       app_flow.synch_mode=PARALLEL_PORT;
-      g_printerr ("parallel_port synch.\n"); 
+      #ifdef DEBUG_CALLBACK
+      g_printerr ("parallel_port synch.\n");
+      #endif
     }
 }
 void on_singlewhitespot_radiobutton_toggled(GtkObject *object, gpointer user_data)
 {
-  g_printerr ("on_singlewhite toggled.\n"); 
+  #ifdef DEBUG_CALLBACK
+  g_printerr ("on_singlewhite toggled.\n");
+  #endif
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.singlewhitespot_radiobutton))==TRUE)
     {
       app_flow.trk_mode=ONE_WHITE_SPOT;
-      g_printerr ("one white spot.\n"); 
+      #ifdef DEBUG_CALLBACK
+      g_printerr ("one white spot.\n");
+      #endif
     }
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.twowhitespots_radiobutton))==TRUE)
     {
       app_flow.trk_mode=TWO_WHITE_SPOTS;
-      g_printerr ("two white spots.\n"); 
+      #ifdef DEBUG_CALLBACK
+      g_printerr ("two white spots.\n");
+      #endif
     }
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.redgreenbluespots_radiobutton))==TRUE)
     {
       app_flow.trk_mode=RED_GREEN_BLUE_SPOTS;
-      g_printerr ("red green blue spots.\n"); 
+      #ifdef DEBUG_CALLBACK
+      g_printerr ("red green blue spots.\n");
+      #endif
     }
 }
 
 void on_firewirecamerablackwhite_radiobutton_toggled(GtkObject *object, gpointer user_data)
 {
+  #ifdef DEBUG_CALLBACK
   g_printerr ("on_firewirecamerablackwhite_radiobutton_toggled.\n"); 
-
+  #endif
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.firewirecamerablackwhite_radiobutton))==TRUE)
     {
       app_flow.video_source=FIREWIRE_BLACK_WHITE;
-      g_printerr ("FIREWIRE BLACK WHITE.\n"); 
+      #ifdef DEBUG_CALLBACK
+      g_printerr ("FIREWIRE BLACK WHITE.\n");
+      #endif
     }
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.firewirecameracolor_radiobutton))==TRUE)
     {
       app_flow.video_source=FIREWIRE_COLOR;
-      g_printerr ("FIREWIRE COLOR.\n"); 
+#ifdef DEBUG_CALLBACK
+      g_printerr ("FIREWIRE COLOR.\n");
+#endif
+      
     }
 }
 void on_videoplayback_checkbutton_toggled(GtkObject *object, gpointer user_data)
@@ -977,52 +1006,72 @@ void main_app_flow_set_gui(struct main_app_flow* app_flow)
 
 void main_app_flow_get_setting_from_gui(struct main_app_flow* app_flow)
 {
-  g_printerr ("main app flow get default.\n"); 
+  #ifdef DEBUG_CALLBACK
+  g_printerr ("main app flow get default.\n");
+  #endif
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.firewirecamerablackwhite_radiobutton))==TRUE)
     {
       app_flow->video_source=FIREWIRE_BLACK_WHITE;
-      g_printerr ("FIREWIRE_BLACK_WHITE.\n"); 
+      #ifdef DEBUG_CALLBACK
+      g_printerr ("FIREWIRE_BLACK_WHITE.\n");
+      #endif
     }
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.firewirecameracolor_radiobutton))==TRUE)
     {
       app_flow->video_source=FIREWIRE_COLOR;
-      g_printerr ("FIREWIRE_COLOR.\n"); 
+      #ifdef DEBUG_CALLBACK
+      g_printerr ("FIREWIRE_COLOR.\n");
+      #endif
     }
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.singlewhitespot_radiobutton))==TRUE)
     {
       app_flow->trk_mode=ONE_WHITE_SPOT;
-      g_printerr ("one white spot.\n"); 
+      #ifdef DEBUG_CALLBACK
+      g_printerr ("one white spot.\n");
+      #endif
     }
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.twowhitespots_radiobutton))==TRUE)
     {
       app_flow->trk_mode=TWO_WHITE_SPOTS;
-      g_printerr ("two white spots.\n"); 
+      #ifdef DEBUG_CALLBACK
+      g_printerr ("two white spots.\n");
+      #endif
     }
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.redgreenbluespots_radiobutton))==TRUE)
     {
       app_flow->trk_mode=RED_GREEN_BLUE_SPOTS;
-      g_printerr ("red green blue spots.\n"); 
+      #ifdef DEBUG_CALLBACK
+      g_printerr ("red green blue spots.\n");
+      #endif
     }
   
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.no_synchronization_radiobutton))==TRUE)
     {
       app_flow->synch_mode=NONE;
-      g_printerr ("no synch.\n"); 
+      #ifdef DEBUG_CALLBACK
+      g_printerr ("no synch.\n");
+      #endif
     }
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.parallel_port_synchronization_radiobutton))==TRUE)
     {
       app_flow->synch_mode=PARALLEL_PORT;
-      g_printerr ("parallel_port synch.\n"); 
+      #ifdef DEBUG_CALLBACK
+      g_printerr ("parallel_port synch.\n");
+      #endif
     }
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.videoplayback_checkbutton))==TRUE)
     {
       app_flow->playback_mode=ON;
-      g_printerr ("playback on.\n"); 
+      #ifdef DEBUG_CALLBACK
+      g_printerr ("playback on.\n");
+      #endif
     }
   else
     {
       app_flow->playback_mode=OFF;
-      g_printerr ("playback off.\n"); 
+      #ifdef DEBUG_CALLBACK
+      g_printerr ("playback off.\n");
+      #endif
     }
 }
 
