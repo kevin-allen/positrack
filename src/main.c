@@ -19,7 +19,7 @@ along with positrack.  If not, see <http://www.gnu.org/licenses/>.
 Date: 01.08.2010
 *************************************/
 #include "main.h" // all functions are declared there
-
+#include <locale.h>
 
 // bus call to get message sent from the gstreamer pipeline
 
@@ -120,6 +120,11 @@ int main (int argc, char *argv[])
       return (1);
     }
 
+
+  // set locale so that numbers have a . for decimal and not a ,
+  setlocale(LC_NUMERIC, "en_GB.UTF-8");
+
+  
   // build the gui
   if(init_window()!=0)
     {

@@ -92,7 +92,7 @@ File with declarations of the main structures and functions used in positrack
 #define PARALLELPORTFILE "/dev/parport0"
 
 //#define DEBUG_ACQ // to turn on debugging output for the comedi card
-//#define DEBUG_CAMERA // to turn on debugging for the camera
+#define DEBUG_CAMERA // to turn on debugging for the camera
 //#define DEBUG_TRACKING // to turn on debugging for the tracking
 //#define DEBUG_IMAGE // to turn on debugging for the image processing
 //#define DEBUG_CALLBACK
