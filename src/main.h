@@ -116,8 +116,9 @@ enum videosource {
 };
 enum tracking_mode {
   ONE_WHITE_SPOT = 1,
-  TWO_WHITE_SPOTS = 2,
-  RED_GREEN_BLUE_SPOTS = 3
+  ONE_WHITE_SPOT_CIRCULAR =2, // track a led on a circle centered on center of env (Latuske's work)
+  TWO_WHITE_SPOTS = 3,
+  RED_GREEN_BLUE_SPOTS = 4
 };
 enum synchronization_mode {
   NONE = 1,
@@ -313,6 +314,8 @@ struct tracking_interface
   double x_object;
   double y_object;
   double head_direction_object;
+  double center_x; // center of environment to get direction relative to center
+  double center_y;
 };
 struct tracking_interface tr;
 
@@ -584,4 +587,7 @@ int control_shared_memory_interface_free(struct control_shared_memory_interface*
 
 gint start_gst_inter_loop(gpointer data);
 
+// defined in parallel_port.c
+int init_parallel_port();
+int close_parallel_port();
 void set_parallel_port(char pin, int value);

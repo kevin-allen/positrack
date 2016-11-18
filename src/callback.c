@@ -100,6 +100,59 @@ int init_window()
 }
 
 
+int get_center_xy_from_file()
+{
+  gchar* config_file_name="positrack.center.xy";
+  gchar* config_directory_name;
+  char input[255];
+  // the home directory as the default directory
+  struct passwd *p;
+  char *username=getenv("USER");
+  p=getpwnam(username);
+  config_directory_name=strcat(p->pw_dir,"/");
+  config_file_name=g_strconcat(config_directory_name,config_file_name,NULL);
+
+  // check for positrack.center.xy file
+  FILE* fp;
+  size_t len = 0;
+  ssize_t read;
+#ifdef DEBUG_CALLBACK
+  fprintf(stderr,"config_file_name:%s\n",config_file_name);
+#endif
+  // read variables from file
+  fp = fopen(config_file_name, "r");
+  if (fp == NULL)
+    {
+      tr.center_x=0;
+      tr.center_y=0;
+      fprintf(stderr,"%s can't be opened\n",config_file_name);
+      fprintf(stderr,"center of environment: %lf %lf\n",tr.center_x,tr.center_y);
+      return -1;
+    }
+  
+  if(fscanf(fp,"%lf",&tr.center_x)!=1)
+    {
+      tr.center_x=0;
+      tr.center_y=0;
+      fprintf(stderr,"problem reading x from %s\n",config_file_name);
+      fprintf(stderr,"center of environment: %lf %lf\n",tr.center_x,tr.center_y);
+      return -1;
+    }
+  if(fscanf(fp,"%lf",&tr.center_y)!=1)
+    {
+      tr.center_x=0;
+      tr.center_y=0;
+      fprintf(stderr,"problem reading y from %s\n",config_file_name);
+      fprintf(stderr,"center of environment: %lf %lf\n",tr.center_x,tr.center_y);
+      return -1;
+    }
+  
+  printf("center of environment: %lf %lf\n",tr.center_x,tr.center_y);
+  fclose(fp);   
+  return 0;
+}
+
+
 void set_default_file_base_entry()
 {
 
@@ -391,41 +444,21 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
   // set the parallel port for synchronization
   if(app_flow.synch_mode==PARALLEL_PORT||app_flow.pulse_valid_position==ON)
     {
-      parap.val=0;
-      parap.parportfd = open(PARALLELPORTFILE, O_RDWR);
-      if (parap.parportfd == -1){
-        g_printerr("Error opening the parallel port file %s\n",PARALLELPORTFILE);
-        return;
-      }
-      if(ioctl(parap.parportfd,PPCLAIM,NULL)){
-	g_printerr("Error claiming the parallel port\n");
-	close(parap.parportfd);
+      if(init_parallel_port()!=0){
+	g_printerr("Problem with initiation of the parallel port, from on_playtrackingmenuitem_activate()\n");
 	return;
       }
-      
-      int mode = IEEE1284_MODE_BYTE; //  to transmit eight bits at a time
-      if (ioctl (parap.parportfd, PPSETMODE, &mode)) {
-        g_printerr("Error setting the parallel port mode\n");
-	ioctl(parap.parportfd, PPRELEASE);
-        close (parap.parportfd);
-        return;
-      }
-
-      // Set data pins to output
-      int dir = 0x00;
-      if (ioctl(parap.parportfd, PPDATADIR, &dir))
-	{
-	  g_printerr("Could not set parallel port direction");
-	  ioctl(parap.parportfd, PPRELEASE);
-	  close(parap.parportfd);
-	  return;
-	}
-
-      // Set the port to 0
-      char low=0;
-      ioctl(parap.parportfd,PPWDATA, &low);
     }
 
+  // maybe this could be moved somewhere else
+  if(app_flow.trk_mode==ONE_WHITE_SPOT_CIRCULAR)
+    {
+      if(get_center_xy_from_file()!=0){
+	g_printerr("Problem reading the file containing the coordinate of the center of the environment, from on_playtrackingmenuitem_activate()\n");
+	return;
+      }
+    }
+  
   widgets.tracking_running=1;
   // clear drawing area before starting new trial
   tracking_interface_clear_drawingarea(&tr);
@@ -460,8 +493,7 @@ void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
       usleep(200000);
       tracked_object_free(&tob);
       if(app_flow.synch_mode==PARALLEL_PORT||app_flow.pulse_valid_position==ON){
-	ioctl(parap.parportfd,PPRELEASE);
-	close(parap.parportfd);
+	close_parallel_port();
       }
       index=gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widgets.trialnospinbutton));
       index++; 
@@ -723,7 +755,7 @@ void main_app_print_example_config_file(struct main_app_flow* app_flow)
   fprintf(stderr,"\nChoose one option per line for:\n\nvideosource\ntracking_mode\nsynchronization_mode\nvideoplayback_mode\ndrawspot_mode\ndrawobject_mode\npulse_valid_position\n");
   fprintf(stderr,"\nYour options on each line are\n\n");
   fprintf(stderr,"FIREWIRE_BLACK_WHITE FIREWIRE_COLOR\n");
-  fprintf(stderr,"ONE_WHITE_SPOT TWO_WHITE_SPOTS RED_GREEN_BLUE_SPOTS\n");
+  fprintf(stderr,"ONE_WHITE_SPOT ONE_WHITE_SPOT_CIRCILAR TWO_WHITE_SPOTS RED_GREEN_BLUE_SPOTS\n");
   fprintf(stderr,"NONE PARALLEL_PORT\n");
   fprintf(stderr,"ON OFF\n");
   fprintf(stderr,"NO ALL ONLY_USED_SPOTS\n");
@@ -864,6 +896,11 @@ int main_app_set_default_from_config_file(struct main_app_flow* app_flow)
   if (strcmp(tracking_mode, "ONE_WHITE_SPOT") == 0) 
     {
       app_flow->trk_mode=ONE_WHITE_SPOT;
+      printf("tracking mode: %s\n",tracking_mode);
+    }
+  else if (strcmp(tracking_mode, "ONE_WHITE_SPOT_CIRCULAR") == 0) 
+    {
+      app_flow->trk_mode=ONE_WHITE_SPOT_CIRCULAR;
       printf("tracking mode: %s\n",tracking_mode);
     }
   else if (strcmp(tracking_mode, "TWO_WHITE_SPOTS") == 0) 

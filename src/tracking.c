@@ -257,7 +257,7 @@ gboolean tracking()
     }
   tracking_interface_clear_spot_data(&tr);
   // depending on tracking type //
-  if(app_flow.trk_mode==ONE_WHITE_SPOT)
+  if(app_flow.trk_mode==ONE_WHITE_SPOT || app_flow.trk_mode==ONE_WHITE_SPOT_CIRCULAR)
     {
       if(tracking_interface_tracking_one_bright_spot(&tr)!=0)
 	{ // find spots, choose one, update tracking object
@@ -374,8 +374,6 @@ int tracking_interface_print_position_to_file(struct tracking_interface* tr)
 	{
 	  fprintf(rec_file_data.fp,"no capTime startProcTime procDuration x y nSpots\n");
 	}
-
- 
       fprintf(rec_file_data.fp,"%d %"PRIu64" %d %d %.2lf %.2lf %d\n",
 	      tob.n,
 	      (fw_inter.frame->timestamp - tr->start_tracking_time_all_64)/1000, // time of capture
@@ -385,7 +383,24 @@ int tracking_interface_print_position_to_file(struct tracking_interface* tr)
 	      tob.y[tob.n-1],
 	      tr->number_spots);
     }
-
+  
+  if(app_flow.trk_mode==ONE_WHITE_SPOT_CIRCULAR)
+    {
+      if(tob.n==1) // header
+	{
+	  fprintf(rec_file_data.fp,"no capTime startProcTime procDuration x y hd nSpots\n");
+	}
+      fprintf(rec_file_data.fp,"%d %"PRIu64" %d %d %.2lf %.2lf %.2lf %d\n",
+	      tob.n,
+	      (fw_inter.frame->timestamp - tr->start_tracking_time_all_64)/1000, // time of capture
+	      (int)((tr->tracking_time_duration.tv_sec*1000)+(tr->tracking_time_duration.tv_nsec/1000000.0)), // time of ttl up
+	      (int)((tr->frame_tracking_time_duration.tv_sec*1000)+(tr->frame_tracking_time_duration.tv_nsec/1000000.0)), // duration of frame processing
+	      tob.x[tob.n-1],
+	      tob.y[tob.n-1],
+	      tob.head_direction[tob.n-1],
+	      tr->number_spots);
+    }
+  
   if(app_flow.trk_mode==RED_GREEN_BLUE_SPOTS)
     {
 
@@ -641,11 +656,20 @@ int tracking_interface_tracking_one_bright_spot(struct tracking_interface* tr)
   // update object position, which is th position of the largest spot
   if(tr->number_spots>0)
     {
-      tracked_object_update_position(&tob,
-				     tr->spot_mean_x[tr->index_largest_spot],
-				     tr->spot_mean_y[tr->index_largest_spot],
-				     -1.0,
-				     microsecond_from_timespec(&tr->inter_buffer_duration));
+      if(app_flow.trk_mode==ONE_WHITE_SPOT){
+	tracked_object_update_position(&tob,
+				       tr->spot_mean_x[tr->index_largest_spot],
+				       tr->spot_mean_y[tr->index_largest_spot],
+				       -1.0,
+				       microsecond_from_timespec(&tr->inter_buffer_duration));
+      }
+      if(app_flow.trk_mode==ONE_WHITE_SPOT_CIRCULAR){
+	tracked_object_update_position(&tob,
+				       tr->spot_mean_x[tr->index_largest_spot],
+				       tr->spot_mean_y[tr->index_largest_spot],
+				       heading(tr->spot_mean_x[tr->index_largest_spot]-tr->center_x,tr->spot_mean_y[tr->index_largest_spot]-tr->center_y),
+				       microsecond_from_timespec(&tr->inter_buffer_duration));
+      }
     }
   else
     {
