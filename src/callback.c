@@ -444,7 +444,7 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
   // set the parallel port for synchronization
   if(app_flow.synch_mode==PARALLEL_PORT||app_flow.pulse_valid_position==ON)
     {
-      if(init_parallel_port()!=0){
+      if(init_parallel_port(tr.psm)!=0){
 	g_printerr("Problem with initiation of the parallel port, from on_playtrackingmenuitem_activate()\n");
 	return;
       }

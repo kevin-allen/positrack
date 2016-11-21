@@ -23,6 +23,7 @@ void psm_init(struct positrack_shared_memory* psm)
       pthread_mutexattr_setpshared(&psm->attrmutex, PTHREAD_PROCESS_SHARED);
       /* Initialise mutex. */
       pthread_mutex_init(&psm->pmutex, &psm->attrmutex);
+      pthread_mutex_init(&psm->ppmutex, &psm->attrmutex); // parallel port
       psm->is_mutex_allocated=1;
     }
 }
@@ -36,6 +37,7 @@ void psm_free(struct positrack_shared_memory* psm)
   if(psm->is_mutex_allocated==1)
     {
       pthread_mutex_destroy(&psm->pmutex);
+      pthread_mutex_destroy(&psm->ppmutex);// parallel port
       pthread_mutexattr_destroy(&psm->attrmutex); 
     }
 }
@@ -78,7 +80,6 @@ int control_shared_memory_interface_init(struct control_shared_memory_interface*
   g_printerr("control_shared_memory_interface_init()\n");
   fprintf(stderr, "shm_unlink:%s\n",POSITRACKCONTROLSHARE);
   #endif
-
 
   shm_unlink(POSITRACKCONTROLSHARE); // just in case
   csmi->size=sizeof(struct positrack_control_shared_memory);

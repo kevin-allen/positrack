@@ -226,7 +226,8 @@ struct positrack_shared_memory
   double hd[POSITRACKSHARENUMFRAMES]; // head direction
   pthread_mutexattr_t attrmutex;
   int is_mutex_allocated;
-  pthread_mutex_t pmutex;  
+  pthread_mutex_t pmutex;
+  pthread_mutex_t ppmutex;// for parallel port claims
 };
 
 
@@ -588,6 +589,6 @@ int control_shared_memory_interface_free(struct control_shared_memory_interface*
 gint start_gst_inter_loop(gpointer data);
 
 // defined in parallel_port.c
-int init_parallel_port();
+int init_parallel_port(struct positrack_shared_memory* psm);
 int close_parallel_port();
-void set_parallel_port(char pin, int value);
+void set_parallel_port(struct positrack_shared_memory* psm,char pin, int value);

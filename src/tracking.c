@@ -239,7 +239,7 @@ gboolean tracking()
   if(app_flow.synch_mode==PARALLEL_PORT)
     {
       // set the first pin of parallel port to high
-      set_parallel_port(0,1); // pin 0 high
+      set_parallel_port(tr.psm,0,1); // pin 0 high
     }
 
   clock_gettime(CLOCK_REALTIME, &tr.time_now); // timestamp the ttl signal
@@ -290,9 +290,9 @@ gboolean tracking()
   if(app_flow.pulse_valid_position==ON)
     {
       if(tob.x[tob.n-1]==-1.0)
-	set_parallel_port(1,0); // pin 1 low
+	set_parallel_port(tr.psm,1,0); // pin 1 low
       else
-	set_parallel_port(1,1); // pin 1 high
+	set_parallel_port(tr.psm,1,1); // pin 1 high
     }
 
   // update shared memory
@@ -328,7 +328,7 @@ gboolean tracking()
   /* // synchronization pulse goes down here */
   if(app_flow.synch_mode==PARALLEL_PORT)
     {
-      set_parallel_port(0,0); // pin 0 low
+      set_parallel_port(tr.psm,0,0); // pin 0 low
     }
     tr.number_frames_tracked++;
     tr.is_in_tracking_function=0;
