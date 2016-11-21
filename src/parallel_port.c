@@ -36,12 +36,14 @@ int init_parallel_port()
   // Set the port to 0
   char low=0;
   ioctl(parap.parportfd,PPWDATA, &low);
-  return 0;
+  ioctl(parap.parportfd,PPRELEASE);
+  return 0;  
 }
+
 
 int close_parallel_port()
 {
-  ioctl(parap.parportfd,PPRELEASE);
+  
   close(parap.parportfd);
   return 0;
 }
@@ -51,7 +53,10 @@ void set_parallel_port(char pin, int value)
   // pin should be from 0 to 7
   // change the value of a pin in the parallel port
   // previous value is stored in parap.val
-  
+  if(ioctl(parap.parportfd,PPCLAIM,NULL)){
+    g_printerr("Error claiming the parallel port\n");
+    return ;
+  }
   if(pin<0||pin>7){
     printf("error with value of pin in set_parallel_port()\n");
     return;
@@ -66,6 +71,7 @@ void set_parallel_port(char pin, int value)
   else
     parap.val |= 1<<(pin);
   ioctl(parap.parportfd,PPWDATA, &parap.val);
+  
   //printf("pin: %d  value: %d  parap.val: %d\n",pin,value,parap.val);
-
+  ioctl(parap.parportfd,PPRELEASE);
 }
