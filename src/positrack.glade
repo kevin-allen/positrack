@@ -12,11 +12,11 @@
 
 http://savannah.nongnu.org/projects/positrack/
 </property>
-    <property name="license" translatable="yes">kacq is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
+    <property name="license" translatable="yes">positrack is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
 
-kacq is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+positrack is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License along with gacq; if not, write to the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</property>
+You should have received a copy of the GNU General Public License along with positrack; if not, write to the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</property>
     <property name="authors">Kevin Allen</property>
     <property name="wrap_license">True</property>
     <child internal-child="vbox">
@@ -298,6 +298,9 @@ You should have received a copy of the GNU General Public License along with gac
       <action-widget response="0">okbutton_synchronization</action-widget>
     </action-widgets>
   </object>
+
+
+  
   <object class="GtkDialog" id="tracking_dialog">
     <property name="can_focus">False</property>
     <property name="border_width">5</property>
@@ -340,10 +343,10 @@ You should have received a copy of the GNU General Public License along with gac
           </packing>
         </child>
         <child>
-          <object class="GtkVBox" id="vbox5">
+	  <object class="GtkVBox" id="vbox5">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <child>
+	    <child>
               <object class="GtkRadioButton" id="singlewhitespot_radiobutton">
                 <property name="label" translatable="yes">Object is a single white spot</property>
                 <property name="visible">True</property>
@@ -361,7 +364,7 @@ You should have received a copy of the GNU General Public License along with gac
                 <property name="position">0</property>
               </packing>
             </child>
-            <child>
+	    <child>
               <object class="GtkRadioButton" id="twowhitespots_radiobutton">
                 <property name="label" translatable="yes">Object between two white spots 
 (small spot on the rigth, big spot on the left)</property>
@@ -371,7 +374,7 @@ You should have received a copy of the GNU General Public License along with gac
                 <property name="xalign">0</property>
                 <property name="draw_indicator">True</property>
                 <property name="group">singlewhitespot_radiobutton</property>
-                <signal name="toggled" handler="on_singlewhitespot_radiobutton_toggled" swapped="no"/>
+		<signal name="toggled" handler="on_singlewhitespot_radiobutton_toggled" after="no" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">True</property>
@@ -379,7 +382,7 @@ You should have received a copy of the GNU General Public License along with gac
                 <property name="position">1</property>
               </packing>
             </child>
-            <child>
+	    <child>
               <object class="GtkRadioButton" id="redgreenbluespots_radiobutton">
                 <property name="label" translatable="yes">Object between red green blue spots 
 (red=right, blue=right, green=back)</property>
@@ -389,11 +392,30 @@ You should have received a copy of the GNU General Public License along with gac
                 <property name="xalign">0</property>
                 <property name="draw_indicator">True</property>
                 <property name="group">singlewhitespot_radiobutton</property>
+		<signal name="toggled" handler="on_singlewhitespot_radiobutton_toggled" after="no" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">True</property>
                 <property name="fill">True</property>
                 <property name="position">2</property>
+              </packing>
+            </child>
+	    <child>
+              <object class="GtkRadioButton" id="singlewhitespotcircular_radiobutton">
+		<property name="label" translatable="yes">Object is a single white spot rotating around a point</property>
+		<property name="visible">True</property>
+		<property name="can_focus">True</property>
+		<property name="receives_default">False</property>
+		<property name="relief">half</property>
+		<property name="xalign">0</property>
+		<property name="draw_indicator">True</property>
+		<property name="group">singlewhitespot_radiobutton</property>
+		<signal name="toggled" handler="on_singlewhitespot_radiobutton_toggled" after="no" swapped="no"/>
+              </object>
+              <packing>
+		<property name="expand">True</property>
+		<property name="fill">True</property>
+		<property name="position">3</property>
               </packing>
             </child>
           </object>
@@ -403,6 +425,7 @@ You should have received a copy of the GNU General Public License along with gac
             <property name="position">1</property>
           </packing>
         </child>
+	
       </object>
     </child>
     <action-widgets>

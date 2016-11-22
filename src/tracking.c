@@ -241,11 +241,10 @@ gboolean tracking()
       // set the first pin of parallel port to high
       set_parallel_port(tr.psm,0,1); // pin 0 high
     }
-
   clock_gettime(CLOCK_REALTIME, &tr.time_now); // timestamp the ttl signal
   tr.tracking_time_duration=diff(&tr.start_tracking_time_all,&tr.time_now); // time of ttl signal relative to start of tracking process
   
-  clock_gettime(CLOCK_REALTIME, &tr.start_frame_tracking_time); // get the time we start tracking
+  clock_gettime(CLOCK_REALTIME, &tr.start_frame_tracking_time); // get the time we start processing the frame
   
   // check if the buffer contain a valid buffer
   if(tracking_interface_valid_buffer(&tr)!=0)
@@ -294,7 +293,6 @@ gboolean tracking()
       else
 	set_parallel_port(tr.psm,1,1); // pin 1 high
     }
-
   // update shared memory
   psm_add_frame(tr.psm, tr.number_frames_tracked+1,tr.time_now,
 		tob.x[tob.n-1],
@@ -310,7 +308,6 @@ gboolean tracking()
       return FALSE;
     }
 
-  
   clock_gettime(CLOCK_REALTIME, &tr.end_frame_tracking_time); // get the time we stop tracking
   tr.frame_tracking_time_duration=diff(&tr.start_frame_tracking_time,&tr.end_frame_tracking_time);
   

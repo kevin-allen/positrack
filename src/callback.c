@@ -59,7 +59,8 @@ int init_window()
   widgets.parallel_port_synchronization_radiobutton= GTK_WIDGET (gtk_builder_get_object (builder, "parallel_port_synchronizationradiobutton"));  
   widgets.singlewhitespot_radiobutton= GTK_WIDGET (gtk_builder_get_object (builder, "singlewhitespot_radiobutton"));  
   widgets.twowhitespots_radiobutton=GTK_WIDGET (gtk_builder_get_object (builder, "twowhitespots_radiobutton"));  
-  widgets.redgreenbluespots_radiobutton=GTK_WIDGET (gtk_builder_get_object (builder, "redgreenbluespots_radiobutton"));  
+  widgets.redgreenbluespots_radiobutton=GTK_WIDGET (gtk_builder_get_object (builder, "redgreenbluespots_radiobutton"));
+  widgets.singlewhitespotcircular_radiobutton= GTK_WIDGET (gtk_builder_get_object (builder, "singlewhitespotcircular_radiobutton"));
   
   widgets.firewirecamerablackwhite_radiobutton=GTK_WIDGET (gtk_builder_get_object (builder, "firewirecamerablackwhite_radiobutton"));  
   widgets.firewirecameracolor_radiobutton=GTK_WIDGET (gtk_builder_get_object (builder, "firewirecameracolor_radiobutton"));  
@@ -706,7 +707,15 @@ void on_singlewhitespot_radiobutton_toggled(GtkObject *object, gpointer user_dat
       g_printerr ("red green blue spots.\n");
       #endif
     }
+ if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widgets.singlewhitespotcircular_radiobutton))==TRUE) 
+     { 
+       app_flow.trk_mode=ONE_WHITE_SPOT_CIRCULAR; 
+       #ifdef DEBUG_CALLBACK 
+       g_printerr ("one white spot circular.\n"); 
+       #endif 
+     } 
 }
+
 
 void on_firewirecamerablackwhite_radiobutton_toggled(GtkObject *object, gpointer user_data)
 {
@@ -1027,6 +1036,9 @@ void main_app_flow_set_gui(struct main_app_flow* app_flow)
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widgets.twowhitespots_radiobutton),TRUE);
   if(app_flow->trk_mode==RED_GREEN_BLUE_SPOTS)
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widgets.redgreenbluespots_radiobutton),TRUE);
+  if(app_flow->trk_mode==ONE_WHITE_SPOT_CIRCULAR)
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widgets.singlewhitespotcircular_radiobutton),TRUE);
+  
   //sychronization_mode
   if(app_flow->synch_mode==NONE)
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widgets.no_synchronization_radiobutton),TRUE);

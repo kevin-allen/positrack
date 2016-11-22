@@ -1,5 +1,4 @@
-#include "main.h"
-                       
+#include "main.h"                
 int init_parallel_port(struct positrack_shared_memory* psm)
 {
   
@@ -9,7 +8,13 @@ int init_parallel_port(struct positrack_shared_memory* psm)
     g_printerr("Error opening the parallel port file %s\n",PARALLELPORTFILE);
     return -1;
   }
+  /*
+    we use a mutex because if another program tries to claim the parallel port 
+    at the same time, positrack will hang.
 
+    If other program uses the parallel port, they can check the mutex of the 
+    positrack shared memory to make sure the port is free before claiming it.
+   */
   pthread_mutex_lock(&psm->ppmutex);
   if(ioctl(parap.parportfd,PPCLAIM,NULL)){
     g_printerr("Error claiming the parallel port\n");
@@ -38,15 +43,13 @@ int init_parallel_port(struct positrack_shared_memory* psm)
   char low=0;
   ioctl(parap.parportfd,PPWDATA, &low);
   ioctl(parap.parportfd,PPRELEASE);
-  pthread_mutex_unlock(&psm->ppmutex);
-  
+  pthread_mutex_unlock(&psm->ppmutex); 
   return 0;  
 }
 
 
 int close_parallel_port()
 {
-  
   close(parap.parportfd);
   return 0;
 }
@@ -56,7 +59,6 @@ void set_parallel_port(struct positrack_shared_memory* psm,char pin, int value)
   // pin should be from 0 to 7
   // change the value of a pin in the parallel port
   // previous value is stored in parap.val
-  
   if(pin<0||pin>7){
     printf("error with value of pin in set_parallel_port()\n");
     return;
@@ -66,15 +68,11 @@ void set_parallel_port(struct positrack_shared_memory* psm,char pin, int value)
       printf("error with value of value in set_parallel_port()\n");
       return;
     }
-
-
   pthread_mutex_lock(&psm->ppmutex);  
-  fprintf(stderr,"about to claim\n");
   if(ioctl(parap.parportfd,PPCLAIM,NULL)){
     g_printerr("Error claiming the parallel port\n");
     return ;
   }
-  fprintf(stderr,"claimed\n");
   if(ioctl(parap.parportfd,PPRDATA, &parap.val)){
     g_printerr("Error reading from the parallel port\n");
     return;
@@ -88,9 +86,6 @@ void set_parallel_port(struct positrack_shared_memory* psm,char pin, int value)
     g_printerr("Error writing to the parallel port\n");
     return;
   }
-  printf("pin: %d  value: %d  parap.val: %d\n",pin,value,parap.val);
   ioctl(parap.parportfd,PPRELEASE);
-  printf("released\n");
   pthread_mutex_unlock(&psm->ppmutex);
-  
 }

@@ -174,6 +174,7 @@ struct all_widget
   GtkWidget *singlewhitespot_radiobutton;
   GtkWidget *twowhitespots_radiobutton;
   GtkWidget *redgreenbluespots_radiobutton;
+  GtkWidget *singlewhitespotcircular_radiobutton;
   GtkWidget *firewirecamerablackwhite_radiobutton;
   GtkWidget *firewirecameracolor_radiobutton;
   GtkWidget *videoplayback_checkbutton;
@@ -214,7 +215,9 @@ struct control_shared_memory_interface
 };
 struct control_shared_memory_interface csmi;
 
-
+// structure to share the tracking data across processes
+// other processes can do "stuff" based on the tracking data
+// make sure we can implement new functionality while keeping positrack as simple as possible
 struct positrack_shared_memory
 {
   int numframes;
@@ -226,11 +229,9 @@ struct positrack_shared_memory
   double hd[POSITRACKSHARENUMFRAMES]; // head direction
   pthread_mutexattr_t attrmutex;
   int is_mutex_allocated;
-  pthread_mutex_t pmutex;
-  pthread_mutex_t ppmutex;// for parallel port claims
+  pthread_mutex_t pmutex; // use for secure access of the data in this structure
+  pthread_mutex_t ppmutex;// use for securely claiming the parallel port, if several processes are using it
 };
-
-
 
 struct tracking_interface
 {
@@ -320,7 +321,6 @@ struct tracking_interface
 };
 struct tracking_interface tr;
 
-
 struct recording_file_data
 {
   int is_open;
@@ -356,8 +356,6 @@ struct tracked_object
 };
 struct tracked_object tob;
 
-
-
 struct firewire_camera_interface
 {
   int is_acquiring;
@@ -379,8 +377,6 @@ struct firewire_camera_interface
   dc1394_t * d;
   dc1394camera_list_t *list;
   dc1394error_t err;
-  
-
 };
 struct firewire_camera_interface fw_inter;
 
@@ -546,7 +542,7 @@ int tracked_object_update_position(struct tracked_object* tob,double x, double y
 int tracked_object_draw_object(struct tracked_object* tob);
 int tracked_object_display_path_variables(struct tracked_object* tob);
 int recording_file_data_open_file();
-
+int recording_file_data_close_file();
 		
 int find_max_index(int num_data,double* data);	
 int find_max_index_int(int num_data,int* data);	   
