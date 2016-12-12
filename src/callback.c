@@ -353,7 +353,7 @@ void start_video()
 	  firewire_camera_interface_print_info(&fw_inter);
 	  #endif
 	}
-      usleep(50000); // wait a little to make sure the tracking process starts before the acquisition
+      usleep(250000); // wait a little to make sure the tracking process starts before the acquisition
       firewire_camera_interface_start_transmission(&fw_inter);
       
       // let the pipeline ask for new data via a signal to cb_need_data function      
