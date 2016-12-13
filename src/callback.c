@@ -300,7 +300,6 @@ gint sharedMemoryTimerCallback (gpointer data)
     {
       csmi.pcsm->start_tracking=0;
       on_playtrackingmenuitem_activate(NULL,NULL);
-      start_video(); // void function
     }
   if(csmi.pcsm->stop_tracking==1)
     {
@@ -350,7 +349,7 @@ void start_video()
 	      return;
 	    }
 	  #ifdef DEBUG_CALLBACK
-	  firewire_camera_interface_print_info(&fw_inter);
+	  //firewire_camera_interface_print_info(&fw_inter);
 	  #endif
 	}
       usleep(50000); // wait a little to make sure the tracking process starts before the acquisition
@@ -397,7 +396,14 @@ gint start_gst_inter_loop(gpointer data)
 
 void on_stopvideomenuitem_activate(GtkObject *object, gpointer user_data)
 {
-  stop_video();
+  if(widgets.tracking_running!=1) // don't stop the video if tracking running
+    {
+      stop_video();
+    }
+  else
+    {
+      fprintf(stderr,"on_stopvideomenuitem(), will not stop video as tracking is currently running\n");
+    }
 } 
 void stop_video()
 {
@@ -435,6 +441,7 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
   tr.start_tracking_time_all_64+=tr.start_tracking_time_all.tv_nsec/1000;
   tracked_object_init(&tob);
 
+ 
   
   // open .positrack file
   if(recording_file_data_open_file()!=0)
@@ -443,6 +450,7 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
       return;
     }
 
+ 
   
   // initialize the shared memory, so that the old frames are all set to 0
   psm_init(tr.psm);
@@ -464,6 +472,8 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
 	return;
       }
     }
+
+  start_video();
   
   widgets.tracking_running=1;
   // clear drawing area before starting new trial
@@ -507,7 +517,7 @@ void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
       gtk_statusbar_remove(GTK_STATUSBAR(widgets.statusbar),widgets.statusbar_context_id,widgets.statusbar_message_id);
 
     }
-}
+ }
 
 
 

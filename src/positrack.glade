@@ -735,8 +735,7 @@ You should have received a copy of the GNU General Public License along with pos
                         <property name="can_focus">False</property>
                         <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
-                        <signal name="activate" handler="on_playtrackingmenuitem_activate" swapped="no"/>
-                        <signal name="activate" handler="on_playvideomenuitem_activate" after="yes" swapped="no"/>
+                        <signal name="activate" handler="on_playtrackingmenuitem_activate" after="yes" swapped="no"/>
                       </object>
                     </child>
                     <child>
