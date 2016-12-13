@@ -261,7 +261,6 @@ struct tracking_interface
   struct timespec previous_buffer_time;
   struct timespec inter_buffer_duration;
   double current_sampling_rate;
-  struct timespec start_tracking_time; // for a sample
   struct timespec end_tracking_time; // for a sample
   struct timespec tracking_time_duration; // for a sample
   struct timespec start_tracking_time_all; // for all samples

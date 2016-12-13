@@ -353,9 +353,10 @@ void start_video()
 	  firewire_camera_interface_print_info(&fw_inter);
 	  #endif
 	}
+      usleep(50000); // wait a little to make sure the tracking process starts before the acquisition
       firewire_camera_interface_start_transmission(&fw_inter);
-      // let the pipeline ask for new data via a signal to cb_need_data function
-            
+      
+      // let the pipeline ask for new data via a signal to cb_need_data function      
       if(gst_inter.loop==NULL)
 	{
 #ifdef DEBUG_CALLBACK
@@ -407,9 +408,8 @@ void stop_video()
   if(widgets.video_running==1)
     {
       gst_element_set_state(gst_inter.pipeline, GST_STATE_PAUSED);
-      
       firewire_camera_interface_stop_transmission(&fw_inter);
-      //firewire_camera_interface_empty_buffer(&fw_inter);
+      firewire_camera_interface_free(&fw_inter); // needed to do this to get rid of weird capture time for the first frame of next tracking process
     }
   widgets.video_running=0;
 #ifdef DEBUG_CALLBACK
@@ -429,16 +429,21 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
       return;
     }
 
+  tr.number_frames_tracked=0;
+  clock_gettime(CLOCK_REALTIME,&tr.start_tracking_time_all);
+  tr.start_tracking_time_all_64=tr.start_tracking_time_all.tv_sec*1000000;
+  tr.start_tracking_time_all_64+=tr.start_tracking_time_all.tv_nsec/1000;
+  tracked_object_init(&tob);
+
+  
   // open .positrack file
   if(recording_file_data_open_file()!=0)
     {
       g_printerr("recording_file_data_open_file() did not return 0\n");
       return;
     }
-  
-  tracked_object_init(&tob);
-  tr.number_frames_tracked=0;
 
+  
   // initialize the shared memory, so that the old frames are all set to 0
   psm_init(tr.psm);
 
@@ -470,10 +475,7 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
   widgets.statusbar_context_id=gtk_statusbar_get_context_id(GTK_STATUSBAR(widgets.statusbar),"tracking");
   widgets.statusbar_message_id=gtk_statusbar_push(GTK_STATUSBAR(widgets.statusbar),widgets.statusbar_context_id,str);
   
-  clock_gettime(CLOCK_REALTIME,&tr.start_tracking_time_all);
-  tr.start_tracking_time_all_64=tr.start_tracking_time_all.tv_sec*1000000;
-  tr.start_tracking_time_all_64+=tr.start_tracking_time_all.tv_nsec/1000;
-
+  
   g_timeout_add(tr.interval_between_tracking_calls_ms,tracking,NULL); // timer to trigger a tracking event
 
 #ifdef DEBUG_CALLBACK
@@ -489,6 +491,7 @@ void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
     {
       widgets.tracking_running=0; // making tracking function to return FALSE */
       usleep(200000); // let things die down before cleaning resources
+      stop_video();
       psm_free(tr.psm); // was init, changed to free?
       recording_file_data_close_file();
       usleep(200000);
@@ -502,7 +505,7 @@ void on_stoptrackingmenuitem_activate(GtkObject *object, gpointer user_data)
       usleep(100000);
       widgets.statusbar_context_id=gtk_statusbar_get_context_id(GTK_STATUSBAR(widgets.statusbar),"tracking");
       gtk_statusbar_remove(GTK_STATUSBAR(widgets.statusbar),widgets.statusbar_context_id,widgets.statusbar_message_id);
-      stop_video();
+
     }
 }
 

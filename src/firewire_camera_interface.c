@@ -20,7 +20,6 @@ date 15.02.2010
 /* ************************************************************************\/ */
 #include "main.h"
 
-
 int firewire_camera_interface_init(struct firewire_camera_interface* cam)
 {
   // returns -1 if nothing is working
@@ -181,9 +180,13 @@ int firewire_camera_interface_start_transmission(struct firewire_camera_interfac
 #endif
   if(cam->is_initialized!=1)
     return 1;
+
+  // flush the video buffer 
   firewire_camera_interface_empty_buffer(cam); // to make sure we don't work with old buffers
+
   cam->err=dc1394_video_set_transmission(cam->camera, DC1394_ON);
   DC1394_ERR_CLN_RTN(cam->err,firewire_camera_interface_free(cam),"Could not start camera transmission");
+  
 #ifdef DEBUG_CAMERA
   fprintf(stderr,"firewire_camera_interface_start_transmission, leaving\n");
 #endif
@@ -198,9 +201,10 @@ int firewire_camera_interface_stop_transmission(struct firewire_camera_interface
     return 1;
   cam->err=dc1394_video_set_transmission(cam->camera, DC1394_OFF);
   DC1394_ERR_CLN_RTN(cam->err,firewire_camera_interface_free(cam),"Could not start camera transmission");
-
+  
   // flush the video buffer 
-
+  firewire_camera_interface_empty_buffer(cam); // to make sure we don't work with old buffers
+  
 #ifdef DEBUG_CAMERA
   fprintf(stderr,"firewire_camera_interface_stop_transmission, leaving\n");
 #endif
@@ -225,7 +229,7 @@ int firewire_camera_interface_enqueue(struct firewire_camera_interface* cam)
 int firewire_camera_interface_dequeue(struct firewire_camera_interface* cam)
 {
 #ifdef DEBUG_CAMERA
-  fprintf(stderr,"firewire_camera_interface_capture\n");
+  fprintf(stderr,"firewire_camera_interface_dequeue\n");
 #endif
   if(cam->is_initialized!=1)
     return 1;
@@ -234,7 +238,7 @@ int firewire_camera_interface_dequeue(struct firewire_camera_interface* cam)
   cam->err=dc1394_capture_enqueue(cam->camera, cam->frame);
   DC1394_ERR_CLN_RTN(cam->err,firewire_camera_interface_free(cam),"Could not enqueue a frame");
 #ifdef DEBUG_CAMERA
-  fprintf(stderr,"firewire_camera_interface_capture, leaving\n");
+  fprintf(stderr,"firewire_camera_interface_dequeue, leaving\n");
 #endif
   return 0;
 }
@@ -248,7 +252,7 @@ int firewire_camera_interface_empty_buffer(struct firewire_camera_interface* cam
     return 1;
   int i = 0;
   // best to stop transmission to do that
-  firewire_camera_interface_stop_transmission(cam);
+  // firewire_camera_interface_stop_transmission(cam);
   usleep(50000); // sleep 50 ms, so that all frames left have arrived in buffer
   while(cam->frame!=NULL)
     {

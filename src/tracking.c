@@ -192,17 +192,14 @@ gboolean tracking()
     function that is called by a timer to do the tracking
   */
 #ifdef DEBUG_TRACKING
-  g_printerr("tracking(), tr.number_frames_tracked: %d\n",tr.number_frames_tracked);
+  g_printerr("tracking(), tr.number_frames_tracked: %ld\n",tr.number_frames_tracked);
 #endif
   if(tr.is_in_tracking_function==1){ // prevent two threads running this code at the same time
     return TRUE;
   }
   tr.is_in_tracking_function=1;
   
-  if(tr.number_frames_tracked==0){
-    clock_gettime(CLOCK_REALTIME, &tr.start_tracking_time); // get the time we start tracking
-   }
-
+ 
   if(widgets.tracking_running!=1)
     {
       tr.number_frames_tracked=0;
@@ -218,6 +215,7 @@ gboolean tracking()
       return TRUE;
     }
 
+
   clock_gettime(CLOCK_REALTIME, &tr.time_now); // how long since this tracking trial started
   tr.tracking_time_duration_all=diff(&tr.start_tracking_time_all,&tr.time_now);
 
@@ -228,6 +226,7 @@ gboolean tracking()
       tr.is_in_tracking_function=0;
       return FALSE; // stop recording
     }
+
   
   if(microsecond_from_timespec(&tr.waiting_buffer_duration)/1000>INTERVAL_BETWEEN_TRACKING_CALLS_MS/1.5) 
     { // we are waiting a long time for frames, will ignore the next tick
@@ -312,7 +311,7 @@ gboolean tracking()
   tr.frame_tracking_time_duration=diff(&tr.start_frame_tracking_time,&tr.end_frame_tracking_time);
   
 #ifdef DEBUG_TRACKING 
-  g_printerr("offset: %d, buffer_duration: %ld, lum: %lf, waiting time: %d us, processing time: %d ms, current sampling rate: %.2lf Hz, interframe duration: %.2f ms, %d ms\n",
+  g_printerr("offset: %ld, buffer_duration: %d, lum: %lf, waiting time: %d us, processing time: %d ms, current sampling rate: %.2lf Hz, interframe duration: %.2f ms, %d ms\n",
 	     tr.current_buffer_offset,
 	     microsecond_from_timespec(&tr.inter_buffer_duration),
 	     tr.mean_luminance,microsecond_from_timespec(&tr.waiting_buffer_duration), 
@@ -341,6 +340,10 @@ int tracking_interface_print_position_to_file(struct tracking_interface* tr)
       fprintf(stderr,"try to save position data but tob.n <=0\n");
       return -1;
     }
+
+ 
+
+  
   // save data to the file
   if(app_flow.trk_mode==TWO_WHITE_SPOTS)
     {
@@ -352,7 +355,7 @@ int tracking_interface_print_position_to_file(struct tracking_interface* tr)
       fprintf(rec_file_data.fp,"%d %"PRIu64" %d %d %.2lf %.2lf %.2lf %d %d %.2lf %.2lf %d %.2lf %.2lf\n",
 	      tob.n,
 	      (fw_inter.frame->timestamp - tr->start_tracking_time_all_64)/1000, // time of capture
-	      (int)((tr->tracking_time_duration.tv_sec*1000)+(tr->tracking_time_duration.tv_nsec/1000000.0)), // time of ttl up
+	      (int)((tr->tracking_time_duration.tv_sec*1000)+(tr->tracking_time_duration.tv_nsec/1000000.0)), // time of ttl up relative to begining tracking process
 	      (int)((tr->frame_tracking_time_duration.tv_sec*1000)+(tr->frame_tracking_time_duration.tv_nsec/1000000.0)), // duration of frame processing
 	      tob.x[tob.n-1],
 	      tob.y[tob.n-1],
@@ -455,10 +458,7 @@ int tracking_interface_firewire_get_buffer(struct tracking_interface* tr)
   
   if(tr->number_frames_tracked==0)
     tr->previous_buffer_time=tr->current_buffer_time;// we want to set previous buffer time to current buffer time
-#ifdef DEBUG_TRACKING
-  fprintf(stderr,"previous buffer time: %d\n",microsecond_from_timespec(&tr->previous_buffer_time));
-  fprintf(stderr,"current buffer time: %d\n",microsecond_from_timespec(&tr->current_buffer_time));
-#endif
+
   //offset=frame number
   tr->previous_buffer_offset=tr->current_buffer_offset;
   tr->current_buffer_offset=fw_inter.frame->frames_behind;
@@ -470,6 +470,7 @@ int tracking_interface_firewire_get_buffer(struct tracking_interface* tr)
 				       tr->width, tr->height,
 				       GST_ROUND_UP_4 (tr->width * 3), NULL, NULL);
 #ifdef DEBUG_TRACKING
+  fprintf(stderr,"tr->current_buffer_offset:%ld\n",tr->current_buffer_offset);
   fprintf(stderr,"tracking_interface_firewire_get_buffer() done\n");
 #endif
   return 0;
@@ -537,6 +538,18 @@ int tracking_interface_valid_buffer(struct tracking_interface* tr)
 	  return -1;
 	}
     }
+
+  // if the frame caputre time is before the time tracking process was started, raise the alarm!
+  if(fw_inter.frame->timestamp < tr->start_tracking_time_all_64)
+    {
+      fprintf(stderr,"tracking_interface_valid_buffer(), fw_inter.frame->timestamp < tr.start_tracking_Time_all_64\n");
+      fprintf(stderr,"time of the frame capture is before the time at which tracking started\n");
+      fprintf(stderr,"tob.n:%d\n",tob.n);
+      fprintf(stderr,"fw:%"PRIu64"\n",fw_inter.frame->timestamp/1000);
+      fprintf(stderr,"st:%"PRIu64"\n",tr->start_tracking_time_all_64/1000);
+      return -1;
+    }
+
 #ifdef DEBUG_TRACKING
   g_printerr("tracking_interface_valid_buffer() %d done\n",tr->number_frames_tracked);
 #endif

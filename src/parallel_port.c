@@ -50,12 +50,17 @@ int init_parallel_port(struct positrack_shared_memory* psm)
 
 int close_parallel_port()
 {
+  //ioctl(parap.parportfd,PPRELEASE);
   close(parap.parportfd);
   return 0;
 }
 
 void set_parallel_port(struct positrack_shared_memory* psm,char pin, int value)
 {
+  
+  struct timespec req;
+  struct timespec slp;
+  slp=set_timespec_from_ms(0.5);
   // pin should be from 0 to 7
   // change the value of a pin in the parallel port
   // previous value is stored in parap.val
@@ -87,5 +92,6 @@ void set_parallel_port(struct positrack_shared_memory* psm,char pin, int value)
     return;
   }
   ioctl(parap.parportfd,PPRELEASE);
+  nanosleep(&slp,&req); // try to prevent hanging between threads
   pthread_mutex_unlock(&psm->ppmutex);
 }
