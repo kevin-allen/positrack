@@ -435,6 +435,13 @@ void on_playtrackingmenuitem_activate(GtkObject *object, gpointer user_data)
       return;
     }
 
+  if(widgets.video_running==1) // stop video if it is currently on
+    {
+      stop_video();
+      usleep(100000);
+    }
+
+  
   tr.number_frames_tracked=0;
   clock_gettime(CLOCK_REALTIME,&tr.start_tracking_time_all);
   tr.start_tracking_time_all_64=tr.start_tracking_time_all.tv_sec*1000000;
