@@ -352,11 +352,11 @@ int tracking_interface_print_position_to_file(struct tracking_interface* tr)
 	  fprintf(rec_file_data.fp,"no capTime startProcTime procDuration x y hd nSpots nPixSpot1 xSpot1 ySpot1 nPixSpot2 xSpot2 ySpot2\n");
 	}
       
-      fprintf(rec_file_data.fp,"%d %"PRIu64" %d %d %.2lf %.2lf %.2lf %d %d %.2lf %.2lf %d %.2lf %.2lf\n",
+      fprintf(rec_file_data.fp,"%d %"PRIu64" %.3lf %.3lf %.2lf %.2lf %.2lf %d %d %.2lf %.2lf %d %.2lf %.2lf\n",
 	      tob.n,
 	      (fw_inter.frame->timestamp - tr->start_tracking_time_all_64)/1000, // time of capture
-	      (int)((tr->tracking_time_duration.tv_sec*1000)+(tr->tracking_time_duration.tv_nsec/1000000.0)), // time of ttl up relative to begining tracking process
-	      (int)((tr->frame_tracking_time_duration.tv_sec*1000)+(tr->frame_tracking_time_duration.tv_nsec/1000000.0)), // duration of frame processing
+	      (float)((tr->tracking_time_duration.tv_sec*1000)+(tr->tracking_time_duration.tv_nsec/1000000.0)), // time of ttl up relative to begining tracking process
+	      (float)((tr->frame_tracking_time_duration.tv_sec*1000)+(tr->frame_tracking_time_duration.tv_nsec/1000000.0)), // duration of frame processing
 	      tob.x[tob.n-1],
 	      tob.y[tob.n-1],
 	      tob.head_direction[tob.n-1],
@@ -374,11 +374,11 @@ int tracking_interface_print_position_to_file(struct tracking_interface* tr)
 	{
 	  fprintf(rec_file_data.fp,"no capTime startProcTime procDuration x y nSpots\n");
 	}
-      fprintf(rec_file_data.fp,"%d %"PRIu64" %d %d %.2lf %.2lf %d\n",
+      fprintf(rec_file_data.fp,"%d %"PRIu64" %.3lf %.3lf %.2lf %.2lf %d\n",
 	      tob.n,
 	      (fw_inter.frame->timestamp - tr->start_tracking_time_all_64)/1000, // time of capture
-	      (int)((tr->tracking_time_duration.tv_sec*1000)+(tr->tracking_time_duration.tv_nsec/1000000.0)), // time of ttl up
-	      (int)((tr->frame_tracking_time_duration.tv_sec*1000)+(tr->frame_tracking_time_duration.tv_nsec/1000000.0)), // duration of frame processing
+	      (float)((tr->tracking_time_duration.tv_sec*1000)+(tr->tracking_time_duration.tv_nsec/1000000.0)), // time of ttl up
+	      (float)((tr->frame_tracking_time_duration.tv_sec*1000)+(tr->frame_tracking_time_duration.tv_nsec/1000000.0)), // duration of frame processing
 	      tob.x[tob.n-1],
 	      tob.y[tob.n-1],
 	      tr->number_spots);
@@ -390,11 +390,11 @@ int tracking_interface_print_position_to_file(struct tracking_interface* tr)
 	{
 	  fprintf(rec_file_data.fp,"no capTime startProcTime procDuration x y hd nSpots\n");
 	}
-      fprintf(rec_file_data.fp,"%d %"PRIu64" %d %d %.2lf %.2lf %.2lf %d\n",
+      fprintf(rec_file_data.fp,"%d %"PRIu64" %.3lf %.3lf %.2lf %.2lf %.2lf %d\n",
 	      tob.n,
 	      (fw_inter.frame->timestamp - tr->start_tracking_time_all_64)/1000, // time of capture
-	      (int)((tr->tracking_time_duration.tv_sec*1000)+(tr->tracking_time_duration.tv_nsec/1000000.0)), // time of ttl up
-	      (int)((tr->frame_tracking_time_duration.tv_sec*1000)+(tr->frame_tracking_time_duration.tv_nsec/1000000.0)), // duration of frame processing
+	      (float)((tr->tracking_time_duration.tv_sec*1000)+(tr->tracking_time_duration.tv_nsec/1000000.0)), // time of ttl up
+	      (float)((tr->frame_tracking_time_duration.tv_sec*1000)+(tr->frame_tracking_time_duration.tv_nsec/1000000.0)), // duration of frame processing
 	      tob.x[tob.n-1],
 	      tob.y[tob.n-1],
 	      tob.head_direction[tob.n-1],
@@ -409,11 +409,11 @@ int tracking_interface_print_position_to_file(struct tracking_interface* tr)
 	  fprintf(rec_file_data.fp,"no capTime startProcTime procDuration x y hd nSpots nPixSpotRed xSpotRed ySpotRed nPixSpotGreen xSpotGreen ySpotGreen nPixSpotBlue xSpotBlue ySpotBlue\n");
 	}
       
-      fprintf(rec_file_data.fp,"%d %"PRIu64" %d %d %.2lf %.2lf %.2lf %d %d %.2lf %.2lf %d %.2lf %.2lf %d %.2lf %.2lf \n",
+      fprintf(rec_file_data.fp,"%d %"PRIu64" %.3lf %.3lf %.2lf %.2lf %.2lf %d %d %.2lf %.2lf %d %.2lf %.2lf %d %.2lf %.2lf \n",
 	      tob.n,
       	      (fw_inter.frame->timestamp - tr->start_tracking_time_all_64)/1000, // time of capture
-	      (int)((tr->tracking_time_duration.tv_sec*1000)+(tr->tracking_time_duration.tv_nsec/1000000.0)), // time of ttl up
-	      (int)((tr->frame_tracking_time_duration.tv_sec*1000)+(tr->frame_tracking_time_duration.tv_nsec/1000000.0)), // duration of frame processing
+	      (float)((tr->tracking_time_duration.tv_sec*1000)+(tr->tracking_time_duration.tv_nsec/1000000.0)), // time of ttl up
+	      (float)((tr->frame_tracking_time_duration.tv_sec*1000)+(tr->frame_tracking_time_duration.tv_nsec/1000000.0)), // duration of frame processing
 	      tob.x[tob.n-1],
 	      tob.y[tob.n-1],
 	      tob.head_direction[tob.n-1],

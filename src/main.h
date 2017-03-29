@@ -60,7 +60,7 @@ File with declarations of the main structures and functions used in positrack
 #define INTERVAL_BETWEEN_TRACKING_CALLS_MS 20 //  20  // if this is too close to frame rate, then larger 
                                                // jitter in inter frame intervals
 
-#define TIMEOUT_FOR_CAPTURE_MS 20 // time before the timeout try to get a new frame
+#define TIMEOUT_FOR_CAPTURE_MS 18.25 // time before the timeout try to get a new frame
 #define FIREWIRE_CAMERA_INTERFACE_NUMBER_OF_FRAMES_IN_RING_BUFFER 10
 
 #define VIDEO_SOURCE_USB_WIDTH 860 
@@ -90,7 +90,7 @@ File with declarations of the main structures and functions used in positrack
 #define POSITRACKCONTROLSHARE "/tmppositrackcontrolshare" 
 #define POSITRACKSHARENUMFRAMES 100
 
-#define PARALLELPORTFILE "/dev/parport0"
+#define PARALLELPORTFILE "/dev/parport1"
 
 //#define DEBUG_ACQ // to turn on debugging output for the comedi card
 //#define DEBUG_CAMERA // to turn on debugging for the camera
