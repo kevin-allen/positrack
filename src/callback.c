@@ -533,6 +533,7 @@ int recording_file_data_open_file()
   // get the name for the tracking file
   const gchar *str;
   gchar * str0;
+  gchar * strCp;
   gchar * str1;
   gchar * str2;
   gchar * str3;
@@ -557,8 +558,11 @@ int recording_file_data_open_file()
   fprintf(stderr,"date: %s\n",sdate);
   #endif
 
- 
-  str=gtk_entry_get_text(GTK_ENTRY(widgets.filebaseentry));
+  // get filebase and strip any white space that a student might have left ;)
+  strCp=gtk_entry_get_text(GTK_ENTRY(widgets.filebaseentry));
+  str=g_alloca (strlen (strCp));
+  g_stpcpy(str, g_strstrip(strCp));
+  
   str0=rec_file_data.directory;
   str1=g_strdup_printf("%02d",gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widgets.trialnospinbutton)));
   str2=".positrack";

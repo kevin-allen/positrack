@@ -90,7 +90,7 @@ File with declarations of the main structures and functions used in positrack
 #define POSITRACKCONTROLSHARE "/tmppositrackcontrolshare" 
 #define POSITRACKSHARENUMFRAMES 100
 
-#define PARALLELPORTFILE "/dev/parport1"
+#define PARALLELPORTFILE "/dev/parport0"
 
 //#define DEBUG_ACQ // to turn on debugging output for the comedi card
 //#define DEBUG_CAMERA // to turn on debugging for the camera
