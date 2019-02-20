@@ -1115,7 +1115,6 @@ int tracking_interface_head_direction_from_red_green_blue_spots(struct tracking_
 	}
       return 0;
     }
-    
   // if the red light is missing
   if (Red_X == -1 && Blue_X != -1 && Green_X != -1)
     {
@@ -1134,9 +1133,7 @@ int tracking_interface_head_direction_from_red_green_blue_spots(struct tracking_
 	  tr->head_direction_object = angleGB - (estimatedAngleBGR/2);
 	}
       return 0;
-    }
-	
-
+    }	
   // if the green is missing
   if (Red_X != -1 && Blue_X == -1 && Green_X != -1)
     {
