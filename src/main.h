@@ -179,6 +179,7 @@ struct all_widget
   GtkWidget *firewirecamerablackwhite_radiobutton;
   GtkWidget *firewirecameracolor_radiobutton;
   GtkWidget *videoplayback_checkbutton;
+  GtkWidget *refreshbutton;
   guint statusbar_context_id;
   guint statusbar_message_id;
   int video_running;
@@ -433,6 +434,8 @@ void on_synchronization_dialog_delete_event(GtkObject *object, gpointer user_dat
 void on_videoplayback_menuitem_activate(GtkObject *object, gpointer user_data);
 void on_okbutton_videoplayback_clicked(GtkObject *object, gpointer user_data);
 void on_videoplayback_dialog_delete_event(GtkObject *object, gpointer user_data);
+
+void on_refreshbutton_clicked(GtkObject *object, gpointer user_data);
 
 void on_playvideomenuitem_activate(GtkObject *object, gpointer user_data);
 void on_stopvideomenuitem_activate(GtkObject *object, gpointer user_data);

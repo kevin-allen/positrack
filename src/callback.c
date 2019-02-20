@@ -33,6 +33,7 @@ int init_window()
       fprintf(stderr,"An error occurred reading %s\n",glade_file_name);
       return -1;
     }
+
   // get a reference for the widget we need to play with
   widgets.window = GTK_WIDGET (gtk_builder_get_object (builder, "window"));
   widgets.videodrawingarea =  GTK_WIDGET(gtk_builder_get_object (builder, "videodrawingarea"));
@@ -45,7 +46,9 @@ int init_window()
   widgets.trialnospinbutton=GTK_WIDGET(gtk_builder_get_object (builder, "trialnospinbutton"));
   widgets.statusbar=GTK_WIDGET(gtk_builder_get_object (builder, "statusbar"));
   widgets.savingdirectorydlg=GTK_WIDGET(gtk_builder_get_object (builder, "savingdirectorydlg"));
+  widgets.refreshbutton=GTK_WIDGET(gtk_builder_get_object (builder, "refreshbutton"));
 
+  
   // dialog windows accessible via edit menuitems
   widgets.videosource_dlg =GTK_WIDGET (gtk_builder_get_object (builder, "videosource_dialog"));
   widgets.tracking_dlg =GTK_WIDGET (gtk_builder_get_object (builder, "tracking_dialog"));
@@ -266,6 +269,8 @@ void on_videoplayback_dialog_delete_event(GtkObject *object, gpointer user_data)
   gtk_widget_hide(widgets.videoplayback_dlg);
 }
 
+
+
 // callback for the main window 
 void on_window_destroy (GtkObject *object, gpointer user_data)
 {
@@ -421,6 +426,16 @@ void stop_video()
 #ifdef DEBUG_CALLBACK
   fprintf(stderr,"stop_video() done\n");
 #endif
+}
+
+
+void on_refreshbutton_clicked(GtkObject *object, gpointer user_data)
+{
+#ifdef DEBUG_CALLBACK
+  fprintf(stderr,"on_refreshbutton_clicked()\n");
+#endif
+ tracking_interface_clear_drawingarea(&tr);
+    
 }
 
 
