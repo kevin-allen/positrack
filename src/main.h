@@ -63,14 +63,14 @@ File with declarations of the main structures and functions used in positrack
 #define TIMEOUT_FOR_CAPTURE_MS 18.25 // time before the timeout try to get a new frame
 #define FIREWIRE_CAMERA_INTERFACE_NUMBER_OF_FRAMES_IN_RING_BUFFER 10
 
-#define VIDEO_SOURCE_USB_WIDTH 860 
+#define VIDEO_SOURCE_USB_WIDTH 1200 //860 
 #define VIDEO_SOURCE_USB_HEIGHT 860
 #define VIDEO_SOURCE_USB_FRAMERATE 30 //30
 #define VIDEO_SOURCE_SCALABLE_LEFT_POSITION 250
 #define VIDEO_SOURCE_SCALABLE_TOP_POSITION 40
 
 #define TRACKING_INTERFACE_LUMINANCE_THRESHOLD 50
-#define TRACKING_INTERFACE_WIDTH 860
+#define TRACKING_INTERFACE_WIDTH 1200 //860
 #define TRACKING_INTERFACE_HEIGHT 860
 #define TRACKING_INTERFACE_MAX_NUMBER_SPOTS 4 // was 2 before for black and white 2 spots detection
 #define TRACKING_INTERFACE_MAX_NUMBER_SPOTS_CALLS 5 // was 6 before changed because of slow computers

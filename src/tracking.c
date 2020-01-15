@@ -1305,15 +1305,30 @@ int tracking_interface_draw_one_spot_xy(struct tracking_interface* tr,int spot_i
   if(tr->number_spots==0)
     return 0;
   cairo_t * cr;
+  int width_start, height_start,i;
+  double drawing_scaler = 1;
+
+  gdk_drawable_get_size(gtk_widget_get_window(widgets.trackingdrawingarea),&width_start, &height_start);
   cr = gdk_cairo_create(gtk_widget_get_window(widgets.trackingdrawingarea));
+
+// adjust drawing dimension to the size of the buffer_surface
+  if (width_start>tr->width || height_start>tr->height)
+    {
+      if(width_start/(double)tr->width < height_start/(double)tr->height)
+	drawing_scaler=width_start/(double)tr->width;
+      else
+	drawing_scaler=height_start/(double)tr->height;
+    }
+  
+  
   cairo_set_line_width (cr, 5);
   cairo_set_source_rgb (cr,red,green,blue);
   cairo_move_to(cr, 
-		tr->spot_mean_x[spot_index]-size/2,
-		tr->spot_mean_y[spot_index]-size/2);
+		tr->spot_mean_x[spot_index]*drawing_scaler-size/2,
+		tr->spot_mean_y[spot_index]*drawing_scaler-size/2);
   cairo_line_to(cr,
-		tr->spot_mean_x[spot_index]+size/2,
-		tr->spot_mean_y[spot_index]+size/2);
+		tr->spot_mean_x[spot_index]*drawing_scaler+size/2,
+		tr->spot_mean_y[spot_index]*drawing_scaler+size/2);
   cairo_stroke(cr);
   cairo_destroy(cr);
   return 0;
@@ -1325,7 +1340,7 @@ int tracking_interface_draw_all_spots_xy(struct tracking_interface* tr)
   cairo_surface_t *buffer_surface;
   cairo_surface_t *drawable_surface;
   int width_start, height_start,i;
-  
+  double drawing_scaler = 1;
   #ifdef DEBUG_TRACKING
   fprintf(stderr,"tracking_interface_draw_all_spots_xy\n");
 #endif
@@ -1346,16 +1361,27 @@ int tracking_interface_draw_all_spots_xy(struct tracking_interface* tr)
   buffer_cr=cairo_create(buffer_surface);
 
 
+  // adjust drawing dimension to the size of the buffer_surface
+  if (width_start>tr->width || height_start>tr->height)
+    {
+      if(width_start/(double)tr->width < height_start/(double)tr->height)
+	drawing_scaler=width_start/(double)tr->width;
+      else
+	drawing_scaler=height_start/(double)tr->height;
+    }
+
+
+
   cairo_set_line_width (buffer_cr, 5);
   cairo_set_source_rgb (buffer_cr,0.69,0.19,0.0);
   for(i=0;i<tr->number_spots;i++)
     {
       cairo_move_to(buffer_cr, 
-		    tr->spot_mean_x[i]-2,
-		    tr->spot_mean_y[i]-2);
+		    tr->spot_mean_x[i]*drawing_scaler-2,
+		    tr->spot_mean_y[i]*drawing_scaler-2);
       cairo_line_to(buffer_cr,
-		    tr->spot_mean_x[i]+2,
-		    tr->spot_mean_y[i]+2);
+		    tr->spot_mean_x[i]*drawing_scaler+2,
+		    tr->spot_mean_y[i]*drawing_scaler+2);
       cairo_stroke(buffer_cr);
     }
 

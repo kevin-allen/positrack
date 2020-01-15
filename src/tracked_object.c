@@ -149,8 +149,22 @@ int tracked_object_draw_object(struct tracked_object* tob)
   double green2=0.1;
   double blue2=0.7;
   cairo_t * cr;
+  int width_start, height_start,i;
+  double drawing_scaler = 1;
+  gdk_drawable_get_size(gtk_widget_get_window(widgets.trackingdrawingarea),&width_start, &height_start);  
   cr = gdk_cairo_create(gtk_widget_get_window(widgets.trackingdrawingarea));
   cairo_set_line_width (cr, 5);
+
+  
+// adjust drawing dimension to the size of the buffer_surface
+  if (width_start>TRACKING_INTERFACE_WIDTH || height_start>TRACKING_INTERFACE_HEIGHT)
+    {
+      if(width_start/(double)TRACKING_INTERFACE_WIDTH < height_start/(double)TRACKING_INTERFACE_HEIGHT)
+	drawing_scaler=width_start/(double)TRACKING_INTERFACE_WIDTH;
+      else
+	drawing_scaler=height_start/(double)TRACKING_INTERFACE_HEIGHT;
+    }
+  
 
 
   // if previous position was valid, set it to black
@@ -158,11 +172,11 @@ int tracked_object_draw_object(struct tracked_object* tob)
     {
       cairo_set_source_rgb (cr,red1,green1,blue1);
       cairo_move_to(cr, 
-		    tob->x[tob->n-1]-2,
-		    tob->y[tob->n-1]-2);
+		    tob->x[tob->n-1]*drawing_scaler-2,
+		    tob->y[tob->n-1]*drawing_scaler-2);
       cairo_line_to(cr,
-		    tob->x[tob->n-1]+2,
-		    tob->y[tob->n-1]+2);
+		    tob->x[tob->n-1]*drawing_scaler+2,
+		    tob->y[tob->n-1]*drawing_scaler+2);
       cairo_stroke(cr);
     }
 
@@ -174,11 +188,11 @@ int tracked_object_draw_object(struct tracked_object* tob)
   
   cairo_set_source_rgb (cr,red2,green2,blue2);
   cairo_move_to(cr,
-		tob->x[tob->n]-2,
-		tob->y[tob->n]-2);
+		tob->x[tob->n]*drawing_scaler-2,
+		tob->y[tob->n]*drawing_scaler-2);
   cairo_line_to(cr,
-		tob->x[tob->n]+2,
-		tob->y[tob->n]+2);
+		tob->x[tob->n]*drawing_scaler+2,
+		tob->y[tob->n]*drawing_scaler+2);
   cairo_stroke(cr);
   cairo_destroy(cr);
   return 0;
