@@ -229,6 +229,7 @@ struct positrack_shared_memory
   double x[POSITRACKSHARENUMFRAMES]; // position x
   double y[POSITRACKSHARENUMFRAMES]; // position y
   double hd[POSITRACKSHARENUMFRAMES]; // head direction
+  int trialNo[POSITRACKSHARENUMFRAMES];
   pthread_mutexattr_t attrmutex;
   int is_mutex_allocated;
   pthread_mutex_t pmutex; // use for secure access of the data in this structure
@@ -327,6 +328,7 @@ struct recording_file_data
   FILE* fp;
   gchar* file_name;
   gchar* directory;
+  int trialNo;
 };
 struct recording_file_data rec_file_data;
 
@@ -577,7 +579,7 @@ int timespec_first_larger(struct timespec* t1, struct timespec* t2);
 
 
 // defined in positrack_shared_memory.c
-void psm_add_frame(struct positrack_shared_memory* psm, unsigned long int fid, struct timespec fts, double x, double y, double hd);
+void psm_add_frame(struct positrack_shared_memory* psm, unsigned long int fid, struct timespec fts, double x, double y, double hd, int trialNo);
 void psm_init(struct positrack_shared_memory* psm);
 void psm_free(struct positrack_shared_memory* psm);
 

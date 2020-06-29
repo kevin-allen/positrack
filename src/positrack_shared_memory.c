@@ -15,6 +15,7 @@ void psm_init(struct positrack_shared_memory* psm)
       psm->x[i]=-1;
       psm->y[i]=-1;
       psm->hd[i]=-1;
+      psm->trialNo[i]=-1;
     }
   if(psm->is_mutex_allocated==0)
     {
@@ -40,7 +41,7 @@ void psm_free(struct positrack_shared_memory* psm)
     }
 }
 
-void psm_add_frame(struct positrack_shared_memory* psm, unsigned long int frame_no, struct timespec fts, double x, double y, double hd)
+void psm_add_frame(struct positrack_shared_memory* psm, unsigned long int frame_no, struct timespec fts, double x, double y, double hd,int trialNo)
 {
 #ifdef DEBUG_SHARE
   g_printerr("psm_add_frame()\n");
@@ -57,6 +58,7 @@ void psm_add_frame(struct positrack_shared_memory* psm, unsigned long int frame_
       psm->x[i]=psm->x[i-1];
       psm->y[i]=psm->y[i-1];
       psm->hd[i]=psm->hd[i-1];
+      psm->trialNo[i]=psm->trialNo[i-1];
     }
   // add the new frame
   psm->id[0]=psm->id[0]+1;
@@ -65,9 +67,10 @@ void psm_add_frame(struct positrack_shared_memory* psm, unsigned long int frame_
   psm->x[0]=x;
   psm->y[0]=y;
   psm->hd[0]=hd;
+  psm->trialNo[0]=trialNo;
 
 #ifdef DEBUG_SHARE
-  g_printerr("psm id: %ld, frame_no: %ld,  x: %lf, y: %lf, hd: %lf\n",psm->id[0], psm->frame_no[0],psm->x[0],psm->y[0], psm->hd[0]);
+  g_printerr("psm id: %ld, frame_no: %ld,  x: %lf, y: %lf, hd: %lf trialNo: %d\n",psm->id[0], psm->frame_no[0],psm->x[0],psm->y[0], psm->hd[0],psm->trialNo[0]);
 #endif
   pthread_mutex_unlock(&psm->pmutex);
 }

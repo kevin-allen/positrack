@@ -296,7 +296,8 @@ gboolean tracking()
   psm_add_frame(tr.psm, tr.number_frames_tracked+1,tr.time_now,
 		tob.x[tob.n-1],
 		tob.y[tob.n-1],
-		tob.head_direction[tob.n-1]);
+		tob.head_direction[tob.n-1],
+		rec_file_data.trialNo);
   
   // print the data to a file
   if(tracking_interface_print_position_to_file(&tr)!=0)

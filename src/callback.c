@@ -92,6 +92,7 @@ int init_window()
   p=getpwnam(username);
   rec_file_data.directory=strcat(p->pw_dir,"/");
   rec_file_data.is_open=0;
+  rec_file_data.trialNo=-1;
   #ifdef DEBUG_CALLBACK
   printf("data directory:%s\n",rec_file_data.directory);
   #endif
@@ -580,6 +581,7 @@ int recording_file_data_open_file()
   
   str0=rec_file_data.directory;
   str1=g_strdup_printf("%02d",gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widgets.trialnospinbutton)));
+  rec_file_data.trialNo=gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widgets.trialnospinbutton));
   str2=".positrack";
   rec_file_data.file_name=g_strdup_printf("%s%s-%s_%s%s",str0,str,sdate,str1,str2);
 

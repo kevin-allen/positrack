@@ -27,6 +27,7 @@ struct positrack_shared_memory
   double x[POSITRACKSHARENUMFRAMES]; // position x
   double y[POSITRACKSHARENUMFRAMES]; // position y
   double hd[POSITRACKSHARENUMFRAMES]; // head direction
+  int trialNo[POSITRACKSHARENUMFRAMES]; // current trial number
   pthread_mutexattr_t attrmutex;
   int is_mutex_allocated;
   pthread_mutex_t pmutex;  
@@ -43,6 +44,7 @@ int main(int argc, char *argv[])
   unsigned long int frame_id = 0;
   unsigned long int frame_no = 0;
   double x,y,hd;
+  int trialNo;
   des_num=shm_open(POSITRACKSHARE, O_RDWR  ,0600);
   if(des_num ==-1)
     {
@@ -78,9 +80,10 @@ int main(int argc, char *argv[])
       x=psm->x[0];
       y=psm->y[0];
       hd=psm->hd[0];
+      trialNo=psm->trialNo[0];
       pthread_mutex_unlock(&psm->pmutex);
       
-      cout << "frame_id: " << frame_id << " frame_no: " << frame_no << " x: " << x << " y: " <<  y << " hd: " << hd <<
+      cout << "frame_id: " << frame_id << " frame_no: " << frame_no << " x: " << x << " y: " <<  y << " hd: " << hd << " trialNo: " << trialNo <<
 	ts_now.tv_sec << " " << ts_now.tv_nsec/1000 << " microsec" << '\n';
       sleep(1);
     }
