@@ -229,7 +229,7 @@ struct positrack_shared_memory
   double x[POSITRACKSHARENUMFRAMES]; // position x
   double y[POSITRACKSHARENUMFRAMES]; // position y
   double hd[POSITRACKSHARENUMFRAMES]; // head direction
-  int trialNo[POSITRACKSHARENUMFRAMES];
+  unsigned long int trialNo[POSITRACKSHARENUMFRAMES];
   pthread_mutexattr_t attrmutex;
   int is_mutex_allocated;
   pthread_mutex_t pmutex; // use for secure access of the data in this structure

@@ -68,6 +68,7 @@ void psm_add_frame(struct positrack_shared_memory* psm, unsigned long int frame_
   psm->y[0]=y;
   psm->hd[0]=hd;
   psm->trialNo[0]=trialNo;
+  //  g_printerr("psm id: %ld, frame_no: %ld,  x: %lf, y: %lf, hd: %lf trialNo: %ld\n",psm->id[0], psm->frame_no[0],psm->x[0],psm->y[0], psm->hd[0],psm->trialNo[0]);
 
 #ifdef DEBUG_SHARE
   g_printerr("psm id: %ld, frame_no: %ld,  x: %lf, y: %lf, hd: %lf trialNo: %d\n",psm->id[0], psm->frame_no[0],psm->x[0],psm->y[0], psm->hd[0],psm->trialNo[0]);
