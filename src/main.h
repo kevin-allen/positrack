@@ -345,7 +345,7 @@ struct tracked_object
   double* speed;
   int position_invalid;
   int head_direction_invalid;
-  int n;
+  int n; // number of frames
   double percentage_position_invalid_total;
   double percentage_position_invalid_last_100;
   double travelled_distance;

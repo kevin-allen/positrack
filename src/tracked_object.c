@@ -121,7 +121,17 @@ int tracked_object_update_position(struct tracked_object* tob,double x, double y
       //tob->speed[tob->n]=tob->sample_distance/((double)frame_duration_us/1000000);
     }
   
-  
+  tob->percentage_position_invalid_total = (double)tob->position_invalid/tob->n*100;
+  int invalid_count = 0;
+  if(tob->n > 100){
+    for(int i = tob->n-100; i < tob->n; i++){
+      if(tob->x[i]==-1.0)
+	invalid_count++;
+    }
+  }
+  tob->percentage_position_invalid_last_100=invalid_count;
+  fprintf(stderr,"invalid %lf\n",tob->percentage_position_invalid_last_100);
+    
   if(app_flow.drawo_mode==ONE_BLACK_DOT)
     {
       tracked_object_draw_object(tob);
@@ -214,7 +224,7 @@ int tracked_object_display_path_variables(struct tracked_object* tob)
   cairo_select_font_face (cr, "sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL  );
   cairo_set_font_size (cr, 14.0);
   cairo_set_source_rgb (cr,0.9,0.9,0.9);
-  cairo_rectangle(cr, 0, 0,175,45);
+  cairo_rectangle(cr, 0, 0,205,60);
   cairo_fill(cr);
 
   cairo_set_source_rgb (cr,0.1,0.1,0.1);
@@ -222,6 +232,16 @@ int tracked_object_display_path_variables(struct tracked_object* tob)
   cairo_show_text (cr, g_strdup_printf("Distance: %.2lf",tob->travelled_distance));
   cairo_move_to(cr,0,30);
   cairo_show_text (cr, g_strdup_printf("Duration: %d sec",(int)tr.tracking_time_duration_all.tv_sec));
+
+  if(tob->n>0){
+    cairo_set_source_rgb (cr,tob->percentage_position_invalid_total/100.0,0.1,0.1);
+    cairo_move_to(cr,0,45);
+    cairo_show_text (cr, g_strdup_printf("Perc. invalid: %.2lf", (double)tob->percentage_position_invalid_total));
+
+    cairo_set_source_rgb (cr,tob->percentage_position_invalid_last_100/100.0,0.1,0.1);
+    cairo_move_to(cr,0,60);
+    cairo_show_text (cr, g_strdup_printf("Perc. invalid last 100: %.2lf",(double)tob->percentage_position_invalid_last_100));
+  }
   return 0;
 }
 
