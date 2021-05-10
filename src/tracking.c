@@ -20,7 +20,7 @@ int tracking_interface_init(struct tracking_interface* tr)
   tr->max_number_spot_calls=TRACKING_INTERFACE_MAX_NUMBER_SPOTS_CALLS;
   tr->min_spot_size=TRACKING_INTERFACE_MIN_SPOT_SIZE;
   tr->interval_between_tracking_calls_ms = INTERVAL_BETWEEN_TRACKING_CALLS_MS;
-  tr->max_distance_two_spots = TRACKING_INTERFACE_MIN_DISTANCE_TWO_SPOTS;
+  tr->max_distance_two_spots = TRACKING_INTERFACE_MAX_DISTANCE_TWO_SPOTS;
 
   if((tr->spot_positive_pixels=malloc(sizeof(int)*tr->max_number_spots))==NULL)
     {
@@ -746,6 +746,12 @@ int tracking_interface_tracking_two_bright_spots(struct tracking_interface* tr)
 				     microsecond_from_timespec(&tr->inter_buffer_duration));
       return 0;
     }
+
+#ifdef DEBUG_TRACKING
+      g_printerr("distance between the two spots: %lf\n",
+		 distance(tr->spot_mean_x[0],tr->spot_mean_y[0],tr->spot_mean_x[1],tr->spot_mean_y[1]));
+#endif
+
   // check if the two spots are within reasonable distance
   if(distance(tr->spot_mean_x[0],tr->spot_mean_y[0],tr->spot_mean_x[1],tr->spot_mean_y[1])>tr->max_distance_two_spots)
     {

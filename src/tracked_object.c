@@ -130,7 +130,7 @@ int tracked_object_update_position(struct tracked_object* tob,double x, double y
     }
   }
   tob->percentage_position_invalid_last_100=invalid_count;
-  fprintf(stderr,"invalid %lf\n",tob->percentage_position_invalid_last_100);
+  //fprintf(stderr,"invalid %lf\n",tob->percentage_position_invalid_last_100);
     
   if(app_flow.drawo_mode==ONE_BLACK_DOT)
     {

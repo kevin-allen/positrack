@@ -69,7 +69,7 @@ File with declarations of the main structures and functions used in positrack
 #define VIDEO_SOURCE_SCALABLE_LEFT_POSITION 250
 #define VIDEO_SOURCE_SCALABLE_TOP_POSITION 40
 
-#define TRACKING_INTERFACE_LUMINANCE_THRESHOLD 50
+#define TRACKING_INTERFACE_LUMINANCE_THRESHOLD 100
 #define TRACKING_INTERFACE_WIDTH 1200 //860
 #define TRACKING_INTERFACE_HEIGHT 860
 #define TRACKING_INTERFACE_MAX_NUMBER_SPOTS 4 // was 2 before for black and white 2 spots detection
@@ -77,9 +77,8 @@ File with declarations of the main structures and functions used in positrack
 
 #define TRACKING_INTERFACE_MAX_MEAN_LUMINANCE_FOR_TRACKING 11/* 0 */
 #define TRACKING_INTERFACE_MAX_SPOT_SIZE 40000
-#define TRACKING_INTERFACE_MIN_SPOT_SIZE 20 // this was 10 but was worried about false positive
-#define TRACKING_INTERFACE_MIN_DISTANCE_TWO_SPOTS 190 // for patrick spinning table
-//#define TRACKING_INTERFACE_MIN_DISTANCE_TWO_SPOTS 150 // for open field
+#define TRACKING_INTERFACE_MIN_SPOT_SIZE 12 // this was 10 but was worried about false positive
+#define TRACKING_INTERFACE_MAX_DISTANCE_TWO_SPOTS 150 // for patrick spinning table
 
 #define TRACKED_OBJECT_BUFFER_LENGTH 1500000 // 1500000 should give 500 minutes at 50Hz.
 #define TRACKED_OBJECT_PULSE_DISTANCE 500 // distance to run before pulse is done
